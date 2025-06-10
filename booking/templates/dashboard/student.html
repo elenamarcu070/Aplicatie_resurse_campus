@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Student{% endblock %}
+
+
+{% block content %}
+<div class="content-box">
+    <h2>Bine ai venit, {{ request.user.first_name }}!</h2>
+    <p>Email: {{ request.user.email }}</p>
+    <p>Alege o funcționalitate din meniu.</p>
+</div>
+{% endblock %}
+
+

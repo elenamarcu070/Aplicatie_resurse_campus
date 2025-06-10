@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4 fade-in" style="max-width: 700px;">
+    <div class="p-4 bg-white rounded shadow">
+        <h4 class="mb-4">Adaugă student în {{ camin.nume }}</h4>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="email">Email:</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="nume">Nume:</label>
+                <input type="text" name="nume" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="prenume">Prenume:</label>
+                <input type="text" name="prenume" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="camera">Camera:</label>
+                <input type="text" name="camera" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-primary">Adaugă student</button>
+            <a href="{% url 'incarca_studenti' %}" class="btn btn-secondary ms-2">Anulează</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

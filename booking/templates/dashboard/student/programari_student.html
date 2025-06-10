@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container mt-4 fade-in" style="max-width: 900px;">
+    <div class="card p-4 mb-4" style="background-color: rgba(255, 255, 255, 0.95); border-radius: 16px;">
+        <h3 class="text-center mb-3">Programările Tale</h3>
+        <div class="d-flex justify-content-center mb-3">
+            <button class="btn btn-outline-primary me-2" onclick="afiseazaSectiune('urmatoare')">Următoare</button>
+            <button class="btn btn-outline-secondary" onclick="afiseazaSectiune('incheiate')">Încheiate</button>
+        </div>
+
+        <div id="sectiune_urmatoare">
+            <h5 class="text-primary">Programări Următoare</h5>
+            {% if rezervari_urmatoare %}
+                {% for r in rezervari_urmatoare %}
+                    <div class="card p-3 mb-3 shadow-sm">
+                        <p><strong>Mașină:</strong> {{ r.masina.nume }}</p>
+                        <p><strong>Data:</strong> {{ r.data_rezervare|date:"j F Y" }}</p>
+                        <p><strong>Interval:</strong> {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}</p>
+                        <form method="post" action="{% url 'anuleaza_rezervare' r.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Anulează Programarea</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">Nu ai programări viitoare.</p>
+            {% endif %}
+        </div>
+
+        <div id="sectiune_incheiate" style="display: none;">
+            <h5 class="text-secondary">Programări Încheiate</h5>
+            {% if rezervari_incheiate %}
+                {% for r in rezervari_incheiate %}
+                    <div class="card p-3 mb-3 shadow-sm">
+                        <p><strong>Mașină:</strong> {{ r.masina.nume }}</p>
+                        <p><strong>Data:</strong> {{ r.data_rezervare|date:"j F Y" }}</p>
+                        <p><strong>Interval:</strong> {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">Nu ai programări încheiate în ultimele 7 zile.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function afiseazaSectiune(sectie) {
+        document.getElementById("sectiune_urmatoare").style.display = sectie === 'urmatoare' ? 'block' : 'none';
+        document.getElementById("sectiune_incheiate").style.display = sectie === 'incheiate' ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

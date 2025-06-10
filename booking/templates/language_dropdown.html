@@ -1,0 +1,17 @@
+<div class="dropdown">
+    <button class="btn btn-outline-dark dropdown-toggle" type="button" id="languageMenu" data-bs-toggle="dropdown" aria-expanded="false">
+        {{ request.user.email }}
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageMenu">
+        <li class="dropdown-item disabled">{{ rol|title }}</li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <a class="dropdown-item" href="#">Română</a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="#">English</a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item text-danger" href="{% url 'custom_logout' %}">Deconectare</a></li>
+    </ul>
+</div>

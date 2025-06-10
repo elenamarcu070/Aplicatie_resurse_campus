@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Adaugă Cămin</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="nume" class="form-label">Nume Cămin</label>
+            <input type="text" name="nume" id="nume" class="form-control" required>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-success">Adaugă</button>
+            <a href="{% url 'dashboard_admin_camin' %}" class="btn btn-secondary">Anulează</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

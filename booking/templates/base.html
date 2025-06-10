@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url('{% static "images/fundal_autentificare.png" %}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-top {
+            height: 70px;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-left h4 {
+            margin: 0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .navbar-center {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .navbar-center a {
+            margin: 0 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-center a:hover {
+            font-weight: bold;
+            background-color: #e7f1ff;
+            border-radius: 8px;
+            padding: 0.4rem 1rem;
+        }
+
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .content-box {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            margin: 2rem;
+            max-width: 1000px;
+            width: 100%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .content-box:hover {
+            transform: scale(1.01);
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 1.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar-top">
+        <a class="navbar-brand" href="#">
+            Spălătorie{% if nume_camin %} – {{ nume_camin }}{% endif %}
+
+        <div class="navbar-links d-flex justify-content-center align-items-center flex-grow-1 gap-2">
+            {% if rol == 'student' %}
+                <a href="{% url 'dashboard_student' %}" class="btn btn-outline-primary">Home</a>
+                <a href="{% url 'calendar_rezervari' %}" class="btn btn-outline-primary">Calendar</a>
+                <a href="{% url 'programari_student' %}" class="btn btn-outline-primary">Programări</a>
+            {% elif rol == 'admin_camin' %}
+                <a href="{% url 'dashboard_admin_camin' %}" class="btn btn-outline-primary">Home</a>
+                <a href="{% url 'calendar_rezervari_admin' %}" class="btn btn-outline-primary">Calendar</a>
+                <a href="{% url 'programari_admin_camin' %}" class="btn btn-outline-primary">Programări</a>
+                <a href="{% url 'incarca_studenti' %}" class="btn btn-outline-primary">Importă Studenți</a>
+            {% endif %}
+        </div>
+
+        <div class="d-flex align-items-center">
+            {% include 'language_dropdown.html' %}
+        </div>
+    </div>
+
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+    
+
+
+
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
