@@ -26,46 +26,285 @@
           {% endfor %}
         {% endif %}
 
+        <div class="mb-4">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" 
+                       id="searchStudent" 
+                       class="form-control" 
+                       placeholder="Caută după nume, prenume sau email..."
+                       onkeyup="searchStudents()">
+            </div>
+        </div>
+
+
         <!-- Butoane acțiuni -->
         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-            <a href="{% url 'adauga_student' %}" class="btn btn-success">Adaugă student</a>
+            <a href="{% url 'adauga_student' %}" class="btn btn-success">
+                <i class="fas fa-user-plus"></i> Adaugă student
+            </a>
             <form action="{% url 'sterge_toti_studentii' %}" method="post" onsubmit="return confirm('Ești sigur că vrei să ștergi toți studenții din {{ camin.nume }}?');">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Șterge toți studenții</button>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash-alt"></i> Șterge toți studenții
+                </button>
             </form>
         </div>
 
         <!-- Tabelul cu studenți -->
         {% if studenti %}
-        <table class="table table-striped table-bordered align-middle text-center">
-            <thead class="table-light">
-                <tr>
-                    <th>Email</th>
-                    <th>Nume</th>
-                    <th>Prenume</th>
-                    <th>Cămin</th>
-                    <th>Camera</th>
-                    <th>Acțiuni</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for s in studenti %}
-                <tr>
-                    <td>{{ s.utilizator.email }}</td>
-                    <td>{{ s.utilizator.last_name }}</td>
-                    <td>{{ s.utilizator.first_name }}</td>
-                    <td>{{ s.camin.nume }}</td>
-                    <td>{{ s.numar_camera }}</td>
-                    <td>
-                        <a href="{% url 'sterge_student' s.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Sigur vrei să ștergi acest student?');">Șterge</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Email</th>
+                        <th>Nume</th>
+                        <th>Prenume</th>
+                        <th>Cămin</th>
+                        <th>Camera</th>
+                        <th>Acțiuni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in studenti %}
+                    <tr id="row-{{ s.id }}">
+                        <td>
+                            <span class="view-mode">{{ s.utilizator.email }}</span>
+                            <input type="email" class="form-control edit-mode d-none" value="{{ s.utilizator.email }}">
+                        </td>
+                        <td>
+                            <span class="view-mode">{{ s.utilizator.last_name }}</span>
+                            <input type="text" class="form-control edit-mode d-none" value="{{ s.utilizator.last_name }}">
+                        </td>
+                        <td>
+                            <span class="view-mode">{{ s.utilizator.first_name }}</span>
+                            <input type="text" class="form-control edit-mode d-none" value="{{ s.utilizator.first_name }}">
+                        </td>
+                        <td>
+                            <span class="view-mode">{{ s.camin.nume }}</span>
+                            <select class="form-control edit-mode d-none" name="camin">
+                                {% for c in camine %}
+                                    <option value="{{ c.id }}" {% if c.id == s.camin.id %}selected{% endif %}>
+                                        {{ c.nume }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <span class="view-mode">{{ s.numar_camera }}</span>
+                            <input type="text" class="form-control edit-mode d-none" value="{{ s.numar_camera }}">
+                        </td>
+                        <td>
+                            <div class="btn-group view-mode">
+                                <button class="btn btn-sm btn-primary" onclick="toggleEdit('{{ s.id }}')">
+                                    <i class="fas fa-edit"></i> Editează
+                                </button>
+                                <a href="{% url 'sterge_student' s.id %}" class="btn btn-sm btn-danger" 
+                                   onclick="return confirm('Sigur vrei să ștergi acest student?');">
+                                    <i class="fas fa-trash"></i> Șterge
+                                </a>
+                            </div>
+                            <div class="btn-group edit-mode d-none">
+                                <button class="btn btn-sm btn-success" onclick="saveChanges('{{ s.id }}')">
+                                    <i class="fas fa-save"></i> Salvează
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="cancelEdit('{{ s.id }}')">
+                                    <i class="fas fa-times"></i> Anulează
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
         <p>Nu există studenți înregistrați în căminul {{ camin.nume }}.</p>
         {% endif %}
     </div>
 </div>
+
+<!-- Script pentru editare -->
+<script>
+function toggleEdit(studentId) {
+    const row = document.getElementById(`row-${studentId}`);
+    if (row) {
+        row.querySelectorAll('.view-mode').forEach(el => el.classList.toggle('d-none'));
+        row.querySelectorAll('.edit-mode').forEach(el => el.classList.toggle('d-none'));
+    }
+}
+
+function saveChanges(studentId) {
+    const row = document.getElementById(`row-${studentId}`);
+    
+    // Verificăm dacă am găsit rândul
+    if (!row) {
+        console.error('Nu s-a găsit rândul cu ID-ul:', studentId);
+        return;
+    }
+
+    // Găsim toate elementele necesare cu verificări
+    const emailInput = row.querySelector('input[type="email"]');
+    const textInputs = row.querySelectorAll('input[type="text"]');
+    const caminSelect = row.querySelector('select[name="camin"]');
+    
+    // Verificăm dacă am găsit toate elementele
+    if (!emailInput || textInputs.length < 2 || !caminSelect) {
+        console.error('Nu s-au găsit toate elementele necesare');
+        return;
+    }
+
+    try {
+        const data = {
+            email: emailInput.value,
+            nume: textInputs[0].value,
+            prenume: textInputs[1].value,
+            camin: caminSelect.value,
+            camera: textInputs[2].value
+        };
+
+        console.log('Data to send:', data); // Pentru debugging
+
+        // Adaugă indicator de încărcare
+        const saveBtn = row.querySelector('.btn-success');
+        if (!saveBtn) {
+            console.error('Nu s-a găsit butonul de salvare');
+            return;
+        }
+
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvare...';
+        saveBtn.disabled = true;
+
+        fetch(`/dashboard/admin_camin/student/${studentId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                // Găsim containerul pentru mesaje
+                let alertContainer = document.querySelector('.alert-container');
+                if (!alertContainer) {
+                    // Dacă nu există, creăm unul nou
+                    alertContainer = document.createElement('div');
+                    alertContainer.className = 'alert-container';
+                    const contentContainer = document.querySelector('.p-4.bg-white');
+                    if (contentContainer) {
+                        contentContainer.insertBefore(alertContainer, contentContainer.firstChild);
+                    }
+                }
+
+                // Creăm și adăugăm alerta
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                alertContainer.appendChild(alert);
+                
+                // Reîncarcă pagina după 1 secundă
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                alert('Eroare la salvare: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Eroare la salvare. Verificați consola pentru detalii.');
+        })
+        .finally(() => {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        });
+    } catch (error) {
+        console.error('Error in saveChanges:', error);
+        alert('Eroare la pregătirea datelor pentru salvare');
+    }
+}
+
+
+function cancelEdit(studentId) {
+    toggleEdit(studentId);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+
+function searchStudents() {
+    const searchText = document.getElementById('searchStudent').value.toLowerCase();
+    const table = document.querySelector('table');
+    const rows = table.getElementsByTagName('tr');
+
+    // Păstrăm prima linie (header-ul tabelului)
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const email = row.getElementsByTagName('td')[0].querySelector('.view-mode').textContent.toLowerCase();
+        const nume = row.getElementsByTagName('td')[1].querySelector('.view-mode').textContent.toLowerCase();
+        const prenume = row.getElementsByTagName('td')[2].querySelector('.view-mode').textContent.toLowerCase();
+        
+        if (email.includes(searchText) || 
+            nume.includes(searchText) || 
+            prenume.includes(searchText)) {
+            row.style.display = '';
+            // Evidențiază rezultatul găsit
+            if (searchText) {
+                row.classList.add('table-warning');
+                // Scroll la primul rezultat găsit
+                if (row.style.display === '' && !document.querySelector('.table-warning')) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } else {
+                row.classList.remove('table-warning');
+            }
+        } else {
+            row.style.display = 'none';
+            row.classList.remove('table-warning');
+        }
+    }
+
+    // Afișează un mesaj dacă nu sunt rezultate
+    const noResultsMsg = document.getElementById('noResultsMessage');
+    const hasVisibleRows = Array.from(rows).slice(1).some(row => row.style.display !== 'none');
+    
+    if (!hasVisibleRows && searchText) {
+        if (!noResultsMsg) {
+            const msg = document.createElement('div');
+            msg.id = 'noResultsMessage';
+            msg.className = 'alert alert-info mt-3';
+            msg.textContent = 'Nu s-au găsit rezultate pentru căutarea efectuată.';
+            table.parentNode.insertBefore(msg, table.nextSibling);
+        }
+    } else if (noResultsMsg) {
+        noResultsMsg.remove();
+    }
+}
+
+</script>
 {% endblock %}

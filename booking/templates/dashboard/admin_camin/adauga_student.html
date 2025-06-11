@@ -1,29 +1,67 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+
 {% block content %}
+
 <div class="container mt-4 fade-in" style="max-width: 700px;">
     <div class="p-4 bg-white rounded shadow">
         <h4 class="mb-4">Adaugă student în {{ camin.nume }}</h4>
-        <form method="post">
+        <!-- Formularul de adăugare student -->
+        <form method="post" class="mb-4">
+
             {% csrf_token %}
+
             <div class="mb-3">
-                <label for="email">Email:</label>
-                <input type="email" name="email" class="form-control" required>
+                <label for="email" class="form-label">Email:</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="nume" class="form-label">Nume:</label>
+                <input type="text" class="form-control" id="nume" name="nume" required>
             </div>
             <div class="mb-3">
-                <label for="nume">Nume:</label>
-                <input type="text" name="nume" class="form-control" required>
+                <label for="prenume" class="form-label">Prenume:</label>
+                <input type="text" class="form-control" id="prenume" name="prenume" required>
             </div>
             <div class="mb-3">
-                <label for="prenume">Prenume:</label>
-                <input type="text" name="prenume" class="form-control" required>
+                <label for="camin" class="form-label">Cămin:</label>
+                <select class="form-select" id="camin" name="camin" required>
+                    <option value="{{ camin.id }}" selected>{{ camin.nume }}</option>
+                </select>
             </div>
+
             <div class="mb-3">
-                <label for="camera">Camera:</label>
-                <input type="text" name="camera" class="form-control">
+                <label for="numar_camera" class="form-label">Număr cameră:</label>
+                <input type="text" class="form-control" id="numar_camera" name="numar_camera" required>
             </div>
+
             <button type="submit" class="btn btn-primary">Adaugă student</button>
-            <a href="{% url 'incarca_studenti' %}" class="btn btn-secondary ms-2">Anulează</a>
+
+
         </form>
+        {% if student %}
+            <div class="alert alert-success" role="alert">
+                Studentul {{ student.utilizator.first_name }} {{ student.utilizator.last_name }} a fost adăugat cu succes!
+            </div>
+        {% endif %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Închide"></button>
+                </div>
+            {% endfor %}
+        
+
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'incarca_studenti' %}" class="btn btn-secondary">Înapoi la import studenți</a>
+            <a href="{% url 'dashboard_admin_camin' %}" class="btn btn-secondary">Înapoi la dashboard</a>
+        </div>
+
     </div>
 </div>
 {% endblock %}

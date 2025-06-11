@@ -38,9 +38,9 @@ urlpatterns = [
     path('dashboard/admin_camin/studenti/adauga/', views.adauga_student_view, name='adauga_student'),
     path('dashboard/admin_camin/studenti/sterge/<int:student_id>/', views.sterge_student_view, name='sterge_student'),
     path('dashboard/admin_camin/studenti/sterge-toti/', views.sterge_toti_studentii_view, name='sterge_toti_studentii'),
-
-
-
+    path('dashboard/admin_camin/student/<int:student_id>/update/', views.update_student, name='update_student'),
+    
+ 
 
 ]
 

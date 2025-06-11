@@ -132,13 +132,16 @@ WSGI_APPLICATION = 'rezervari_spalatorie.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,  # Timeout în secunde
+        }
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -199,3 +202,31 @@ USE_I18N = True
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
 TIME_ZONE = 'Europe/Bucharest'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'elenamarcu070@gmail.com'  # contul sistem
+EMAIL_HOST_PASSWORD = 'ohfy zzft gebi xpyz'  # parola pentru contul sistem
+DEFAULT_FROM_EMAIL = 'Spalatorie Camin T5 <elenamarcu070@gmail.com>'
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'ERROR',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
+}

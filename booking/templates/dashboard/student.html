@@ -2,13 +2,115 @@
 
 {% block title %}Dashboard Student{% endblock %}
 
-
 {% block content %}
-<div class="content-box">
-    <h2>Bine ai venit, {{ request.user.first_name }}!</h2>
-    <p>Email: {{ request.user.email }}</p>
-    <p>Alege o funcționalitate din meniu.</p>
+<div class="container mt-4">
+    <div class="content-box p-4 bg-white rounded shadow">
+        <h2 class="mb-4">Bine ai venit, {{ request.user.first_name }}!</h2>
+        <p class="text-muted mb-4">Email: {{ request.user.email }}</p>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Cum funcționează sistemul de rezervări?</h4>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">Reguli generale:</h5>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item">
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        Poți face rezervări pentru ziua curentă și ziua următoare în săptămâna curentă
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                        Pentru săptămânile viitoare, poți face o singură rezervare pe săptămână
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                        Poți face rezervări cu până la 4 săptămâni în avans
+                    </li>
+                </ul>
+
+                <h5 class="mb-3">Niveluri de prioritate:</h5>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-danger mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-danger me-2">1</span>
+                                Prima rezervare - nu poate fi preluată de alți studenți
+                            </div>
+                        </div>
+                        <div class="card border-secondary mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-secondary me-2">2</span>
+                                A doua rezervare - poate fi preluată
+                            </div>
+                        </div>
+                        <div class="card border-primary mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-primary me-2">3</span>
+                                A treia rezervare - poate fi preluată
+                            </div>
+                        </div>
+                        <div class="card border mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-brown me-2">4</span>
+                                A patra rezervare - poate fi preluată
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mb-3">Sistem de preluare rezervări:</h5>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item">
+                        <i class="fas fa-exchange-alt text-success me-2"></i>
+                        Poți prelua rezervările altor studenți dacă ai mai puține rezervări decât ei
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-shield-alt text-danger me-2"></i>
+                        Prima rezervare (roșie) nu poate fi preluată de nimeni
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-bell text-warning me-2"></i>
+                        Vei primi notificări prin email când rezervările tale sunt preluate
+                    </li>
+                </ul>
+
+                <h5 class="mb-3">Avertismente:</h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Dacă nu folosești o rezervare și nu o anulezi, poți primi un avertisment
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-ban text-danger me-2"></i>
+                        Trei avertismente duc la blocarea temporară a contului pentru o săptămână
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-undo text-success me-2"></i>
+                        Poți anula o rezervare oricând înainte de intervalul rezervat
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Pentru a face o rezervare, accesează secțiunea "Calendar" din meniul principal.
+        </div>
+    </div>
 </div>
+
+<style>
+    .bg-brown {
+        background-color: #D2B48C !important;
+        color: white !important;
+    }
+    .border-brown {
+        border-color: #D2B48C !important;
+    }
+    .list-group-item i {
+        width: 20px;
+        text-align: center;
+    }
+</style>
 {% endblock %}
-
-
