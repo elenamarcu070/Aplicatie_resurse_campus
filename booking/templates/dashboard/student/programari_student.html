@@ -1,54 +1,115 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block content %}
 <div class="container mt-4 fade-in" style="max-width: 900px;">
     <div class="card p-4 mb-4" style="background-color: rgba(255, 255, 255, 0.95); border-radius: 16px;">
-        <h3 class="text-center mb-3">Programările Tale</h3>
-        <div class="d-flex justify-content-center mb-3">
-            <button class="btn btn-outline-primary me-2" onclick="afiseazaSectiune('urmatoare')">Următoare</button>
-            <button class="btn btn-outline-secondary" onclick="afiseazaSectiune('incheiate')">Încheiate</button>
-        </div>
+        <h3 class="text-center mb-4">Programările Tale</h3>
 
-        <div id="sectiune_urmatoare">
-            <h5 class="text-primary">Programări Următoare</h5>
-            {% if rezervari_urmatoare %}
-                {% for r in rezervari_urmatoare %}
-                    <div class="card p-3 mb-3 shadow-sm">
-                        <p><strong>Mașină:</strong> {{ r.masina.nume }}</p>
-                        <p><strong>Data:</strong> {{ r.data_rezervare|date:"j F Y" }}</p>
-                        <p><strong>Interval:</strong> {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}</p>
-                        <form method="post" action="{% url 'anuleaza_rezervare' r.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">Anulează Programarea</button>
-                        </form>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">Nu ai programări viitoare.</p>
-            {% endif %}
-        </div>
+        <ul class="nav nav-tabs" id="myTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="urmatoare-tab" data-bs-toggle="tab" data-bs-target="#urmatoare" type="button" role="tab" aria-controls="urmatoare" aria-selected="true">Următoare</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="incheiate-tab" data-bs-toggle="tab" data-bs-target="#incheiate" type="button" role="tab" aria-controls="incheiate" aria-selected="false">Încheiate</button>
+            </li>
+        </ul>
 
-        <div id="sectiune_incheiate" style="display: none;">
-            <h5 class="text-secondary">Programări Încheiate</h5>
-            {% if rezervari_incheiate %}
-                {% for r in rezervari_incheiate %}
-                    <div class="card p-3 mb-3 shadow-sm">
-                        <p><strong>Mașină:</strong> {{ r.masina.nume }}</p>
-                        <p><strong>Data:</strong> {{ r.data_rezervare|date:"j F Y" }}</p>
-                        <p><strong>Interval:</strong> {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}</p>
+        <div class="tab-content mt-3" id="myTabContent">
+            <div class="tab-pane fade show active" id="urmatoare" role="tabpanel" aria-labelledby="urmatoare-tab">
+                {% if rezervari_urmatoare %}
+                    <div class="list-group">
+                        {% for r in rezervari_urmatoare %}
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start" id="rezervare-{{ r.id }}">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">{{ r.masina.nume }} - {{ r.data_rezervare|date:"j F Y" }}</div>
+                                    {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}
+                                </div>
+                                <button class="btn btn-sm btn-danger anuleaza-rezervare" data-rezervare-id="{{ r.id }}" type="button">Anulează</button>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">Nu ai programări încheiate în ultimele 7 zile.</p>
-            {% endif %}
+                {% else %}
+                    <p class="text-muted">Nu ai programări viitoare.</p>
+                {% endif %}
+            </div>
+
+            <div class="tab-pane fade" id="incheiate" role="tabpanel" aria-labelledby="incheiate-tab">
+                {% if rezervari_incheiate %}
+                    <div class="list-group">
+                        {% for r in rezervari_incheiate %}
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">{{ r.masina.nume }} - {{ r.data_rezervare|date:"j F Y" }}</div>
+                                    {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Nu ai programări încheiate în ultimele 7 zile.</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    function afiseazaSectiune(sectie) {
-        document.getElementById("sectiune_urmatoare").style.display = sectie === 'urmatoare' ? 'block' : 'none';
-        document.getElementById("sectiune_incheiate").style.display = sectie === 'incheiate' ? 'block' : 'none';
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        const anuleazaButoane = document.querySelectorAll('.anuleaza-rezervare');
+
+        anuleazaButoane.forEach(buton => {
+            buton.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevenim trimiterea formularului implicit
+                const rezervareId = this.dataset.rezervareId;
+
+                // Extragem CSRF token din cookie-uri
+                let csrftoken = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, 'csrftoken='.length) === 'csrftoken=') {
+                            csrftoken = decodeURIComponent(cookie.substring('csrftoken='.length));
+                            break;
+                        }
+                    }
+                }
+
+                if (!csrftoken) {
+                    console.error("CSRF token not found!");
+                    return;
+                }
+
+                fetch(`{% url 'anuleaza_rezervare' 0 %}`.replace('0', rezervareId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({}) // Trimitem un body gol, dar necesar pentru POST
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json(); // Parsează răspunsul JSON
+                    } else {
+                        throw new Error('Network response was not ok.');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`rezervare-${rezervareId}`).remove();
+                        alert('Rezervarea a fost anulată cu succes!');
+                    } else {
+                        alert('Eroare la anulare: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Eroare la anularea rezervării:', error);
+                    alert('A apărut o eroare la anularea rezervării. Verificați consola.');
+                });
+            });
+        });
+    });
 </script>
 {% endblock %}

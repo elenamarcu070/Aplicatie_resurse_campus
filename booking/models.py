@@ -130,8 +130,15 @@ class ProfilStudent(models.Model):
         if not self.utilizator.email:
             raise ValidationError({'utilizator': 'Emailul este obligatoriu!'})
 
+
+
+
     def save(self, *args, **kwargs):
-        self.clean()
+        # Asigură-te că email-ul este sincronizat cu modelul User
+        if self.utilizator:
+            self.email = self.utilizator.email
+            self.nume = self.utilizator.last_name
+            self.prenume = self.utilizator.first_name
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -167,6 +174,28 @@ class Rezervare(models.Model):
             data_rezervare__range=(start_sapt, end_sapt),
             anulata=False
         ).order_by('created_at')
+    
+    @staticmethod
+    def actualizeaza_prioritati(user, data_rezervare):
+        """
+        Actualizează nivelurile de prioritate pentru toate rezervările unui utilizator
+        din săptămâna specificată, în ordine cronologică
+        """
+        start_sapt = data_rezervare - timedelta(days=data_rezervare.weekday())
+        end_sapt = start_sapt + timedelta(days=6)
+        
+        # Ia toate rezervările active din săptămână, ordonate după dată și oră
+        rezervari = Rezervare.objects.filter(
+            utilizator=user,
+            data_rezervare__range=(start_sapt, end_sapt),
+            anulata=False
+        ).order_by('data_rezervare', 'ora_start')
+
+        # Actualizează nivelul de prioritate pentru fiecare rezervare
+        for index, rezervare in enumerate(rezervari, 1):
+            if rezervare.nivel_prioritate != index:
+                rezervare.nivel_prioritate = index
+                rezervare.save()
 
 
     class Meta:

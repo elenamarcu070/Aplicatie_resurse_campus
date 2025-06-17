@@ -1,0 +1,14 @@
+Collecting django-bootstrap-datepicker-plus
+  Using cached django_bootstrap_datepicker_plus-5.0.5-py3-none-any.whl.metadata (9.6 kB)
+Requirement already satisfied: Django<6,>=2 in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from django-bootstrap-datepicker-plus) (5.2.1)
+Requirement already satisfied: pydantic in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from django-bootstrap-datepicker-plus) (2.11.5)
+Requirement already satisfied: typing-extensions in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from django-bootstrap-datepicker-plus) (4.14.0)
+Requirement already satisfied: asgiref>=3.8.1 in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from Django<6,>=2->django-bootstrap-datepicker-plus) (3.8.1)
+Requirement already satisfied: sqlparse>=0.3.1 in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from Django<6,>=2->django-bootstrap-datepicker-plus) (0.5.3)
+Requirement already satisfied: tzdata in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from Django<6,>=2->django-bootstrap-datepicker-plus) (2025.2)
+Requirement already satisfied: annotated-types>=0.6.0 in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from pydantic->django-bootstrap-datepicker-plus) (0.7.0)
+Requirement already satisfied: pydantic-core==2.33.2 in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from pydantic->django-bootstrap-datepicker-plus) (2.33.2)
+Requirement already satisfied: typing-inspection>=0.4.0 in c:\users\operator 1\appdata\local\programs\python\python312\lib\site-packages (from pydantic->django-bootstrap-datepicker-plus) (0.4.1)
+Using cached django_bootstrap_datepicker_plus-5.0.5-py3-none-any.whl (13 kB)
+Installing collected packages: django-bootstrap-datepicker-plus
+Successfully installed django-bootstrap-datepicker-plus-5.0.5

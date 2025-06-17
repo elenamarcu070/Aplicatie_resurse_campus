@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',  # 👈 necesar pentru allauth
 
+
+
     # Allauth
     'allauth',
     'allauth.account',
@@ -48,12 +50,13 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
 
 
+
     # Aplicația ta
     'booking',
 
 ]
 
-SITE_ID = 1
+SITE_ID = 1  # 👈 necesar pentru allauth
 
 
 AUTHENTICATION_BACKENDS = [
@@ -69,13 +72,15 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_QUERY_EMAIL = True
+ACCOUNT_AUTHENTICATED_LOGIN_REDIRECTS = True
 
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 
 
-#SOCIALACCOUNT_ADAPTER = "allauth.socialaccount.adapter.DefaultSocialAccountAdapter"
+ACCOUNT_ADAPTER = 'booking.adapters.MyAccountAdapter'
+# SOCIALACCOUNT_ADAPTER = 'booking.adapters.MySocialAccountAdapter'
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -203,12 +208,13 @@ LOCALE_PATHS = [BASE_DIR / 'locale']
 
 TIME_ZONE = 'Europe/Bucharest'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'elenamarcu070@gmail.com'  # contul sistem
 EMAIL_HOST_PASSWORD = 'ohfy zzft gebi xpyz'  # parola pentru contul sistem
+
 DEFAULT_FROM_EMAIL = 'Spalatorie Camin T5 <elenamarcu070@gmail.com>'
 
 

@@ -1,25 +1,21 @@
 from booking.models import AdminCamin, ProfilStudent
 
-
 def rol_utilizator(request):
     user = request.user
-    rol = None
-    nume_camin = None
+    context = {}
 
     if user.is_authenticated:
-        # Verifică mai întâi dacă e admin
+        context['user'] = user
+
         admin_camin = AdminCamin.objects.filter(email=user.email).first()
         if admin_camin:
-            rol = 'admin_camin'
-            nume_camin = admin_camin.camin.nume
-        
-        # Verifică dacă e student
+            context['rol'] = 'admin_camin'
+            context['nume_camin'] = admin_camin.camin.nume
+            context['is_admin_camin'] = True  # Adaugă is_admin_camin în context
         elif user.email.endswith('@student.tuiasi.ro'):
-            # Caută direct după email
             student = ProfilStudent.objects.filter(utilizator__email=user.email).first()
             
             if not student:
-                # Dacă nu găsește după email, încearcă după nume și prenume
                 email_parts = user.email.split('@')[0].split('.')
                 if len(email_parts) >= 2:
                     nume_email = email_parts[-1].replace('-', ' ').title()
@@ -31,20 +27,18 @@ def rol_utilizator(request):
                     ).first()
 
             if student:
-                rol = 'student'
+                context['rol'] = 'student'
                 if student.camin:
-                    nume_camin = student.camin.nume
-                
-                # Actualizează email-ul studentului dacă e diferit
+                    context['nume_camin'] = student.camin.nume
+                context['is_admin_camin'] = False  # Adaugă is_admin_camin în context
                 if student.utilizator.email != user.email:
                     student.utilizator.email = user.email
                     student.utilizator.username = user.email
                     student.utilizator.save()
+        else:  # Adaugă și pentru alți utilizatori
+            context['is_admin_camin'] = False
 
-    return {
-        'rol': rol,
-        'nume_camin': nume_camin,
-    }
+    return context
 
 
 

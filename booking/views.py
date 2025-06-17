@@ -14,7 +14,6 @@ from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
 from django.utils.timezone import now
-
 from allauth.socialaccount import providers
 from allauth.socialaccount.providers.google.views import oauth2_login
 from allauth.socialaccount.models import SocialApp
@@ -22,6 +21,7 @@ from django.http import HttpRequest
 from django.contrib.sites.models import Site
 import pandas as pd
 from django.core.files.storage import default_storage
+from django.core.cache import cache
 
 
 
@@ -37,30 +37,11 @@ def home(request):
 # Callback după autentificare Google
 # =========================
 
-# Forțăm providerul să aleagă aplicația corectă din admin (după nume)
-
-# @login_required
-# def callback(request):
-#     user = request.user
-#     email = user.email.strip().lower()
-
-#     # Verificare dacă este admin de cămin
-#     admin = AdminCamin.objects.filter(email=email).first()
-#     if admin:
-#         return redirect('dashboard_admin_camin')
-
-#     # Dacă este student TUIASI sau cu email personal
-#     # Ne asigurăm că are profil student asociat
-#     profil, created = ProfilStudent.objects.get_or_create(utilizator=user)
-
-#     return redirect('dashboard_student')
-# VALID_EMAIL_DOMAINS = ['student.tuiasi.ro', 'academic.tuiasi.ro']
-
-# from django.contrib.auth import logout
 
 
 
 
+from allauth.socialaccount.models import SocialAccount
 
 @login_required
 def callback(request):
@@ -75,36 +56,46 @@ def callback(request):
         return redirect('dashboard_admin_camin')
 
     # Verifică dacă e student
-    if email.endswith('@student.tuiasi.ro'):
-        # Caută direct după email
-        student = ProfilStudent.objects.filter(utilizator__email=email).first()
-        
-        if not student:
-            # Dacă nu găsește după email, încearcă după nume și prenume
-            email_parts = email.split('@')[0].split('.')
-            if len(email_parts) >= 2:
-                nume_email = email_parts[-1].replace('-', ' ').title()
-                prenume_email = email_parts[0].replace('-', ' ').title()
-                
-                student = ProfilStudent.objects.filter(
-                    utilizator__last_name__iexact=nume_email,
-                    utilizator__first_name__iexact=prenume_email
-                ).first()
-
-        if student:
-            # Actualizează email-ul studentului dacă e diferit
-            if student.utilizator.email != email:
-                student.utilizator.email = email
-                student.utilizator.username = email
-                student.utilizator.save()
-
+    elif ProfilStudent.objects.filter(utilizator=user).exists():
+        request.session['rol'] = 'student'
+        return redirect('dashboard_student')
+    
+    # Verifică dacă există deja un cont cu acest email
+    elif User.objects.filter(email=email).exists():
+        # Conectează contul Google cu utilizatorul existent
+        try:
+            social_account = SocialAccount.objects.create(user=user, provider='google', uid=email)
+            print(f"Cont Google conectat cu utilizatorul existent: {user.username}")
             request.session['rol'] = 'student'
-            request.session['camin_id'] = student.camin.id if student.camin else None
+            return redirect('dashboard_student')
+        except Exception as e:
+            print(f"Eroare la conectarea contului Google: {e}")
+            return render(request, 'not_allowed.html', {'message': 'A apărut o eroare la conectarea contului Google. Contactați administratorul.'})
+
+    # Dacă nu e nici în baza de date, creează profilul studentului
+    elif email.endswith('@student.tuiasi.ro'):
+        # Extrage numele și prenumele din email
+        email_parts = email.split('@')[0].split('.')
+        if len(email_parts) >= 2:
+            nume_email = email_parts[-1].replace('-', ' ').title()
+            prenume_email = email_parts[0].replace('-', ' ').title()
+
+            # Creează profilul studentului
+            profil = ProfilStudent.objects.create(
+                utilizator=user,
+                camin=None,  # Setează căminul la None sau la o valoare implicită
+                email=email,
+                nume=nume_email,
+                prenume=prenume_email
+            )
+            request.session['rol'] = 'student'
             return redirect('dashboard_student')
 
+    # Dacă nu are acces, arată pagina de acces interzis
     return render(request, 'not_allowed.html', {
         'message': 'Nu aveți acces la această aplicație. Contactați administratorul.'
     })
+
 
 
 
@@ -169,6 +160,11 @@ def sterge_camin_view(request, camin_id):
     return redirect('dashboard_admin_camin')
 
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Camin, Masina, ProgramMasina, AdminCamin, ProfilStudent
+from django.contrib.auth.models import User
 
 
 @login_required
@@ -176,7 +172,6 @@ def detalii_camin_admin(request, camin_id):
     camin = get_object_or_404(Camin, id=camin_id)
 
     if request.method == 'POST':
-        # Adăugare admin
         if 'email_nou_admin' in request.POST:
             email_nou = request.POST.get('email_nou_admin').strip().lower()
             if email_nou:
@@ -187,39 +182,34 @@ def detalii_camin_admin(request, camin_id):
                     messages.warning(request, f"'{email_nou}' este deja admin la cămin.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Ștergere admin
-        if 'sterge_admin_id' in request.POST:
+        elif 'sterge_admin_id' in request.POST:
             admin_id = request.POST.get('sterge_admin_id')
             admin = get_object_or_404(AdminCamin, id=admin_id)
             admin.delete()
             messages.success(request, f"Adminul '{admin.email}' a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Adăugare mașină
-        if 'nume_masina' in request.POST:
+        elif 'nume_masina' in request.POST:
             nume = request.POST.get('nume_masina').strip()
             if nume:
                 Masina.objects.create(camin=camin, nume=nume, activa=True)
                 messages.success(request, f"Mașina '{nume}' a fost adăugată.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Ștergere mașină
-        if 'sterge_masina_id' in request.POST:
+        elif 'sterge_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['sterge_masina_id'])
             masina.delete()
             messages.success(request, f"Mașina '{masina.nume}' a fost ștearsă.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Toggle activare/dezactivare mașină
-        if 'toggle_masina_id' in request.POST:
+        elif 'toggle_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['toggle_masina_id'])
             masina.activa = not masina.activa
             masina.save()
             messages.success(request, f"Statusul mașinii '{masina.nume}' a fost modificat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Editare nume mașină
-        if 'edit_masina_id' in request.POST and 'nume_masina_nou' in request.POST:
+        elif 'edit_masina_id' in request.POST and 'nume_masina_nou' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['edit_masina_id'])
             nume_nou = request.POST.get('nume_masina_nou').strip()
             if nume_nou:
@@ -228,31 +218,27 @@ def detalii_camin_admin(request, camin_id):
                 messages.success(request, f"Numele mașinii a fost actualizat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Adăugare uscător
-        if 'nume_uscator' in request.POST:
+        elif 'nume_uscator' in request.POST:
             nume = request.POST.get('nume_uscator').strip()
             if nume:
                 Uscator.objects.create(camin=camin, nume=nume, activa=True)
                 messages.success(request, f"Uscătorul '{nume}' a fost adăugat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Ștergere uscător
-        if 'sterge_uscator_id' in request.POST:
+        elif 'sterge_uscator_id' in request.POST:
             uscator = get_object_or_404(Uscator, id=request.POST['sterge_uscator_id'])
             uscator.delete()
             messages.success(request, f"Uscătorul '{uscator.nume}' a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Toggle activare/dezactivare uscător
-        if 'toggle_uscator_id' in request.POST:
+        elif 'toggle_uscator_id' in request.POST:
             uscator = get_object_or_404(Uscator, id=request.POST['toggle_uscator_id'])
             uscator.activa = not uscator.activa
             uscator.save()
             messages.success(request, f"Statusul uscătorului '{uscator.nume}' a fost modificat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # Editare nume uscător
-        if 'edit_uscator_id' in request.POST and 'nume_uscator_nou' in request.POST:
+        elif 'edit_uscator_id' in request.POST and 'nume_uscator_nou' in request.POST:
             uscator = get_object_or_404(Uscator, id=request.POST['edit_uscator_id'])
             nume_nou = request.POST.get('nume_uscator_nou').strip()
             if nume_nou:
@@ -260,9 +246,9 @@ def detalii_camin_admin(request, camin_id):
                 uscator.save()
                 messages.success(request, f"Numele uscătorului a fost actualizat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
-        # Adaugă program mașină
-        if 'adauga_program_masina' in request.POST:
-            masina_id = request.POST.get('masina_id')
+
+        elif 'adauga_program_masina' in request.POST or 'program_masina_id' in request.POST:
+            masina_id = request.POST.get('program_masina_id')
             ora_start = request.POST.get('ora_start_masina')
             ora_end = request.POST.get('ora_end_masina')
             masina = get_object_or_404(Masina, id=masina_id)
@@ -270,9 +256,8 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, "Programul mașinii a fost adăugat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-# Adaugă program uscător
-        if 'adauga_program_uscator' in request.POST:
-            uscator_id = request.POST.get('uscator_id')
+        elif 'adauga_program_uscator' in request.POST or 'program_uscator_id' in request.POST:
+            uscator_id = request.POST.get('program_uscator_id')
             ora_start = request.POST.get('ora_start_uscator')
             ora_end = request.POST.get('ora_end_uscator')
             uscator = get_object_or_404(Uscator, id=uscator_id)
@@ -280,45 +265,20 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, "Programul uscătorului a fost adăugat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-# Șterge program mașină
-        if 'sterge_program_masina_id' in request.POST:
+        elif 'sterge_program_masina_id' in request.POST:
             program_id = request.POST.get('sterge_program_masina_id')
             program = get_object_or_404(ProgramMasina, id=program_id)
             program.delete()
             messages.success(request, "Programul mașinii a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-# Șterge program uscător
-        if 'sterge_program_uscator_id' in request.POST:
+        elif 'sterge_program_uscator_id' in request.POST:
             program_id = request.POST.get('sterge_program_uscator_id')
             program = get_object_or_404(ProgramUscator, id=program_id)
             program.delete()
             messages.success(request, "Programul uscătorului a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
-        
-        # Adaugă program pentru mașină
-        if 'program_masina_id' in request.POST:
-            masina_id = request.POST.get('program_masina_id')
-            ora_start = request.POST.get('ora_start_masina')
-            ora_end = request.POST.get('ora_end_masina')
 
-            masina = get_object_or_404(Masina, id=masina_id)
-            ProgramMasina.objects.create(masina=masina, ora_start=ora_start, ora_end=ora_end)
-            messages.success(request, "Programul pentru mașină a fost adăugat.")
-            return redirect('detalii_camin_admin', camin_id=camin_id)
-        # Adaugă program pentru uscător
-        if 'program_uscator_id' in request.POST:
-            uscator_id = request.POST.get('program_uscator_id')
-            ora_start = request.POST.get('ora_start_uscator')
-            ora_end = request.POST.get('ora_end_uscator')
-            uscator = get_object_or_404(Uscator, id=uscator_id)
-            ProgramUscator.objects.create(uscator=uscator, ora_start=ora_start, ora_end=ora_end)
-            messages.success(request, "Programul pentru uscător a fost adăugat.")
-            return redirect('detalii_camin_admin', camin_id=camin_id)
-
-
-
-    # Preluare date pentru afișare
     admini = AdminCamin.objects.filter(camin=camin)
     masini = Masina.objects.filter(camin=camin)
     uscatoare = Uscator.objects.filter(camin=camin)
@@ -333,6 +293,7 @@ def detalii_camin_admin(request, camin_id):
         'programe_masini': programe_masini,
         'programe_uscatoare': programe_uscatoare,
     })
+
 
 
 # =========================
@@ -455,7 +416,6 @@ from django.core.mail import send_mail
 
 
 
-
 @login_required
 def creeaza_rezervare(request):
     if request.method == 'POST':
@@ -508,7 +468,15 @@ def creeaza_rezervare(request):
                 return redirect('calendar_rezervari')
 
             # Verificăm rezervările din săptămâna rezervării
-            rezervari_sapt = Rezervare.get_rezervari_saptamana(user, data_rezervare)
+            start_sapt = data_rezervare - timedelta(days=data_rezervare.weekday())
+            end_sapt = start_sapt + timedelta(days=6)
+            
+            rezervari_sapt = Rezervare.objects.filter(
+                utilizator=user,
+                data_rezervare__range=(start_sapt, end_sapt),
+                anulata=False
+            ).order_by('data_rezervare', 'ora_start')
+            
             nr_rezervari = rezervari_sapt.count()
 
             # Pentru săptămâna curentă
@@ -516,14 +484,11 @@ def creeaza_rezervare(request):
                 if nr_rezervari >= 4:
                     messages.error(request, "Ai atins numărul maxim de rezervări pentru această săptămână.")
                     return redirect('calendar_rezervari')
-                nivel_prioritate = nr_rezervari + 1
             else:
                 # Pentru săptămânile viitoare - doar o rezervare permisă
-                rezervari_existente_saptamana = rezervari_sapt.filter(anulata=False).count()
-                if rezervari_existente_saptamana >= 1:
+                if nr_rezervari >= 1:
                     messages.error(request, "Poți face doar o rezervare pe săptămână pentru săptămânile viitoare.")
                     return redirect('calendar_rezervari')
-                nivel_prioritate = 1
 
             # Verificăm rezervările existente în intervalul dorit
             rezervari_existente = Rezervare.objects.filter(
@@ -536,11 +501,13 @@ def creeaza_rezervare(request):
 
             # Verificăm dacă putem prelua rezervarea existentă
             for rez in rezervari_existente:
-                rezervari_alt_user = Rezervare.get_rezervari_saptamana(rez.utilizator, data_rezervare)
-                rezervari_user_curent = Rezervare.get_rezervari_saptamana(user, data_rezervare)
-                
-                # Dacă utilizatorul curent are mai puține rezervări, poate prelua rezervarea
-                if len(rezervari_user_curent) < len(rezervari_alt_user):
+                rezervari_alt_user = Rezervare.objects.filter(
+                    utilizator=rez.utilizator,
+                    data_rezervare__range=(start_sapt, end_sapt),
+                    anulata=False
+                ).order_by('data_rezervare', 'ora_start')
+
+                if len(rezervari_sapt) < len(rezervari_alt_user):
                     # Anulăm rezervarea existentă
                     rez.anulata = True
                     rez.save()
@@ -571,7 +538,7 @@ def creeaza_rezervare(request):
                         print(f"Eroare la trimiterea emailului: {str(e)}")
                     break
 
-                elif rez.nivel_prioritate <= nivel_prioritate:
+                elif rez.nivel_prioritate <= nr_rezervari + 1:
                     messages.error(request, "Nu poți prelua această rezervare deoarece are prioritate mai mare sau egală.")
                     return redirect('calendar_rezervari')
                 else:
@@ -591,7 +558,7 @@ def creeaza_rezervare(request):
                         Te rugăm să faci o nouă rezervare pentru alt interval disponibil.
 
                         Cu stimă,
-                        Sistemul de rezervări - Spălătorie Campus Tudor Vladimirescu
+                        Sistemul de rezervări - Spălătorie T5
                         '''
                         
                         send_mail(
@@ -606,14 +573,25 @@ def creeaza_rezervare(request):
                     break
 
             # Creăm rezervarea nouă
-            Rezervare.objects.create(
+            rezervare = Rezervare.objects.create(
                 utilizator=user,
                 masina=masina,
                 data_rezervare=data_rezervare,
                 ora_start=ora_start,
                 ora_end=ora_end,
-                nivel_prioritate=nivel_prioritate
+                nivel_prioritate=1  # temporar
             )
+
+            # Actualizăm prioritățile pentru toate rezervările din săptămână
+            rezervari_actualizare = Rezervare.objects.filter(
+                utilizator=user,
+                data_rezervare__range=(start_sapt, end_sapt),
+                anulata=False
+            ).order_by('data_rezervare', 'ora_start')
+
+            for index, rez in enumerate(rezervari_actualizare, 1):
+                rez.nivel_prioritate = index
+                rez.save()
 
             messages.success(request, "Rezervare creată cu succes!")
             return redirect('calendar_rezervari')
@@ -655,8 +633,12 @@ def anuleaza_rezervare(request, rezervare_id):
     rezervare.anulata = True
     rezervare.save()
 
+    # Actualizăm prioritățile pentru rezervările rămase
+    Rezervare.actualizeaza_prioritati(request.user, rezervare.data_rezervare)
+
     messages.success(request, "Rezervarea a fost anulată.")
     return redirect('calendar_rezervari')
+
 
 
 def adauga_avertisment_din_calendar(request):
@@ -725,7 +707,7 @@ def incarca_studenti_view(request):
                 messages.error(request, "Fișierul trebuie să fie în format Excel (.xlsx sau .xls).")
                 return redirect('incarca_studenti')
 
-            # Încarcă datele din Excel
+            # Încărcă datele din Excel
             df = pd.read_excel(default_storage.path(path))
             
             # Verificări preliminare
@@ -736,11 +718,11 @@ def incarca_studenti_view(request):
             required_cols = ['email', 'nume', 'prenume', 'camin', 'camera']
             
             if not all(col in df.columns for col in required_cols):
-                raise ValueError("Fișierul trebuie să conțină coloanele: email, nume, prenume, camin, camera")
+                raise ValueError("Fișierul trebuie să conțină coloanele: email, nume, prenume, camin, camera.")
 
             # Folosește o tranzacție pentru toate operațiunile pe baza de date
             with transaction.atomic():
-                # Șterge studenții existenți (exceptând userul curent)
+                # Șterge studenții existenți (exceptând userul logat)
                 ProfilStudent.objects.exclude(utilizator=request.user).delete()
                 User.objects.exclude(id=request.user.id).filter(is_superuser=False).delete()
 
@@ -752,23 +734,28 @@ def incarca_studenti_view(request):
                     camin_nume = str(row['camin']).strip().upper()
                     camera = str(row['camera']).strip()
 
-                    # Creează sau actualizează înregistrările
+                    # Creează sau actualizează căminul
                     camin, _ = Camin.objects.get_or_create(nume=camin_nume)
                     
-                    user, _ = User.objects.get_or_create(
+                    # Actualizează sau creează utilizatorul
+                    user, created = User.objects.update_or_create(
                         username=email,
                         defaults={
                             'email': email,
                             'first_name': prenume,
-                            'last_name': nume
+                            'last_name': nume,
                         }
                     )
 
+                    # Actualizează sau creează profilul studentului
                     profil, _ = ProfilStudent.objects.update_or_create(
                         utilizator=user,
                         defaults={
                             'camin': camin,
-                            'numar_camera': camera
+                            'numar_camera': camera,
+                            'email': email,  # Asigură-te că salvezi email-ul și în ProfilStudent
+                            'nume': nume,    # Asigură-te că salvezi numele și prenumele
+                            'prenume': prenume
                         }
                     )
 
@@ -785,7 +772,7 @@ def incarca_studenti_view(request):
             messages.success(request, "Lista de studenți a fost importată cu succes.")
 
         except Exception as e:
-            messages.error(request, f"Eroare la procesare: {str(e)}")
+            messages.error(request, f"Eroare la procesare: {e}")
             if 'path' in locals():
                 default_storage.delete(path)
 
@@ -798,6 +785,7 @@ def incarca_studenti_view(request):
         'studenti': studenti,
         'camine': camine,  # Adaugă această linie
     })
+
 
 @login_required
 def adauga_student_view(request):
@@ -816,6 +804,7 @@ def adauga_student_view(request):
         nume = request.POST.get('nume', '').strip().title()
         prenume = request.POST.get('prenume', '').strip().title()
         camera = request.POST.get('camera', '').strip()
+        
 
         try:
             # Create or get user first
@@ -832,8 +821,11 @@ def adauga_student_view(request):
             profil, _ = ProfilStudent.objects.update_or_create(
                 utilizator=user,
                 defaults={
+                    'email': email,
                     'camin': camin,
-                    'numar_camera': camera
+                    'numar_camera': camera,
+                    'nume': nume,    # Asigură-te că salvezi numele și prenumele
+                    'prenume': prenume
                 }
             )
             
