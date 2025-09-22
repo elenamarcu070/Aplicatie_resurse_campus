@@ -20,6 +20,27 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
             text-align: center;
         }
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-weight: 500;
+            color: #444;
+            text-decoration: none;
+            transition: background 0.2s ease;
+        }
+        .google-btn:hover {
+            background-color: #f5f5f5;
+        }
+        .google-icon {
+            height: 20px;
+            width: 20px;
+        }
     </style>
 </head>
 <body class="d-flex justify-content-center align-items-center">
@@ -27,11 +48,10 @@
         <h2 class="mt-3">Bine ai venit!</h2>
         <p>Conectează-te pentru a accesa sistemul de rezervări.</p>
 
-        <a href="{% provider_login_url 'google' process='login' %}&prompt=select_account&max_auth_age=0" class="btn btn-light">
-            Conectează-te cu contul TUIASI
+        <a href="{% provider_login_url 'google' process='login' %}&prompt=select_account&max_auth_age=0" class="google-btn">
+            <img src="{% static 'images/google-icon.png' %}" alt="Google" class="google-icon">
+            <span>Conectează-te cu Google</span>
         </a>
-
-
     </div>
 </body>
 </html>

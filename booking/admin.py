@@ -12,14 +12,11 @@ class MasinaAdmin(admin.ModelAdmin):
     search_fields = ('nume', 'camin__nume')
     list_filter = ('camin', 'activa')
 
-
-
 @admin.register(ProgramMasina)   
 class ProgramMasinaAdmin(admin.ModelAdmin):
     list_display = ('masina', 'ora_start', 'ora_end')
     search_fields = ('masina__nume',)
     list_filter = ('masina',)
-
 
 @admin.register(Camin)
 class CaminAdmin(admin.ModelAdmin):

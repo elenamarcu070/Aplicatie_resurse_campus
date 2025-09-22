@@ -5,7 +5,8 @@
 {% block content %}
 <div class="container mt-4">
     <div class="content-box p-4 bg-white rounded shadow">
-        <h2 class="mb-4">Bine ai venit, {{ request.user.first_name }}!</h2>
+        <h2 class="mb-4">Bine ai venit, {{ request.user.first_name|default:request.user.email }}!</h2>
+
         <p class="text-muted mb-4">Email: {{ request.user.email }}</p>
 
         <div class="card mb-4">

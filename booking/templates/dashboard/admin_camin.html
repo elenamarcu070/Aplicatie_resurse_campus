@@ -2,39 +2,177 @@
 {% load static %}
 
 {% block content %}
-<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="p-4 rounded-4 shadow-lg" style="background-color: rgba(255, 255, 255, 0.9); max-width: 800px; width: 100%;">
+<div class="container mt-4">
+    <div class="content-box fade-in">
+        <h1 class="text-center mb-4">Administrare Cămin</h1>
 
-        <h1 class="text-center mb-4" style="font-weight: bold; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
-            Administrare Cămine
-        </h1>
+        <p>Bine ai venit în panoul de administrare al căminului! Aici poți gestiona resursele și utilizatorii căminului tău.</p>
 
-        <!-- Buton de adăugare -->
-        <div class="text-center mb-4">
-            <a href="{% url 'adauga_camin' %}" class="btn btn-success rounded-pill px-4 py-2">Adaugă Cămin</a>
-        </div>
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Funcționalități disponibile</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-washing-machine me-2"></i>
+                                <a href="{% url 'administrare_camin'  %}" class="text-decoration-none disabled">Gestionare mașini</a>
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-building me-2"></i>
+                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none">Gestionare cămine</a>
+                            </li>
+                            
+                            <li class="list-group-item">
+                                <i class="fas fa-users-cog me-2"></i>
+                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare administratori</a>
+                            </li>
 
-        <div class="row justify-content-center g-4">
-            {% for camin in camine %}
-            <div class="col-12 col-sm-6 col-md-4 d-flex justify-content-center">
-                <div class="card shadow-sm rounded-4" style="width: 14rem;">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ camin.nume }}</h5>
-                        <div class="d-flex justify-content-center gap-2 mt-3">
-                            <a href="{% url 'detalii_camin_admin' camin.id %}" class="btn btn-primary btn-sm rounded-pill px-3">Detalii</a>
-                            <form method="post" action="{% url 'sterge_camin' camin.id %}" onsubmit="return confirm('Ești sigur că vrei să ștergi acest cămin?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">Șterge</button>
-                            </form>
-                        </div>
+                            
+                            <li class="list-group-item">
+                                <i class="fas fa-clock me-2"></i>
+                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare program</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                <a href="{% url 'calendar_rezervari_admin' %}" class="text-decoration-none disabled">Calendar rezervări</a>
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-user-graduate me-2"></i>
+                                <a href="{% url 'incarca_studenti' %}" class="text-decoration-none">Importă Studenți</a>
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <a href="{% url 'calendar_rezervari_admin' %}" class="text-decoration-none disabled">Avertismente</a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
-            {% empty %}
-            <p class="text-center">Nu există cămine adăugate.</p>
-            {% endfor %}
         </div>
 
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Cum funcționează sistemul de rezervări?</h4>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">Reguli generale:</h5>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item">
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        Poți face rezervări pentru ziua curentă și ziua următoare în săptămâna curentă
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                        Pentru săptămânile viitoare, poți face o singură rezervare pe săptămână
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                        Poți face rezervări cu până la 4 săptămâni în avans
+                    </li>
+                </ul>
+
+                <h5 class="mb-3">Niveluri de prioritate:</h5>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-danger mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-danger me-2">1</span>
+                                Prima rezervare - nu poate fi preluată de alți studenți
+                            </div>
+                        </div>
+                        <div class="card border-secondary mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-secondary me-2">2</span>
+                                A doua rezervare - poate fi preluată
+                            </div>
+                        </div>
+                        <div class="card border-primary mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-primary me-2">3</span>
+                                A treia rezervare - poate fi preluată
+                            </div>
+                        </div>
+                        <div class="card border mb-2">
+                            <div class="card-body py-2">
+                                <span class="badge bg-brown me-2">4</span>
+                                A patra rezervare - poate fi preluată
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mb-3">Sistem de preluare rezervări:</h5>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item">
+                        <i class="fas fa-exchange-alt text-success me-2"></i>
+                        Poți prelua rezervările altor studenți dacă ai mai puține rezervări decât ei
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-shield-alt text-danger me-2"></i>
+                        Prima rezervare (roșie) nu poate fi preluată de nimeni
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-bell text-warning me-2"></i>
+                        Vei primi notificări prin email când rezervările tale sunt preluate
+                    </li>
+                </ul>
+
+                <h5 class="mb-3">Avertismente:</h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Dacă nu folosești o rezervare și nu o anulezi, poți primi un avertisment
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-ban text-danger me-2"></i>
+                        Trei avertismente duc la blocarea temporară a contului pentru o săptămână
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-undo text-success me-2"></i>
+                        Poți anula o rezervare oricând înainte de intervalul rezervat
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Pentru a face o rezervare, accesează secțiunea "Calendar" din meniul principal.
+        </div>
+
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Pentru a începe, alege o acțiune din lista de mai sus.
+        </div>
     </div>
 </div>
+
+<style>
+    .bg-brown {
+        background-color: #D2B48C !important;
+        color: white !important;
+    }
+    .border-brown {
+        border-color: #D2B48C !important;
+    }
+    .list-group-item i {
+        width: 20px;
+        text-align: center;
+    }
+    .list-group-item a {
+        color: #007bff; /* Culoarea link-urilor */
+        text-decoration: none; /* Elimină sublinierea implicită */
+    }
+
+    .list-group-item a:hover {
+        text-decoration: underline; /* Subliniază la hover */
+    }
+</style>
 {% endblock %}
