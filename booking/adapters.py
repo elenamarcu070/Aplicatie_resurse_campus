@@ -1,3 +1,57 @@
+# booking/adapters.py
+from allauth.account.adapter import DefaultAccountAdapter
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.exceptions import ImmediateHttpResponse
+from django.http import HttpResponseForbidden
+from django.contrib.auth import get_user_model
+
+# Modelele tale custom (student + admin)
+try:
+    from booking.models import ProfilStudent, AdminCamin
+except Exception:
+    ProfilStudent = None
+    AdminCamin = None
+
+
+# ===============================
+# Helper: verifică dacă email-ul e în baza de date
+# ===============================
+def email_is_allowed(email: str) -> bool:
+    e = (email or "").strip().lower()
+    if not e:
+        return False
+
+    User = get_user_model()
+
+    in_user = User.objects.filter(email__iexact=e).exists()
+    in_student = bool(ProfilStudent and ProfilStudent.objects.filter(email__iexact=e).exists())
+    in_admin = bool(AdminCamin and AdminCamin.objects.filter(email__iexact=e).exists())
+
+    return in_user or in_student or in_admin
+
+
+# ===============================
+# Adaptor pentru login clasic (email/parolă)
+# ===============================
+class MyAccountAdapter(DefaultAccountAdapter):
+    def is_open_for_signup(self, request):
+        """Blochează sign-up liber. Permite doar dacă email-ul e în DB."""
+        email = (request.POST.get("email") or "").strip()
+        return email_is_allowed(email)
+
+    def clean_email(self, email):
+        """Validează că email-ul e în whitelist înainte de creare cont."""
+        email = super().clean_email(email)
+        if not email_is_allowed(email):
+            from django.core.exceptions import ValidationError
+            from django.utils.translation import gettext_lazy as _
+            raise ValidationError(_("Emailul nu este în baza de date. Contactează administratorul."))
+        return email
+
+
+# ===============================
+# Adaptor pentru login cu Google
+# ===============================
 class MySocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_open_for_signup(self, request, sociallogin):
         """Permite login doar dacă emailul există în baza de date."""
