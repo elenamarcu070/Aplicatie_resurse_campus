@@ -24,6 +24,10 @@ from booking.models import (
 # =========================
 # Decoratori pentru roluri
 # =========================
+
+
+
+
 def only_students(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
@@ -59,35 +63,30 @@ def home(request):
 @login_required
 def callback(request):
     user = request.user
-    email = user.email
+    email = user.email.lower()
 
     # Admin de cămin
     if AdminCamin.objects.filter(email=email).exists():
         return redirect('dashboard_admin_camin')
 
-    # Student
+    # Student existent
     if ProfilStudent.objects.filter(utilizator=user).exists():
         return redirect('dashboard_student')
 
-    # Creează profil student dacă e cont instituțional
-    if email.endswith('@student.tuiasi.ro'):
-        email_parts = email.split('@')[0].split('.')
-        if len(email_parts) >= 2:
-            nume_email = email_parts[-1].replace('-', ' ').title()
-            prenume_email = email_parts[0].replace('-', ' ').title()
-            ProfilStudent.objects.create(
-                utilizator=user,
-                camin=None,
-                email=email,
-                nume=nume_email,
-                prenume=prenume_email
-            )
-            return redirect('dashboard_student')
+    # Dacă nu are profil încă → creează unul de bază
+    email_parts = email.split('@')[0].split('.')
+    nume_email = email_parts[-1].replace('-', ' ').title() if len(email_parts) >= 2 else ""
+    prenume_email = email_parts[0].replace('-', ' ').title() if len(email_parts) >= 1 else ""
 
-    # Dacă nu e autorizat
-    return render(request, 'not_allowed.html', {
-        'message': 'Nu aveți acces la această aplicație. Contactați administratorul.'
-    })
+    ProfilStudent.objects.create(
+        utilizator=user,
+        camin=None,
+        email=email,
+        nume=nume_email,
+        prenume=prenume_email
+    )
+    return redirect('dashboard_student')
+
 
 
 
@@ -96,13 +95,7 @@ def callback(request):
 # =========================
 def custom_logout(request):
     logout(request)
-    site_domain = request.build_absolute_uri('/')  # dinamic, nu hardcodat
-    google_logout = (
-        "https://accounts.google.com/Logout"
-        "?continue=https://appengine.google.com/_ah/logout"
-        f"?continue={site_domain}"
-    )
-    return redirect(google_logout)
+    return redirect('account_login')
 
 
 # =========================

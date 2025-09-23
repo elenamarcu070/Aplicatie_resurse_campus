@@ -9,6 +9,7 @@ urlpatterns = [
     # Autentificare și înregistrare
     path('', views.home, name='home'),
     path('callback/', views.callback, name='callback'),
+
     # Dashboard Student
     path('dashboard/student/', views.dashboard_student, name='dashboard_student'),
     # Dashboard Admin Cămin

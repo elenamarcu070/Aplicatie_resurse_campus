@@ -113,7 +113,7 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
 
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/after-login/"
 LOGOUT_REDIRECT_URL = "/"
 
 # Nu mai cere signup separat, creează user-ul direct
