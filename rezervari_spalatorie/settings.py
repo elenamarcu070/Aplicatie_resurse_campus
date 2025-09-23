@@ -115,6 +115,13 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
+# Nu mai cere signup separat, creează user-ul direct
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Folosește doar emailul, fără username
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_UNIQUE_EMAIL = True
+SOCIALACCOUNT_ADAPTER = "booking.adapters.MySocialAccountAdapter"
 # --------------------
 # STATIC & MEDIA
 # --------------------
