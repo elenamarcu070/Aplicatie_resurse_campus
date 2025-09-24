@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.yahoo",
 
     # aplicațiile tale
     "booking",  # modifică aici cu numele app-ului tău
@@ -102,6 +103,17 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    "yahoo": {
+        "APP": {
+            "client_id": os.getenv("YAHOO_CLIENT_ID"),
+            "secret": os.getenv("YAHOO_SECRET"),
+            "key": ""
+        }
+    }
+}
 
 #ACCOUNT_LOGIN_METHODS = {"email"}
 #ACCOUNT_SIGNUP_FIELDS = ["email*"]  # doar email
