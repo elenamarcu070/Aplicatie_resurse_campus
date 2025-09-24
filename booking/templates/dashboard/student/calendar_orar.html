@@ -292,24 +292,37 @@
                                                     data-bs-placement="top"
                                                     title="{% if este_admin_camin or zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}">
 
-
                                                     <div class="d-flex align-items-center w-100">
-                                                      <span class="flex-grow-1">{{ ora }}:00 - {{ ora_sfarsit }}:00</span>
-                                                      {% if not zi < today and rezervare.nivel_prioritate != 1 %}
-                                                          {% if este_admin_camin or este_student %}
-                                                              <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin: 0;">
-                                                                  {% csrf_token %}
-                                                                  <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                                  <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                                  <input type="hidden" name="ora_start" value="{{ ora }}:00">
-                                                                  <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                                  <button type="submit" class="btn-icon" title="Preia rezervarea">
-                                                                      <i class="fas fa-exchange-alt"></i>
-                                                                  </button>
-                                                              </form>
-                                                          {% endif %}
-                                                      {% endif %}
-                                                  </div>
+                                                        <span class="flex-grow-1">{{ ora }}:00 - {{ ora_sfarsit }}:00</span>
+
+                                                        {# Buton pentru avertisment (doar admin + rezervări trecute) #}
+                                                        {% if este_admin_camin and zi < today %}
+                                                            <button type="button" 
+                                                                    class="btn-icon text-warning" 
+                                                                    data-bs-toggle="modal" 
+                                                                    data-bs-target="#confirmModal" 
+                                                                    data-rezervare-id="{{ rezervare.id }}"
+                                                                    title="Trimite avertisment">
+                                                                <i class="fas fa-exclamation-triangle"></i>
+                                                            </button>
+                                                        {% endif %}
+
+                                                        {# Buton de preluare rezervare (doar viitor și != prioritatea 1) #}
+                                                        {% if not zi < today and rezervare.nivel_prioritate != 1 %}
+                                                            {% if este_admin_camin or este_student %}
+                                                                <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin: 0;">
+                                                                    {% csrf_token %}
+                                                                    <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                                                                    <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                                                                    <input type="hidden" name="ora_start" value="{{ ora }}:00">
+                                                                    <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                                                                    <button type="submit" class="btn-icon" title="Preia rezervarea">
+                                                                        <i class="fas fa-exchange-alt"></i>
+                                                                    </button>
+                                                                </form>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             </div>
                                         {% else %}
@@ -346,6 +359,8 @@
     </div>
 </div>
 
+
+<!-- Modal pentru Confirmarea Avertismentului -->
 <!-- Modal pentru Confirmarea Avertismentului -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -358,7 +373,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
                 </div>
                 <div class="modal-body">
-                    Ești sigur(ă) că vrei să trimiți un avertisment pentru această rezervare?
+                    Ești sigur(ă) că vrei să trimiți un avertisment pentru 
+                    <strong id="studentName"></strong> 
+                    (rezervare: <span id="rezervareInfo"></span>)?
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Renunță</button>
@@ -405,10 +422,16 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget
             var rezervareId = button.getAttribute('data-rezervare-id')
-            var input = document.getElementById('rezervareIdInput')
-            input.value = rezervareId
+            var nume = button.getAttribute('data-nume')
+            var data = button.getAttribute('data-data')
+            var interval = button.getAttribute('data-interval')
+            
+            document.getElementById('rezervareIdInput').value = rezervareId
+            document.getElementById('studentName').textContent = nume
+            document.getElementById('rezervareInfo').textContent = data + " " + interval
         })
     }
+
 
     // Auto-dismiss pentru toasts
     var toastElList = [].slice.call(document.querySelectorAll('.toast'))

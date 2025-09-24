@@ -597,22 +597,83 @@ def anuleaza_rezervare(request, rezervare_id):
 # =========================
 # Avertisment pentru rezervări neutilizate
 # =========================
+from django.utils import timezone
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.conf import settings
+from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
+
 @login_required
 @only_admins
 def adauga_avertisment_din_calendar(request):
-    if request.method == 'POST' and request.user.is_authenticated:
-        rezervare_id = request.POST.get('rezervare_id')
-        try:
-            rezervare = Rezervare.objects.get(id=rezervare_id)
-            # Verificăm dacă avertismentul nu a fost deja dat pentru această rezervare
-            exista = Avertisment.objects.filter(utilizator=rezervare.utilizator, data=date.today()).exists()
-            if not exista:
-                Avertisment.objects.create(utilizator=rezervare.utilizator, motiv="Comportament necorespunzător (rezervare neutilizată)")
-                messages.success(request, "Avertisment trimis cu succes.")
-            else:
-                messages.warning(request, "Ai trimis deja un avertisment astăzi.")
-        except Rezervare.DoesNotExist:
-            messages.error(request, "Rezervarea nu a fost găsită.")
+    if request.method != 'POST':
+        return redirect('calendar_rezervari')
+
+    rezervare_id = request.POST.get('rezervare_id')
+    rezervare = get_object_or_404(Rezervare, id=rezervare_id)
+    utilizator = rezervare.utilizator
+
+    # 1) Asigură-te că adminul aparține aceluiași cămin cu mașina rezervată
+    admin = AdminCamin.objects.filter(email=request.user.email).first()
+    if not admin or rezervare.masina.camin_id != admin.camin_id:
+        messages.error(request, "Nu poți trimite avertismente pentru alt cămin.")
+        return redirect('calendar_rezervari')
+
+    azi = timezone.localdate()  # 2) timezone-safe
+
+    # 3) Evită dublura pentru aceeași rezervare în aceeași zi
+    exista = Avertisment.objects.filter(
+        utilizator=utilizator,
+        data=azi,
+        # dacă modelul Avertisment NU are FK la rezervare, scoate linia următoare
+        # rezervare=rezervare
+    ).exists()
+
+    if exista:
+        messages.warning(request, "Ai trimis deja un avertisment acestui utilizator astăzi.")
+        return redirect('calendar_rezervari')
+
+    # 4) Creează avertismentul
+    Avertisment.objects.create(
+        utilizator=utilizator,
+        motiv="Rezervare neutilizată",
+        # dacă ai câmp 'rezervare' în model, setează-l aici:
+        # rezervare=rezervare,
+        # dacă ai câmp 'data', seteaz-o explicit:
+        # data=azi
+    )
+
+    # 5) Trimite email (text + HTML simplu)
+    data_str = rezervare.data_rezervare.strftime("%d %b %Y")
+    interval_str = f"{rezervare.ora_start.strftime('%H:%M')} - {rezervare.ora_end.strftime('%H:%M')}"
+    subject = "Avertisment pentru rezervare neutilizată"
+    text_body = (
+        f"Bună {utilizator.get_full_name() or utilizator.username},\n\n"
+        f"Ai primit un avertisment pentru rezervarea din {data_str}, interval {interval_str}, "
+        f"la mașina '{rezervare.masina.nume}'.\n\n"
+        f"Dacă acumulezi mai multe avertismente într-o săptămână, contul tău poate fi blocat temporar."
+    )
+    html_body = (
+        f"<p>Bună <strong>{utilizator.get_full_name() or utilizator.username}</strong>,</p>"
+        f"<p>Ai primit un avertisment pentru rezervarea din <strong>{data_str}</strong>, "
+        f"interval <strong>{interval_str}</strong>, la mașina <strong>{rezervare.masina.nume}</strong>.</p>"
+        f"<p>Dacă acumulezi mai multe avertismente într-o săptămână, contul tău poate fi blocat temporar.</p>"
+    )
+
+    try:
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            to=[utilizator.email],
+        )
+        email.attach_alternative(html_body, "text/html")
+        email.send(fail_silently=False)
+        messages.success(request, "Avertisment trimis cu succes și notificare prin email.")
+    except Exception as e:
+        # Dacă emailul pică, avertismentul tot rămâne creat
+        messages.warning(request, f"Avertisment creat, dar emailul nu a putut fi trimis: {e}")
+
     return redirect('calendar_rezervari')
 
 
