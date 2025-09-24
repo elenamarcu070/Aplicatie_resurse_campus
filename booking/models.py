@@ -91,6 +91,10 @@ class ProfilStudent(models.Model):
 
     def __str__(self):
         return self.utilizator.email
+    
+    def este_blocat(self):
+        return self.suspendat_pana_la and self.suspendat_pana_la >= date.today()
+
 
 
 # ------------------------------------------
@@ -156,15 +160,3 @@ class Avertisment(models.Model):
     def __str__(self):
         return f"Avertisment pentru {self.utilizator.email} - {self.data}"
 
-@staticmethod
-def este_blocat(utilizator):
-    try:
-        profil = ProfilStudent.objects.get(utilizator=utilizator)
-    except ProfilStudent.DoesNotExist:
-        return False
-    
-    # Dacă are suspendare activă
-    if profil.suspendat_pana_la and profil.suspendat_pana_la >= date.today():
-        return True
-    
-    return False

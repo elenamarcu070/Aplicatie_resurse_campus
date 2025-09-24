@@ -368,7 +368,8 @@ def calendar_rezervari_view(request):
         ).exists()
         rezervari_dict[r.masina.id][r.data_rezervare][start_hour] = r
 
-    este_blocat = Avertisment.este_blocat(user)
+    profil = ProfilStudent.objects.filter(utilizator=user).first()
+    este_blocat = profil.este_blocat() if profil else False
 
     context = {
         'masini': masini,
