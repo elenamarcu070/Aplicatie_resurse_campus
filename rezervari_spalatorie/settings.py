@@ -105,22 +105,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
-SOCIALACCOUNT_PROVIDERS = {
-    "yahoo": {
-        "APP": {
-            "client_id": os.getenv("YAHOO_CLIENT_ID"),
-            "secret": os.getenv("YAHOO_SECRET"),
-            "key": ""
-        }
-    },
-    "google": {
-        "APP": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "secret": os.getenv("GOOGLE_SECRET"),
-            "key": ""
-        }
-    }
-}
+
 
 #ACCOUNT_LOGIN_METHODS = {"email"}
 #ACCOUNT_SIGNUP_FIELDS = ["email*"]  # doar email
