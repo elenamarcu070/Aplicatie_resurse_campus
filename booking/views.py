@@ -559,19 +559,16 @@ def programari_student_view(request):
 # =========================
 # Anularea rezervării
 # =========================
+
 @login_required
 def anuleaza_rezervare(request, rezervare_id):
     user = request.user
 
-    if not (AdminCamin.objects.filter(email=user.email).exists() or 
-            ProfilStudent.objects.filter(utilizator=user).exists()):
-        return render(request, 'not_allowed.html', {
-            'message': 'Acces permis doar studenților sau administratorilor.'
-        })
-
     rezervare = get_object_or_404(Rezervare, id=rezervare_id, utilizator=user)
 
     if rezervare.data_rezervare < date.today():
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": "Nu poți anula o rezervare trecută."})
         messages.error(request, "Nu poți anula o rezervare trecută.")
         return redirect('calendar_rezervari')
 
@@ -579,9 +576,11 @@ def anuleaza_rezervare(request, rezervare_id):
     rezervare.save()
     Rezervare.actualizeaza_prioritati(user, rezervare.data_rezervare)
 
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"success": True})
+    
     messages.success(request, "Rezervarea a fost anulată.")
     return redirect('calendar_rezervari')
-
     
 
  
