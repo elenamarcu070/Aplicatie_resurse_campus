@@ -156,12 +156,15 @@ class Avertisment(models.Model):
     def __str__(self):
         return f"Avertisment pentru {self.utilizator.email} - {self.data}"
 
-    @staticmethod
-    def este_blocat(utilizator):
-        avertismente_recente = Avertisment.objects.filter(
-            utilizator=utilizator,
-            data__gte=date.today() - timedelta(days=30)
-        )
-        return avertismente_recente.count() >= 3
+@staticmethod
+def este_blocat(utilizator):
+    try:
+        profil = ProfilStudent.objects.get(utilizator=utilizator)
+    except ProfilStudent.DoesNotExist:
+        return False
     
+    # Dacă are suspendare activă
+    if profil.suspendat_pana_la and profil.suspendat_pana_la >= date.today():
+        return True
     
+    return False

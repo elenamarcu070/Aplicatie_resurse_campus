@@ -402,6 +402,11 @@ def creeaza_rezervare(request):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților sau administratorilor.'
         })
+    
+    profil = ProfilStudent.objects.filter(utilizator=user).first()
+    if profil and profil.suspendat_pana_la and profil.suspendat_pana_la >= date.today():
+        messages.error(request, f"Contul tău este blocat până la {profil.suspendat_pana_la.strftime('%d %B %Y')}.")
+        return redirect('calendar_rezervari')
 
     if request.method == 'POST':
         masina_id = request.POST.get('masina_id')
@@ -613,52 +618,62 @@ def adauga_avertisment_din_calendar(request):
     rezervare = get_object_or_404(Rezervare, id=rezervare_id)
     utilizator = rezervare.utilizator
 
-    # 1) Asigură-te că adminul aparține aceluiași cămin cu mașina rezervată
+    # verifică dacă adminul e din același cămin
     admin = AdminCamin.objects.filter(email=request.user.email).first()
     if not admin or rezervare.masina.camin_id != admin.camin_id:
         messages.error(request, "Nu poți trimite avertismente pentru alt cămin.")
         return redirect('calendar_rezervari')
 
-    azi = timezone.localdate()  # 2) timezone-safe
+    azi = timezone.localdate()
 
-    # 3) Evită dublura pentru aceeași rezervare în aceeași zi
-    exista = Avertisment.objects.filter(
-        utilizator=utilizator,
-        data=azi,
-        # dacă modelul Avertisment NU are FK la rezervare, scoate linia următoare
-        # rezervare=rezervare
-    ).exists()
-
-    if exista:
+    # vezi dacă deja există avertisment azi
+    if Avertisment.objects.filter(utilizator=utilizator, data=azi).exists():
         messages.warning(request, "Ai trimis deja un avertisment acestui utilizator astăzi.")
         return redirect('calendar_rezervari')
 
-    # 4) Creează avertismentul
+    # creează avertisment
     Avertisment.objects.create(
         utilizator=utilizator,
-        motiv="Rezervare neutilizată",
-        # dacă ai câmp 'rezervare' în model, setează-l aici:
-        # rezervare=rezervare,
-        # dacă ai câmp 'data', seteaz-o explicit:
-        # data=azi
+        motiv="Rezervare neutilizată"
     )
 
-    # 5) Trimite email (text + HTML simplu)
+    # număr total avertismente în ultimele 30 zile
+    avertismente_recente = Avertisment.objects.filter(
+        utilizator=utilizator,
+        data__gte=azi - timedelta(days=30)
+    ).count()
+
+    profil = ProfilStudent.objects.filter(utilizator=utilizator).first()
+    data_blocare_pana = None
+
+    # dacă e al 3-lea avertisment → blocare 7 zile
+    if avertismente_recente >= 3 and profil:
+        data_blocare_pana = azi + timedelta(days=7)
+        profil.suspendat_pana_la = data_blocare_pana
+        profil.save()
+
+    # compunem email
     data_str = rezervare.data_rezervare.strftime("%d %b %Y")
     interval_str = f"{rezervare.ora_start.strftime('%H:%M')} - {rezervare.ora_end.strftime('%H:%M')}"
     subject = "Avertisment pentru rezervare neutilizată"
+
     text_body = (
         f"Bună {utilizator.get_full_name() or utilizator.username},\n\n"
         f"Ai primit un avertisment pentru rezervarea din {data_str}, interval {interval_str}, "
         f"la mașina '{rezervare.masina.nume}'.\n\n"
-        f"Dacă acumulezi mai multe avertismente într-o săptămână, contul tău poate fi blocat temporar."
     )
-    html_body = (
-        f"<p>Bună <strong>{utilizator.get_full_name() or utilizator.username}</strong>,</p>"
-        f"<p>Ai primit un avertisment pentru rezervarea din <strong>{data_str}</strong>, "
-        f"interval <strong>{interval_str}</strong>, la mașina <strong>{rezervare.masina.nume}</strong>.</p>"
-        f"<p>Dacă acumulezi mai multe avertismente într-o săptămână, contul tău poate fi blocat temporar.</p>"
-    )
+
+    if data_blocare_pana:
+        text_body += (
+            f"Acesta este al treilea avertisment din ultima perioadă. "
+            f"Contul tău a fost blocat până la {data_blocare_pana.strftime('%d %b %Y')}.\n"
+        )
+    else:
+        text_body += (
+            "Dacă acumulezi 3 avertismente într-o lună, contul tău va fi blocat temporar.\n"
+        )
+
+    html_body = text_body.replace("\n", "<br>")
 
     try:
         email = EmailMultiAlternatives(
@@ -669,12 +684,12 @@ def adauga_avertisment_din_calendar(request):
         )
         email.attach_alternative(html_body, "text/html")
         email.send(fail_silently=False)
-        messages.success(request, "Avertisment trimis cu succes și notificare prin email.")
+        messages.success(request, "Avertisment trimis și notificare prin email.")
     except Exception as e:
-        # Dacă emailul pică, avertismentul tot rămâne creat
         messages.warning(request, f"Avertisment creat, dar emailul nu a putut fi trimis: {e}")
 
     return redirect('calendar_rezervari')
+
 
 
 # =========================
