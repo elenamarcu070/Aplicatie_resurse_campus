@@ -561,14 +561,21 @@ def programari_student_view(request):
 # =========================
 
 @login_required
+@require_POST
 def anuleaza_rezervare(request, rezervare_id):
     user = request.user
-
-    rezervare = get_object_or_404(Rezervare, id=rezervare_id, utilizator=user)
+    try:
+        rezervare = Rezervare.objects.get(id=rezervare_id, utilizator=user)
+    except Rezervare.DoesNotExist:
+        # Răspuns corect pentru fetch()
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": "Rezervarea nu există sau nu îți aparține."}, status=404)
+        messages.error(request, "Rezervarea nu există sau nu îți aparține.")
+        return redirect('calendar_rezervari')
 
     if rezervare.data_rezervare < date.today():
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": False, "error": "Nu poți anula o rezervare trecută."})
+            return JsonResponse({"success": False, "error": "Nu poți anula o rezervare trecută."}, status=400)
         messages.error(request, "Nu poți anula o rezervare trecută.")
         return redirect('calendar_rezervari')
 
@@ -576,9 +583,10 @@ def anuleaza_rezervare(request, rezervare_id):
     rezervare.save()
     Rezervare.actualizeaza_prioritati(user, rezervare.data_rezervare)
 
+    # Dacă e AJAX, întoarcem JSON; altfel păstrăm fluxul vechi
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         return JsonResponse({"success": True})
-    
+
     messages.success(request, "Rezervarea a fost anulată.")
     return redirect('calendar_rezervari')
     
