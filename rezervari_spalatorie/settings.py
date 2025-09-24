@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "booking",  # modifică aici cu numele app-ului tău
 ]
 
-SITE_ID = 2
+SITE_ID = 1
 
 # --------------------
 # MIDDLEWARE
