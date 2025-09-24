@@ -687,7 +687,10 @@ def adauga_avertisment_din_calendar(request):
         email.send(fail_silently=False)
         messages.success(request, "Avertisment trimis și notificare prin email.")
     except Exception as e:
-        messages.warning(request, f"Avertisment creat, dar emailul nu a putut fi trimis: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Eroare la trimiterea emailului: {e}")
+            messages.warning(request, f"Avertisment creat, dar emailul nu a putut fi trimis: {e}")
 
     return redirect('calendar_rezervari')
 

@@ -302,6 +302,9 @@
                                                                     data-bs-toggle="modal" 
                                                                     data-bs-target="#confirmModal" 
                                                                     data-rezervare-id="{{ rezervare.id }}"
+                                                                    data-nume="{{ rezervare.utilizator.get_full_name }}"
+                                                                    data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
+                                                                    data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
                                                                     title="Trimite avertisment">
                                                                 <i class="fas fa-exclamation-triangle"></i>
                                                             </button>
@@ -427,8 +430,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var interval = button.getAttribute('data-interval')
             
             document.getElementById('rezervareIdInput').value = rezervareId
-            document.getElementById('studentName').textContent = nume
-            document.getElementById('rezervareInfo').textContent = data + " " + interval
+            document.getElementById('studentName').textContent = nume || 'student necunoscut'
+            document.getElementById('rezervareInfo').textContent = (data && interval) ? (data + " " + interval) : "necunoscut"
         })
     }
 
