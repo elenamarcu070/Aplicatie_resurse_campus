@@ -198,6 +198,7 @@
                 <a href="{% url 'administrare_camin' %}" class="btn btn-outline-primary">
                     <i class="fas fa-building"></i> Cămine
                 </a>
+            {% endif %}
             {% if user.is_authenticated %}
             <div class="d-flex align-items-center ms-3">
                 <span class="me-3 fw-bold text-dark">{{ user.email }}</span>
