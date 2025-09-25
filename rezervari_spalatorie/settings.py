@@ -145,6 +145,9 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+import logging
+
 # --------------------
 # LOCALE
 # --------------------
@@ -152,7 +155,9 @@ LANGUAGE_CODE = os.getenv("LANGUAGE_CODE", "ro")
 TIME_ZONE = os.getenv("TIME_ZONE", "Europe/Bucharest")
 USE_I18N = True
 USE_TZ = True
-
+# logging pentru debugging SMTP
+EMAIL_USE_LOCALTIME = True
+logging.basicConfig(level=logging.DEBUG)
 # --------------------
 # DEFAULT
 # --------------------
