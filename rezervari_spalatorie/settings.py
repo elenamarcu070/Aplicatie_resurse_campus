@@ -106,10 +106,6 @@ AUTHENTICATION_BACKENDS = [
 
 
 
-
-#ACCOUNT_LOGIN_METHODS = {"email"}
-#ACCOUNT_SIGNUP_FIELDS = ["email*"]  # doar email
-
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_USERNAME_REQUIRED = False
@@ -127,6 +123,8 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_ADAPTER = "booking.adapters.MySocialAccountAdapter"
+
+
 # --------------------
 # STATIC & MEDIA
 # --------------------
@@ -142,11 +140,11 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # --------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = os.getenv("EMAIL_PORT", 587)
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # --------------------
 # LOCALE
 # --------------------
