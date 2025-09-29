@@ -22,11 +22,20 @@
         </div>
         {% endif %}
 
-
         <p class="text-muted mb-4">
-            Email: {{ request.user.email }}<br>
-            Telefon: {{ request.user.profilstudent.telefon|default:"-" }}
-            <a href="{% url 'adauga_telefon' %}" class="btn btn-sm btn-outline-primary ms-2">Modifică</a>
+            <strong>Email:</strong> {{ request.user.email }}<br>
+            <strong>Telefon:</strong>
+            {% if request.user.profilstudent.telefon %}
+                {{ request.user.profilstudent.telefon }}
+                <button class="btn btn-sm btn-outline-primary ms-2" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalTelefon">Modifică</button>
+            {% else %}
+                -
+                <button class="btn btn-sm btn-outline-primary ms-2" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalTelefon">Adaugă</button>
+            {% endif %}
         </p>
 
         <div class="card mb-4">
@@ -117,6 +126,29 @@
         <div class="alert alert-info" role="alert">
             <i class="fas fa-info-circle me-2"></i>
             Pentru a face o rezervare, accesează secțiunea "Calendar" din meniul principal.
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTelefon" tabindex="-1" aria-labelledby="modalTelefonLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'adauga_telefon' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTelefonLabel">Actualizează numărul de telefon</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" name="telefon" 
+                           value="{{ request.user.profilstudent.telefon|default:'' }}" 
+                           class="form-control" placeholder="07xx xxx xxx" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                    <button type="submit" class="btn btn-primary">Salvează</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
