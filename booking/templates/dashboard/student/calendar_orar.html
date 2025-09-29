@@ -292,7 +292,7 @@
                                                     data-email="{{ rezervare.utilizator.email }}"
                                                     data-camera="{{ rezervare.utilizator.profilstudent.numar_camera }}"
                                                     style="cursor: pointer;"
-                                                    ata-bs-toggle="tooltip" 
+                                                    data-bs-toggle="tooltip" 
                                                     data-bs-placement="top"
                                                     title="{% if este_admin_camin or zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}">
 
@@ -393,6 +393,20 @@
     </div>
 </div>
 
+<div class="offcanvas offcanvas-end" tabindex="-1" id="detaliiStudent" aria-labelledby="detaliiStudentLabel">
+  <div class="offcanvas-header">
+    <h5 id="detaliiStudentLabel">Detalii Student</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Închide"></button>
+  </div>
+  <div class="offcanvas-body">
+    <p><strong>Nume:</strong> <span id="studentNume"></span></p>
+    <p><strong>Email:</strong> <span id="studentEmail"></span></p>
+    <p><strong>Cameră:</strong> <span id="studentCamera"></span></p>
+  </div>
+</div>
+
+
+
 <!-- Mesaje Toast -->
 {% if messages %}
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
@@ -416,6 +430,7 @@
 
 <!-- Scripts -->
 <script>
+
 document.addEventListener('DOMContentLoaded', function () {
     // Inițializare tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -439,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
     }
 
-
     // Auto-dismiss pentru toasts
     var toastElList = [].slice.call(document.querySelectorAll('.toast'))
     var toastList = toastElList.map(function (toastEl) {
@@ -448,6 +462,23 @@ document.addEventListener('DOMContentLoaded', function () {
             delay: 3000
         })
     })
-})
+
+    // Click pe rezervare -> deschide detalii
+    document.querySelectorAll(".rezervare").forEach(el => {
+        el.addEventListener("click", (e) => {
+            if (e.target.closest("button")) return;
+
+            document.getElementById("studentNume").textContent = el.dataset.nume || "-";
+            document.getElementById("studentEmail").textContent = el.dataset.email || "-";
+            document.getElementById("studentCamera").textContent = el.dataset.camera || "-";
+
+            new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();
+        });
+    });
+});
+
+
+
+
 </script>
 {% endblock %}
