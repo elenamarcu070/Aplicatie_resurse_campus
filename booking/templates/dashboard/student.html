@@ -6,8 +6,28 @@
 <div class="container mt-4">
     <div class="content-box p-4 bg-white rounded shadow">
         <h2 class="mb-4">Bine ai venit, {{ request.user.first_name|default:request.user.email }}!</h2>
+        
 
-        <p class="text-muted mb-4">Email: {{ request.user.email }}</p>
+        {% if request.user.profilstudent and not request.user.profilstudent.telefon %}
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Completează numărul tău de telefon</strong><br>
+                Dacă dorești, colegii te pot contacta mai ușor în legătură cu rezervările.
+            </div>
+            <form method="post" action="{% url 'adauga_telefon' %}" class="d-flex align-items-center">
+                {% csrf_token %}
+                <input type="text" name="telefon" class="form-control me-2" placeholder="07xx xxx xxx" required>
+                <button type="submit" class="btn btn-primary">Salvează</button>
+            </form>
+        </div>
+        {% endif %}
+
+
+        <p class="text-muted mb-4">
+            Email: {{ request.user.email }}<br>
+            Telefon: {{ request.user.profilstudent.telefon|default:"-" }}
+            <a href="{% url 'adauga_telefon' %}" class="btn btn-sm btn-outline-primary ms-2">Modifică</a>
+        </p>
 
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">

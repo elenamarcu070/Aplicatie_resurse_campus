@@ -874,6 +874,17 @@ def adauga_student_view(request):
 
     return render(request, 'dashboard/admin_camin/adauga_student.html', {'camin': camin})
 
+@login_required
+@only_students
+def adauga_telefon(request):
+    if request.method == "POST":
+        telefon = request.POST.get("telefon")
+        profil = ProfilStudent.objects.get(utilizator=request.user)
+        profil.telefon = telefon
+        profil.save()
+        messages.success(request, "Numărul de telefon a fost salvat cu succes!")
+    return redirect("dashboard_student")
+
 
 # =========================
 # Admin cămin - Ștergere student

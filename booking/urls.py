@@ -28,6 +28,7 @@ urlpatterns = [
     path('dashboard/student/anuleaza/<int:rezervare_id>/', views.anuleaza_rezervare, name='anuleaza_rezervare'),
     path('dashboard/student/creeaza/', views.creeaza_rezervare, name='creeaza_rezervare'),
     path('calendar/adauga-avertisment/', views.adauga_avertisment_din_calendar, name='adauga_avertisment_din_calendar'),
+    path("dashboard/student/adauga-telefon/", views.adauga_telefon, name="adauga_telefon"),
     
     # Dashboard Admin Cămin - Programări
     path('dashboard/admin_camin/calendar/', views.calendar_rezervari_admin_view, name='calendar_rezervari_admin'),

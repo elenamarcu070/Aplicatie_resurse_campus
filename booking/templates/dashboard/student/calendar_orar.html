@@ -291,6 +291,7 @@
                                                     data-nume="{{ rezervare.utilizator.last_name }} {{ rezervare.utilizator.first_name }}"
                                                     data-email="{{ rezervare.utilizator.email }}"
                                                     data-camera="{{ rezervare.utilizator.profilstudent.numar_camera }}"
+                                                    data-telefon="{{ rezervare.utilizator.profilstudent.telefon }}"
                                                     style="cursor: pointer;"
                                                     data-bs-toggle="tooltip" 
                                                     data-bs-placement="top"
@@ -401,7 +402,9 @@
   <div class="offcanvas-body">
     <p><strong>Nume:</strong> <span id="studentNume"></span></p>
     <p><strong>Email:</strong> <span id="studentEmail"></span></p>
+    <p><strong>Telefon:</strong> <span id="studentTelefon"></span></p>
     <p><strong>Cameră:</strong> <span id="studentCamera"></span></p>
+    
   </div>
 </div>
 
@@ -470,6 +473,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.getElementById("studentNume").textContent = el.dataset.nume || "-";
             document.getElementById("studentEmail").textContent = el.dataset.email || "-";
+            document.getElementById("studentTelefon").textContent = el.dataset.telefon || "-";
             document.getElementById("studentCamera").textContent = el.dataset.camera || "-";
 
             new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();

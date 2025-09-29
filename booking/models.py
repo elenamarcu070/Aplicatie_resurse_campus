@@ -78,6 +78,8 @@ class ProfilStudent(models.Model):
     numar_camera = models.CharField(max_length=10, blank=True, null=True)
     suspendat_pana_la = models.DateField(null=True, blank=True)
 
+    telefon = models.CharField(max_length=15, blank=True, null=True)
+
     def clean(self):
         if not self.utilizator.email:
             raise ValidationError({'utilizator': 'Emailul este obligatoriu!'})
