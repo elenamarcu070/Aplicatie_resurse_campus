@@ -817,7 +817,8 @@ def incarca_studenti_view(request):
         'studenti_importati': studenti_importati,
         'camin': camin,
         'studenti': studenti,
-        'camine': camine,  # Adaugă această linie
+        'camine': camine,  
+        'camera':camera
     })
 
 
