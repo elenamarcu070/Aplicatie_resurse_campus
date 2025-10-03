@@ -448,9 +448,12 @@ def creeaza_rezervare(request):
                 return redirect('calendar_rezervari')
 
             if saptamana_rezervare == saptamana_curenta:
-                if data_rezervare > azi + timedelta(days=1):
-                    messages.error(request, "În săptămâna curentă poți face rezervări doar pentru azi și mâine.")
-                    return redirect('calendar_rezervari')
+                # verificăm câte rezervări are deja în săptămâna curentă
+                if nr_rezervari >= 1:
+                    # dacă nu e prima rezervare, restricționăm la azi și mâine
+                    if data_rezervare > azi + timedelta(days=1):
+                        messages.error(request, "În săptămâna curentă doar prima rezervare poate fi făcută oricând, restul doar pentru azi și mâine.")
+                        return redirect('calendar_rezervari')
             elif saptamana_rezervare > saptamana_curenta + 4:
                 messages.error(request, "Nu poți face rezervări cu mai mult de 4 săptămâni în avans.")
                 return redirect('calendar_rezervari')
@@ -757,8 +760,6 @@ def incarca_studenti_view(request):
             # Folosește o tranzacție pentru toate operațiunile pe baza de date
             with transaction.atomic():
                 # Șterge studenții existenți (exceptând userul logat)
-                ProfilStudent.objects.exclude(utilizator=request.user).delete()
-                User.objects.exclude(id=request.user.id).filter(is_superuser=False).delete()
 
                 # Procesează fiecare rând
                 for _, row in df.iterrows():
