@@ -19,7 +19,13 @@ from booking.models import (
     Camin, ProfilStudent, AdminCamin,
     Rezervare, ProgramMasina, Masina,
     Avertisment, Uscator, ProgramUscator
+
+
+
 )
+
+from booking.utils import trimite_sms
+
 
 # =========================
 # Decoratori pentru roluri
@@ -496,7 +502,26 @@ def creeaza_rezervare(request):
                 if len(rezervari_sapt) < len(rezervari_alt_user):
                     rez.anulata = True
                     rez.save()
-                    # aici mail-ul tău de notificare...
+                    
+                    mesaj_notificare = (
+                        f"Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
+                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
+                        f"la mașina '{rez.masina.nume}' a fost preluată. "
+                        f"Te rugăm să îți faci o altă rezervare pe washtuiasi.ro."
+                        )
+                    if profil and hasattr(profil, 'telefon') and profil.telefon:
+                        # Trimite SMS dacă are număr de telefon
+                        trimite_sms(profil.telefon, mesaj_notificare)
+                    else:
+                        # Altfel trimite email
+                        send_mail(
+                            "Rezervarea ta a fost preluată",
+                            mesaj_notificare,
+                            getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                            [rez.utilizator.email],
+                            fail_silently=True,
+                            )
+
                     break
 
                 elif rez.nivel_prioritate <= nr_rezervari + 1:
@@ -505,7 +530,24 @@ def creeaza_rezervare(request):
                 else:
                     rez.anulata = True
                     rez.save()
-                    # aici mail-ul tău de notificare...
+                    mesaj_notificare = (
+                        f"Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
+                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
+                        f"la mașina '{rez.masina.nume}' a fost preluată. "
+                        f"Te rugăm să îți faci o altă rezervare pe washtuiasi.ro."
+                        )
+                    if profil and hasattr(profil, 'telefon') and profil.telefon:
+                        # Trimite SMS dacă are număr de telefon
+                        trimite_sms(profil.telefon, mesaj_notificare)
+                    else:
+                        # Altfel trimite email
+                        send_mail(
+                            "Rezervarea ta a fost preluată",
+                            mesaj_notificare,
+                            getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                            [rez.utilizator.email],
+                            fail_silently=True,
+                            )
                     break
 
             # creăm rezervarea nouă

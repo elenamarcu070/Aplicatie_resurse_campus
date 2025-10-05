@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 # Încarcă variabilele din .env (DOAR local, Railway folosește env vars direct)
 load_dotenv()
 
+
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --------------------
@@ -19,6 +22,10 @@ if ALLOWED_HOSTS == "*":
     ALLOWED_HOSTS = ["*"]
 else:
     ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS.split(",") if h.strip()]
+
+    
+ALLOWED_HOSTS += ["127.0.0.1", "localhost"]
+
 
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS.split(",") if o.strip()]
@@ -176,3 +183,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 #SECURE_SSL_REDIRECT = True
+
+
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
