@@ -23,8 +23,8 @@ if ALLOWED_HOSTS == "*":
 else:
     ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS.split(",") if h.strip()]
 
-    
-ALLOWED_HOSTS += ["127.0.0.1", "localhost"]
+
+
 
 
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "")
