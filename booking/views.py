@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 from django.core.files.storage import default_storage
 from django.core.mail import send_mail
 from django.conf import settings
-
+from django.urls import reverse
 from booking.models import (
     Camin, ProfilStudent, AdminCamin,
     Rezervare, ProgramMasina, Masina,
@@ -396,7 +396,7 @@ def calendar_rezervari_view(request):
 @login_required
 def creeaza_rezervare(request):
     user = request.user
-
+    saptamana = request.POST.get('saptamana', 0)
     # verificăm dacă e student sau admin
     if not (AdminCamin.objects.filter(email=user.email).exists() or 
             ProfilStudent.objects.filter(utilizator=user).exists()):
@@ -407,7 +407,7 @@ def creeaza_rezervare(request):
     profil = ProfilStudent.objects.filter(utilizator=user).first()
     if profil and profil.suspendat_pana_la and profil.suspendat_pana_la >= date.today():
         messages.error(request, f"Contul tău este blocat până la {profil.suspendat_pana_la.strftime('%d %B %Y')}.")
-        return redirect('calendar_rezervari')
+        return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
     if request.method == 'POST':
         masina_id = request.POST.get('masina_id')
@@ -430,13 +430,11 @@ def creeaza_rezervare(request):
             ).count()            
             if avertismente >= 3:
                 messages.error(request, "Cont blocat temporar din cauza avertismentelor.")
-                return redirect('calendar_rezervari')
-
+                return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             # verificare dată trecută
             if data_rezervare < azi:
                 messages.error(request, "Nu poți face rezervări pentru date din trecut.")
-                return redirect('calendar_rezervari')
-
+                return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             # logica săptămânilor (exact ca la tine)
             saptamana_curenta = azi.isocalendar()[1]
             saptamana_rezervare = data_rezervare.isocalendar()[1]
@@ -445,9 +443,9 @@ def creeaza_rezervare(request):
 
             if an_rezervare < an_curent or (an_rezervare == an_curent and saptamana_rezervare < saptamana_curenta):
                 messages.error(request, "Nu poți face rezervări pentru săptămânile trecute.")
-                return redirect('calendar_rezervari')
+                return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             
-                        # verificăm rezervările existente pentru user
+            # verificăm rezervările existente pentru user
             start_sapt = data_rezervare - timedelta(days=data_rezervare.weekday())
             end_sapt = start_sapt + timedelta(days=6)
             
@@ -465,7 +463,7 @@ def creeaza_rezervare(request):
                     # dacă nu e prima rezervare, restricționăm la azi și mâine
                     if data_rezervare > azi + timedelta(days=1):
                         messages.error(request, "În săptămâna curentă doar prima rezervare poate fi făcută oricând, restul doar pentru azi și mâine.")
-                        return redirect('calendar_rezervari')
+                        return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             elif saptamana_rezervare > saptamana_curenta + 4:
                 messages.error(request, "Nu poți face rezervări cu mai mult de 4 săptămâni în avans.")
                 return redirect('calendar_rezervari')
@@ -473,10 +471,10 @@ def creeaza_rezervare(request):
 
             if saptamana_rezervare == saptamana_curenta and nr_rezervari >= 4:
                 messages.error(request, "Ai atins numărul maxim de rezervări pentru această săptămână.")
-                return redirect('calendar_rezervari')
+                return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             elif saptamana_rezervare != saptamana_curenta and nr_rezervari >= 1:
                 messages.error(request, "Poți face doar o rezervare pe săptămână pentru săptămânile viitoare.")
-                return redirect('calendar_rezervari')
+                return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
             # verificăm conflictele
             rezervari_existente = Rezervare.objects.filter(
@@ -503,7 +501,7 @@ def creeaza_rezervare(request):
 
                 elif rez.nivel_prioritate <= nr_rezervari + 1:
                     messages.error(request, "Nu poți prelua această rezervare (prioritate mai mare sau egală).")
-                    return redirect('calendar_rezervari')
+                    return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
                 else:
                     rez.anulata = True
                     rez.save()
@@ -532,13 +530,12 @@ def creeaza_rezervare(request):
                 rez.save()
 
             messages.success(request, "Rezervare creată cu succes!")
-            return redirect('calendar_rezervari')
+            return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
         except Exception as e:
             messages.error(request, f"Eroare la creare rezervare: {str(e)}")
 
-    return redirect('calendar_rezervari')
-
+    return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
 # =========================
 # Programările utilizatorului (student/admin)

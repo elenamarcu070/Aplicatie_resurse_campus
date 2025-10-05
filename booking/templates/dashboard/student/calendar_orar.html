@@ -324,6 +324,7 @@
                                                                     <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
                                                                     <input type="hidden" name="ora_start" value="{{ ora }}:00">
                                                                     <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                                                                    <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
                                                                     <button type="submit" class="btn-icon" title="Preia rezervarea">
                                                                         <i class="fas fa-exchange-alt"></i>
                                                                     </button>
@@ -342,6 +343,7 @@
                                                         <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
                                                         <input type="hidden" name="ora_start" value="{{ ora }}:00">
                                                         <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                                                        <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
                                                         <button type="submit" class="btn-interval">
                                                             {{ ora }}:00 - {{ ora_sfarsit }}:00
                                                         </button>
