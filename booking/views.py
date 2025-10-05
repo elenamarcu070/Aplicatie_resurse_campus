@@ -396,50 +396,17 @@ def calendar_rezervari_view(request):
     return render(request, 'dashboard/student/calendar_orar.html', context)
 
 
-# =========================
-# Logica de creare rezervare
-# =========================
-# booking/views.py
-from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect
-from django.urls import reverse
-from datetime import date, datetime, timedelta
-import threading, logging, traceback
 
-from .models import (
-    AdminCamin,
-    ProfilStudent,
-    Masina,
-    Rezervare,
-    Avertisment,
-)
-from .utils import trimite_sms  # deja ai funcția, o folosim
+
+
+
+
+import logging, traceback
+
+
+from .utils import trimite_sms
 
 logger = logging.getLogger(__name__)
-
-def trimite_email_async(subject, mesaj, destinatar):
-    """Trimite email non-blocant într-un thread separat (nu face timeout)."""
-    if not destinatar:
-        return
-
-    def _send():
-        try:
-            send_mail(
-                subject,
-                mesaj,
-                getattr(settings, "DEFAULT_FROM_EMAIL", None),
-                [destinatar],
-                fail_silently=True,
-            )
-            logger.info(f"Email trimis către {destinatar}")
-        except Exception as e:
-            logger.error(f"Eroare la trimiterea emailului către {destinatar}: {e}")
-
-    threading.Thread(target=_send, daemon=True).start()
-
 
 @login_required
 def creeaza_rezervare(request):
@@ -544,22 +511,15 @@ def creeaza_rezervare(request):
                         f"Te rugăm să îți faci o altă rezervare pe washtuiasi.ro."
                     )
 
-                    # SMS prioritar, email fallback non-blocant
+                    # Trimite doar SMS (fără email)
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_sms(profil_vechi.telefon, mesaj_notificare)
-                            
-                        elif rez.utilizator.email:
-                            trimite_email_async(
-                                "Rezervarea ta a fost preluată",
-                                mesaj_notificare,
-                                rez.utilizator.email,
-                            )
                         else:
-                            logger.warning(f"User {rez.utilizator} fără telefon și email — nu se trimite notificare.")
+                            logger.warning(f"User {rez.utilizator} fără telefon — nu se trimite SMS.")
                     except Exception as e:
-                        logger.error(f"Eroare trimitere notificare: {e}")
+                        logger.error(f"Eroare trimitere SMS: {e}")
 
                     break
                 else:
