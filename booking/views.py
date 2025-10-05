@@ -399,13 +399,55 @@ def calendar_rezervari_view(request):
 # =========================
 # Logica de creare rezervare
 # =========================
+# booking/views.py
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from datetime import date, datetime, timedelta
+import threading, logging, traceback
+
+from .models import (
+    AdminCamin,
+    ProfilStudent,
+    Masina,
+    Rezervare,
+    Avertisment,
+)
+from .utils import trimite_sms  # deja ai funcția, o folosim
+
+logger = logging.getLogger(__name__)
+
+def trimite_email_async(subject, mesaj, destinatar):
+    """Trimite email non-blocant într-un thread separat (nu face timeout)."""
+    if not destinatar:
+        return
+
+    def _send():
+        try:
+            send_mail(
+                subject,
+                mesaj,
+                getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                [destinatar],
+                fail_silently=True,
+            )
+            logger.info(f"Email trimis către {destinatar}")
+        except Exception as e:
+            logger.error(f"Eroare la trimiterea emailului către {destinatar}: {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
 @login_required
 def creeaza_rezervare(request):
     user = request.user
     saptamana = request.POST.get('saptamana', 0)
 
-    # Verificăm dacă e student sau admin
-    if not (AdminCamin.objects.filter(email=user.email).exists() or 
+    # verificare drepturi acces
+    if not (AdminCamin.objects.filter(email=user.email).exists() or
             ProfilStudent.objects.filter(utilizator=user).exists()):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților sau administratorilor.'
@@ -429,7 +471,6 @@ def creeaza_rezervare(request):
             ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
             azi = date.today()
 
-            # Verificare avertismente recente
             avertismente = Avertisment.objects.filter(
                 utilizator=user,
                 data__gte=azi - timedelta(days=7)
@@ -438,12 +479,10 @@ def creeaza_rezervare(request):
                 messages.error(request, "Cont blocat temporar din cauza avertismentelor.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
-            # Verificare dată trecută
             if data_rezervare < azi:
                 messages.error(request, "Nu poți face rezervări pentru date din trecut.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
-            # Calcul săptămâni
             sapt_curenta = azi.isocalendar()[1]
             sapt_rezervare = data_rezervare.isocalendar()[1]
             an_curent = azi.isocalendar()[0]
@@ -464,7 +503,6 @@ def creeaza_rezervare(request):
 
             nr_rezervari = rezervari_sapt.count()
 
-            # Reguli săptămânale
             if sapt_rezervare == sapt_curenta:
                 if nr_rezervari >= 1 and data_rezervare > azi + timedelta(days=1):
                     messages.error(request, "În săptămâna curentă doar prima rezervare poate fi făcută oricând, restul doar pentru azi și mâine.")
@@ -480,7 +518,6 @@ def creeaza_rezervare(request):
                 messages.error(request, "Poți face doar o rezervare pe săptămână pentru săptămânile viitoare.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
-            # Conflicte
             rezervari_existente = Rezervare.objects.filter(
                 masina=masina,
                 data_rezervare=data_rezervare,
@@ -489,7 +526,6 @@ def creeaza_rezervare(request):
                 anulata=False
             )
 
-            # Logica de preluare rezervare
             for rez in rezervari_existente:
                 rezervari_alt_user = Rezervare.objects.filter(
                     utilizator=rez.utilizator,
@@ -497,7 +533,6 @@ def creeaza_rezervare(request):
                     anulata=False
                 )
 
-                # dacă are mai puține rezervări -> poate prelua
                 if len(rezervari_sapt) < len(rezervari_alt_user) or rez.nivel_prioritate > nr_rezervari + 1:
                     rez.anulata = True
                     rez.save()
@@ -509,30 +544,27 @@ def creeaza_rezervare(request):
                         f"Te rugăm să îți faci o altă rezervare pe washtuiasi.ro."
                     )
 
-                    # Trimite notificarea — SMS prioritar, email fallback
+                    # SMS prioritar, email fallback non-blocant
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_sms(profil_vechi.telefon, mesaj_notificare)
-                        else:
-                            send_mail(
+                        elif rez.utilizator.email:
+                            trimite_email_async(
                                 "Rezervarea ta a fost preluată",
                                 mesaj_notificare,
-                                getattr(settings, "DEFAULT_FROM_EMAIL", None),
-                                [rez.utilizator.email],
-                                fail_silently=True,
+                                rez.utilizator.email,
                             )
+                        else:
+                            logger.warning(f"User {rez.utilizator} fără telefon și email — nu se trimite notificare.")
                     except Exception as e:
-                        import logging
-                        logging.error(f"Eroare trimitere notificare: {e}")
+                        logger.error(f"Eroare trimitere notificare: {e}")
 
                     break
-
                 else:
                     messages.error(request, "Nu poți prelua această rezervare (prioritate mai mare sau egală).")
                     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
-            # Creăm rezervarea nouă
             rezervare = Rezervare.objects.create(
                 utilizator=user,
                 masina=masina,
@@ -542,7 +574,6 @@ def creeaza_rezervare(request):
                 nivel_prioritate=1
             )
 
-            # Actualizăm prioritățile
             rezervari_actualizare = Rezervare.objects.filter(
                 utilizator=user,
                 data_rezervare__range=(start_sapt, end_sapt),
@@ -557,13 +588,11 @@ def creeaza_rezervare(request):
             return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
         except Exception as e:
-            import traceback, logging
-            logging.error(f"Eroare la creare rezervare: {e}\n{traceback.format_exc()}")
+            logger.error(f"Eroare la creare rezervare: {e}\n{traceback.format_exc()}")
             messages.error(request, f"Eroare la creare rezervare: {e}")
             return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
-
 
 
 # =========================
