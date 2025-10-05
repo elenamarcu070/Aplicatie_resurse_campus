@@ -117,12 +117,12 @@ def dashboard_student(request):
 @login_required
 @only_admins
 def dashboard_admin_camin(request):
-    if not AdminCamin.objects.filter(email=request.user.email).exists():
+    admin = AdminCamin.objects.filter(email=request.user.email).first()
+    if not admin:
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar administratorilor de cămin.'
         })
-    return render(request, 'dashboard/admin_camin.html')
-
+    return render(request, 'dashboard/admin_camin.html', {'admin': admin})
 # =========================
 # Admin cămin - Administrare cămine
 # =========================
@@ -894,9 +894,8 @@ def adauga_telefon_admin(request):
             admin.telefon = telefon
             admin.save()
             messages.success(request, "Numărul de telefon a fost actualizat.")
-        else:
-            messages.error(request, "Nu ești administrator de cămin.")
     return redirect("dashboard_admin_camin")
+
 
 
 # =========================
