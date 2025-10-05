@@ -33,6 +33,7 @@ urlpatterns = [
     # Dashboard Admin Cămin - Programări
     path('dashboard/admin_camin/calendar/', views.calendar_rezervari_admin_view, name='calendar_rezervari_admin'),
     path('dashboard/admin_camin/programari/', views.programari_admin_camin_view, name='programari_admin_camin'),
+    path("adauga_telefon_admin/", views.adauga_telefon_admin, name="adauga_telefon_admin"),
 
 
     # Dashboard Admin Cămin - Import studenți

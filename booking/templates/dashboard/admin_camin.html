@@ -6,8 +6,32 @@
     <div class="content-box fade-in">
         <h1 class="text-center mb-4">Administrare Cămin</h1>
 
-        <p>Bine ai venit în panoul de administrare al căminului! Aici poți gestiona resursele și utilizatorii căminului tău.</p>
+        <p class="text-center">Bine ai venit în panoul de administrare al căminului! Aici poți gestiona resursele și utilizatorii căminului tău.</p>
 
+        <!-- 🟢 FORMULAR ACTUALIZARE TELEFON ADMIN -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-phone-alt me-2"></i>Actualizează numărul de telefon</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'adauga_telefon_admin' %}" class="d-flex flex-wrap align-items-center gap-2">
+                    {% csrf_token %}
+                    <div class="form-group me-2" style="min-width: 250px;">
+                        <input type="text" name="telefon" id="telefon" class="form-control" 
+                               placeholder="Ex: 07xxxxxxxx" 
+                               value="{{ admin.telefon|default_if_none:'' }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Salvează
+                    </button>
+                </form>
+                <small class="text-muted d-block mt-2">
+                    Numărul va fi vizibil doar în aplicație și folosit pentru contactarea rapidă.
+                </small>
+            </div>
+        </div>
+
+        <!-- CARD FUNCȚIONALITĂȚI -->
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">Funcționalități disponibile</h5>
@@ -18,19 +42,16 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
                                 <i class="fas fa-washing-machine me-2"></i>
-                                <a href="{% url 'administrare_camin'  %}" class="text-decoration-none disabled">Gestionare mașini</a>
+                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare mașini</a>
                             </li>
                             <li class="list-group-item">
                                 <i class="fas fa-building me-2"></i>
                                 <a href="{% url 'administrare_camin' %}" class="text-decoration-none">Gestionare cămine</a>
                             </li>
-                            
                             <li class="list-group-item">
                                 <i class="fas fa-users-cog me-2"></i>
                                 <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare administratori</a>
                             </li>
-
-                            
                             <li class="list-group-item">
                                 <i class="fas fa-clock me-2"></i>
                                 <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare program</a>
@@ -57,6 +78,7 @@
             </div>
         </div>
 
+        <!-- REGULI ȘI INSTRUCȚIUNI -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h4 class="mb-0">Cum funcționează sistemul de rezervări?</h4>
@@ -66,15 +88,15 @@
                 <ul class="list-group list-group-flush mb-4">
                     <li class="list-group-item">
                         <i class="fas fa-clock text-primary me-2"></i>
-                        Poți face rezervări pentru ziua curentă și ziua următoare în săptămâna curentă
+                        Poți face rezervări pentru ziua curentă și ziua următoare în săptămâna curentă.
                     </li>
                     <li class="list-group-item">
                         <i class="fas fa-calendar-alt text-primary me-2"></i>
-                        Pentru săptămânile viitoare, poți face o singură rezervare pe săptămână
+                        Pentru săptămânile viitoare, poți face o singură rezervare pe săptămână.
                     </li>
                     <li class="list-group-item">
                         <i class="fas fa-calendar-check text-primary me-2"></i>
-                        Poți face rezervări cu până la 4 săptămâni în avans
+                        Poți face rezervări cu până la 4 săptămâni în avans.
                     </li>
                 </ul>
 
@@ -84,25 +106,25 @@
                         <div class="card border-danger mb-2">
                             <div class="card-body py-2">
                                 <span class="badge bg-danger me-2">1</span>
-                                Prima rezervare - nu poate fi preluată de alți studenți
+                                Prima rezervare - nu poate fi preluată de alți studenți.
                             </div>
                         </div>
                         <div class="card border-secondary mb-2">
                             <div class="card-body py-2">
                                 <span class="badge bg-secondary me-2">2</span>
-                                A doua rezervare - poate fi preluată
+                                A doua rezervare - poate fi preluată.
                             </div>
                         </div>
                         <div class="card border-primary mb-2">
                             <div class="card-body py-2">
                                 <span class="badge bg-primary me-2">3</span>
-                                A treia rezervare - poate fi preluată
+                                A treia rezervare - poate fi preluată.
                             </div>
                         </div>
-                        <div class="card border mb-2">
+                        <div class="card border-brown mb-2">
                             <div class="card-body py-2">
                                 <span class="badge bg-brown me-2">4</span>
-                                A patra rezervare - poate fi preluată
+                                A patra rezervare - poate fi preluată.
                             </div>
                         </div>
                     </div>
@@ -112,15 +134,15 @@
                 <ul class="list-group list-group-flush mb-4">
                     <li class="list-group-item">
                         <i class="fas fa-exchange-alt text-success me-2"></i>
-                        Poți prelua rezervările altor studenți dacă ai mai puține rezervări decât ei
+                        Poți prelua rezervările altor studenți dacă ai mai puține rezervări decât ei.
                     </li>
                     <li class="list-group-item">
                         <i class="fas fa-shield-alt text-danger me-2"></i>
-                        Prima rezervare (roșie) nu poate fi preluată de nimeni
+                        Prima rezervare (roșie) nu poate fi preluată de nimeni.
                     </li>
                     <li class="list-group-item">
                         <i class="fas fa-bell text-warning me-2"></i>
-                        Vei primi notificări prin email când rezervările tale sunt preluate
+                        Vei primi notificări prin email când rezervările tale sunt preluate.
                     </li>
                 </ul>
 
@@ -128,15 +150,15 @@
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item">
                         <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                        Dacă nu folosești o rezervare și nu o anulezi, poți primi un avertisment
+                        Dacă nu folosești o rezervare și nu o anulezi, poți primi un avertisment.
                     </li>
                     <li class="list-group-item">
                         <i class="fas fa-ban text-danger me-2"></i>
-                        Trei avertismente duc la blocarea temporară a contului pentru o săptămână
+                        Trei avertismente duc la blocarea temporară a contului pentru o săptămână.
                     </li>
                     <li class="list-group-item">
                         <i class="fas fa-undo text-success me-2"></i>
-                        Poți anula o rezervare oricând înainte de intervalul rezervat
+                        Poți anula o rezervare oricând înainte de intervalul rezervat.
                     </li>
                 </ul>
             </div>
@@ -145,11 +167,6 @@
         <div class="alert alert-info" role="alert">
             <i class="fas fa-info-circle me-2"></i>
             Pentru a face o rezervare, accesează secțiunea "Calendar" din meniul principal.
-        </div>
-
-        <div class="alert alert-info" role="alert">
-            <i class="fas fa-info-circle me-2"></i>
-            Pentru a începe, alege o acțiune din lista de mai sus.
         </div>
     </div>
 </div>
@@ -167,12 +184,11 @@
         text-align: center;
     }
     .list-group-item a {
-        color: #007bff; /* Culoarea link-urilor */
-        text-decoration: none; /* Elimină sublinierea implicită */
+        color: #007bff;
+        text-decoration: none;
     }
-
     .list-group-item a:hover {
-        text-decoration: underline; /* Subliniază la hover */
+        text-decoration: underline;
     }
 </style>
 {% endblock %}

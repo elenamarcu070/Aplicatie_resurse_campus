@@ -18,7 +18,7 @@ class Camin(models.Model):
 class AdminCamin(models.Model):
     camin = models.ForeignKey(Camin, on_delete=models.CASCADE, related_name="admini")
     email = models.EmailField(max_length=100)
-
+    telefon = models.CharField(max_length=15, blank=True, null=True)  # <--- adaugă asta
     def __str__(self):
         return f"{self.email} - {self.camin.nume}"
 # ------------------------------------------

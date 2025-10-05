@@ -885,6 +885,19 @@ def adauga_telefon(request):
     return redirect("dashboard_student")
 
 
+@login_required
+def adauga_telefon_admin(request):
+    if request.method == "POST":
+        telefon = request.POST.get("telefon")
+        admin = AdminCamin.objects.filter(email=request.user.email).first()
+        if admin:
+            admin.telefon = telefon
+            admin.save()
+            messages.success(request, "Numărul de telefon a fost actualizat.")
+        else:
+            messages.error(request, "Nu ești administrator de cămin.")
+    return redirect("dashboard_admin_camin")
+
 
 # =========================
 # Admin cămin - Ștergere student
