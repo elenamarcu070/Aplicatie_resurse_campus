@@ -291,7 +291,14 @@
                                                     data-nume="{{ rezervare.utilizator.last_name }} {{ rezervare.utilizator.first_name }}"
                                                     data-email="{{ rezervare.utilizator.email }}"
                                                     data-camera="{{ rezervare.utilizator.profilstudent.numar_camera }}"
-                                                    data-telefon="{{ rezervare.utilizator.profilstudent.telefon }}"
+                                                    data-telefon="{% if rezervare.utilizator.profilstudent.telefon %}
+                                                    {{ rezervare.utilizator.profilstudent.telefon }}
+                                                    {% else %}
+                                                    {% with admin_obj=rezervare.utilizator.email|admin_telefon %}
+                                                    {{ admin_obj|default:"-" }}
+                                                    {% endwith %}
+                                                    {% endif %}"
+
                                                     style="cursor: pointer;"
                                                     data-bs-toggle="tooltip" 
                                                     data-bs-placement="top"
