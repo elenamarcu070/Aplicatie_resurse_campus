@@ -446,6 +446,18 @@ def creeaza_rezervare(request):
             if an_rezervare < an_curent or (an_rezervare == an_curent and saptamana_rezervare < saptamana_curenta):
                 messages.error(request, "Nu poți face rezervări pentru săptămânile trecute.")
                 return redirect('calendar_rezervari')
+            
+                        # verificăm rezervările existente pentru user
+            start_sapt = data_rezervare - timedelta(days=data_rezervare.weekday())
+            end_sapt = start_sapt + timedelta(days=6)
+            
+            rezervari_sapt = Rezervare.objects.filter(
+                utilizator=user,
+                data_rezervare__range=(start_sapt, end_sapt),
+                anulata=False
+            ).order_by('data_rezervare', 'ora_start')
+
+            nr_rezervari = rezervari_sapt.count()
 
             if saptamana_rezervare == saptamana_curenta:
                 # verificăm câte rezervări are deja în săptămâna curentă
@@ -458,17 +470,6 @@ def creeaza_rezervare(request):
                 messages.error(request, "Nu poți face rezervări cu mai mult de 4 săptămâni în avans.")
                 return redirect('calendar_rezervari')
 
-            # verificăm rezervările existente pentru user
-            start_sapt = data_rezervare - timedelta(days=data_rezervare.weekday())
-            end_sapt = start_sapt + timedelta(days=6)
-            
-            rezervari_sapt = Rezervare.objects.filter(
-                utilizator=user,
-                data_rezervare__range=(start_sapt, end_sapt),
-                anulata=False
-            ).order_by('data_rezervare', 'ora_start')
-
-            nr_rezervari = rezervari_sapt.count()
 
             if saptamana_rezervare == saptamana_curenta and nr_rezervari >= 4:
                 messages.error(request, "Ai atins numărul maxim de rezervări pentru această săptămână.")
