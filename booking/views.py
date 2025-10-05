@@ -408,6 +408,10 @@ from .utils import trimite_sms
 
 logger = logging.getLogger(__name__)
 
+
+
+
+
 @login_required
 def creeaza_rezervare(request):
     user = request.user
@@ -438,6 +442,7 @@ def creeaza_rezervare(request):
             ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
             azi = date.today()
 
+            # avertismente recente
             avertismente = Avertisment.objects.filter(
                 utilizator=user,
                 data__gte=azi - timedelta(days=7)
@@ -446,6 +451,7 @@ def creeaza_rezervare(request):
                 messages.error(request, "Cont blocat temporar din cauza avertismentelor.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
+            # verificări de date
             if data_rezervare < azi:
                 messages.error(request, "Nu poți face rezervări pentru date din trecut.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
@@ -493,6 +499,7 @@ def creeaza_rezervare(request):
                 anulata=False
             )
 
+            # logica de preluare rezervare
             for rez in rezervari_existente:
                 rezervari_alt_user = Rezervare.objects.filter(
                     utilizator=rez.utilizator,
@@ -511,21 +518,26 @@ def creeaza_rezervare(request):
                         f"Te rugăm să îți faci o altă rezervare pe washtuiasi.ro."
                     )
 
-                    # Trimite doar SMS (fără email)
+                    # 🔔 Trimitere SMS – pentru student sau admin
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_sms(profil_vechi.telefon, mesaj_notificare)
                         else:
-                            logger.warning(f"User {rez.utilizator} fără telefon — nu se trimite SMS.")
+                            admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
+                            if admin_camin and admin_camin.telefon:
+                                trimite_sms(admin_camin.telefon, mesaj_notificare)
+                            else:
+                                logger.warning(f"User {rez.utilizator.email} fără telefon în profil sau admin — nu se trimite SMS.")
                     except Exception as e:
                         logger.error(f"Eroare trimitere SMS: {e}")
 
                     break
                 else:
                     messages.error(request, "Nu poți prelua această rezervare (prioritate mai mare sau egală).")
-                    return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
+                    return redirect(f'{reverse('calendar_rezervari')}?saptamana={saptamana}')
 
+            # creăm rezervarea nouă
             rezervare = Rezervare.objects.create(
                 utilizator=user,
                 masina=masina,
@@ -535,6 +547,7 @@ def creeaza_rezervare(request):
                 nivel_prioritate=1
             )
 
+            # actualizare priorități
             rezervari_actualizare = Rezervare.objects.filter(
                 utilizator=user,
                 data_rezervare__range=(start_sapt, end_sapt),
@@ -554,6 +567,7 @@ def creeaza_rezervare(request):
             return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
+
 
 from django.http import HttpResponse
 
