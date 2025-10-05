@@ -15,6 +15,13 @@ urlpatterns = [
     # Dashboard Admin Cămin
     path('dashboard/admin_camin/', views.dashboard_admin_camin, name='dashboard_admin_camin'),
 
+
+    path("test-sms/", views.test_sms),
+
+
+
+
+
     # Admin cămin - Detalii cămin
     path('dashboard/admin_camin/camine/<int:camin_id>/', views.detalii_camin_admin, name='detalii_camin_admin'),
     path('dashboard/admin_camin/camine/', views.administrare_camin, name='administrare_camin'),

@@ -549,6 +549,7 @@ def creeaza_rezervare(request):
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_sms(profil_vechi.telefon, mesaj_notificare)
+                            
                         elif rez.utilizator.email:
                             trimite_email_async(
                                 "Rezervarea ta a fost preluată",
@@ -594,6 +595,11 @@ def creeaza_rezervare(request):
 
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
+from django.http import HttpResponse
+
+def test_sms(request):
+    trimite_sms("+40756752311", "Salut, test Twilio Railway ✅")
+    return HttpResponse("Trimis — verifică Railway Logs.")
 
 # =========================
 # Programările utilizatorului (student/admin)

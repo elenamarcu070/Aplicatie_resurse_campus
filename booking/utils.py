@@ -1,18 +1,37 @@
+
+# booking/utils.py
 from twilio.rest import Client
 from django.conf import settings
+import logging
 
-def trimite_sms(destinatar, mesaj):
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+logger = logging.getLogger(__name__)
+
+def trimite_sms(numar, mesaj):
+    """
+    Trimite SMS prin Twilio.
+    Loghează statusul (queued/sent/error) pentru debugging pe Railway.
+    """
+    if not numar:
+        logger.warning("❌ SMS: lipsă număr destinatar.")
+        return
+    if not numar.startswith("+"):
+        logger.warning(f"❌ SMS: număr fără prefix internațional: {numar}")
+        return
+
     try:
-        mesaj_sms = client.messages.create(
-            body=mesaj,
-            from_=settings.TWILIO_PHONE_NUMBER,
-            to=destinatar
+        logger.info(f"📤 Trimit SMS către {numar}...")
+        client = Client(
+            settings.TWILIO_ACCOUNT_SID,   # din Railway ENV
+            settings.TWILIO_AUTH_TOKEN     # din Railway ENV
         )
-        print(f"SMS trimis către {destinatar}: {mesaj_sms.sid}")
-        return True
+        msg = client.messages.create(
+            to=numar,
+            from_=settings.TWILIO_PHONE_NUMBER,  # din Railway ENV
+            body=mesaj,
+        )
+        logger.info(f"✅ Twilio: SID={msg.sid}, STATUS={msg.status}")
     except Exception as e:
-        print(f"Eroare la trimiterea SMS-ului: {e}")
-        return False
+        logger.error(f"💥 Eroare Twilio SMS: {e}")
+
 
 
