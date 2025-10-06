@@ -5,36 +5,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from .models import SMSLog
-
-def trimite_sms(numar, mesaj, utilizator=None):
-    if not numar or not numar.startswith("+"):
-        logger.warning(f"❌ Număr invalid: {numar}")
+def trimite_sms(numar, mesaj):
+    """Trimite SMS prin Twilio cu expeditor alfanumeric WASHTUIASI."""
+    if not numar:
+        logger.warning("❌ Lipsă număr destinatar.")
+        return
+    if not numar.startswith("+"):
+        logger.warning(f"❌ Număr fără prefix internațional: {numar}")
         return
 
     try:
-        # 🇷🇴 România → alfanumeric
-        if numar.startswith("+40"):
-            from_number = "WASHTUIASI"
-        else:
-            from_number = settings.TWILIO_PHONE_NUMBER
-
+        logger.info(f"📤 Trimit SMS către {numar} cu sender WASHTUIASI")
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         msg = client.messages.create(
             to=numar,
-            from_=from_number,
+            from_=settings.TWILIO_PHONE_NUMBER,  # ← nu 'WASHTUIASI'
             body=mesaj,
         )
-
-        SMSLog.objects.create(
-            utilizator=utilizator,
-            telefon=numar,
-            mesaj=mesaj,
-            twilio_sid=msg.sid,
-            status=msg.status,
-        )
-
-        logger.info(f"✅ SMS trimis către {numar} cu SID={msg.sid}, STATUS={msg.status}")
-
+        logger.info(f"✅ Twilio: SID={msg.sid}, STATUS={msg.status}")
     except Exception as e:
         logger.error(f"💥 Eroare Twilio SMS: {e}")
