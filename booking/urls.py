@@ -22,7 +22,8 @@ urlpatterns = [
 
 
  
-    path("webhook/twilio-sms/", twilio_sms_status_webhook, name="twilio_sms_webhook"),
+    path("webhook/twilio-sms/", views.twilio_sms_status_webhook, name="twilio_sms_webhook"),
+
 
 
     # Admin cămin - Detalii cămin
