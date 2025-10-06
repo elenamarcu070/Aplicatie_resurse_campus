@@ -162,3 +162,14 @@ class Avertisment(models.Model):
     def __str__(self):
         return f"Avertisment pentru {self.utilizator.email} - {self.data}"
 
+class SMSLog(models.Model):
+    utilizator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    telefon = models.CharField(max_length=20)
+    mesaj = models.TextField()
+    twilio_sid = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=50, default="queued")  # Twilio status
+    data_trimitere = models.DateTimeField(auto_now_add=True)
+    data_actualizare = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.telefon} - {self.status}"

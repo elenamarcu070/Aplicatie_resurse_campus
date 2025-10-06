@@ -569,11 +569,29 @@ def creeaza_rezervare(request):
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
 
-from django.http import HttpResponse
 
-def test_sms(request):
-    trimite_sms("+40756752311", "Salut, test Twilio Railway ✅")
-    return HttpResponse("Trimis — verifică Railway Logs.")
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from .models import SMSLog
+
+@csrf_exempt
+def twilio_sms_status_webhook(request):
+    if request.method == "POST":
+        sid = request.POST.get("MessageSid")
+        status = request.POST.get("MessageStatus")  # e.g., "delivered", "failed"
+
+        if sid and status:
+            try:
+                sms = SMSLog.objects.get(twilio_sid=sid)
+                sms.status = status
+                sms.save()
+                logger.info(f"📬 Status actualizat: {sid} -> {status}")
+            except SMSLog.DoesNotExist:
+                logger.warning(f"❗ Twilio webhook: SID necunoscut {sid}")
+
+        return HttpResponse("OK", status=200)
+    return HttpResponse("Method Not Allowed", status=405)
+
 
 # =========================
 # Programările utilizatorului (student/admin)

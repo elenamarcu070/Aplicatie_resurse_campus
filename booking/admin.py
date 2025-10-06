@@ -80,3 +80,17 @@ class RezervareAdmin(admin.ModelAdmin):
     def sterge_rezervari_anulate(self, request, queryset):
         count = queryset.filter(anulata=True).delete()
         self.message_user(request, f"{count[0]} rezervări anulate au fost șterse.")
+
+
+from django.contrib import admin
+from .models import SMSLog
+
+@admin.register(SMSLog)
+class SMSLogAdmin(admin.ModelAdmin):
+    list_display = ("telefon", "utilizator", "status", "twilio_sid", "data_trimitere")
+    search_fields = ("telefon", "twilio_sid", "mesaj")
+    list_filter = ("status", "data_trimitere")
+    readonly_fields = ("telefon", "utilizator", "mesaj", "twilio_sid", "status", "data_trimitere", "data_actualizare")
+    ordering = ("-data_trimitere",)
+    date_hierarchy = "data_trimitere"
+

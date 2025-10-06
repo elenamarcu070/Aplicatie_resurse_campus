@@ -2,7 +2,12 @@ from django.urls import path
 from . import views
 from django.conf import settings
 from django.contrib.auth.decorators import login_required  
+from booking.views import twilio_sms_status_webhook
 
+urlpatterns = [
+    # ...
+    path("webhook/twilio-sms/", twilio_sms_status_webhook, name="twilio_sms_webhook"),
+]
 
 
 urlpatterns = [
@@ -16,10 +21,8 @@ urlpatterns = [
     path('dashboard/admin_camin/', views.dashboard_admin_camin, name='dashboard_admin_camin'),
 
 
-    path("test-sms/", views.test_sms),
-
-
-
+ 
+    path("webhook/twilio-sms/", twilio_sms_status_webhook, name="twilio_sms_webhook"),
 
 
     # Admin cămin - Detalii cămin
