@@ -19,7 +19,7 @@ def trimite_sms(numar, mesaj):
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         msg = client.messages.create(
             to=numar,
-            from_="WASHTUIASI",  # Expeditor personalizat
+            from_=settings.TWILIO_PHONE_NUMBER,  # ← nu 'WASHTUIASI'
             body=mesaj,
         )
         logger.info(f"✅ Twilio: SID={msg.sid}, STATUS={msg.status}")
