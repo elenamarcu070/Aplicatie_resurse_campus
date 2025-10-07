@@ -82,8 +82,6 @@ class RezervareAdmin(admin.ModelAdmin):
         self.message_user(request, f"{count[0]} rezervări anulate au fost șterse.")
 
 
-from django.contrib import admin
-from .models import SMSLog
 
 
 
