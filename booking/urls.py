@@ -21,10 +21,6 @@ urlpatterns = [
     path('dashboard/admin_camin/', views.dashboard_admin_camin, name='dashboard_admin_camin'),
 
 
- 
-    path("webhook/twilio-sms/", views.twilio_sms_status_webhook, name="twilio_sms_webhook"),
-
-
 
     # Admin cămin - Detalii cămin
     path('dashboard/admin_camin/camine/<int:camin_id>/', views.detalii_camin_admin, name='detalii_camin_admin'),
