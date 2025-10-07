@@ -4,10 +4,6 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required  
 
 
-urlpatterns = [
-    # ...
-    path("webhook/twilio-sms/", twilio_sms_status_webhook, name="twilio_sms_webhook"),
-]
 
 
 urlpatterns = [
