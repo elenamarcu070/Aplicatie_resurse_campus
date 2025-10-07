@@ -25,3 +25,4 @@ def trimite_sms(numar, mesaj):
         logger.info(f"✅ Twilio: SID={msg.sid}, STATUS={msg.status}")
     except Exception as e:
         logger.error(f"💥 Eroare Twilio SMS: {e}")
+
