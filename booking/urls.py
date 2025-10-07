@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 from django.conf import settings
 from django.contrib.auth.decorators import login_required  
-from booking.views import twilio_sms_status_webhook
+
 
 urlpatterns = [
     # ...
