@@ -512,10 +512,11 @@ def creeaza_rezervare(request):
                     rez.save()
 
                     mesaj_notificare = (
-                        f"Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
+                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
                         f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
-                        f"la mașina '{rez.masina.nume}' a fost preluată. "
-                        f"Te rugăm să îți faci o altă rezervare pe washtuiasi.ro."
+                        f"la mașina '{rez.masina.nume}' a fost preluată de alt student. "
+                        f"Prioritatea ta a fost {rez.nivel_prioritate}, iar a lui {nr_rezervari + 1}."
+                        f"Reprogramează-te aici: https://washtuiasi.ro/dashboard."
                     )
 
                     # 🔔 Trimitere SMS – pentru student sau admin
