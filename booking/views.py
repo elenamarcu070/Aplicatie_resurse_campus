@@ -515,7 +515,7 @@ def creeaza_rezervare(request):
                         f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
                         f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
                         f"la mașina '{rez.masina.nume}' a fost preluată de alt student. "
-                        f"Prioritatea ta a fost {rez.nivel_prioritate}, iar a lui {nr_rezervari + 1}."
+                        f"Prioritatea ta a fost {rez.nivel_prioritate}, iar a lui {nr_rezervari + 1}. "
                         f"Reprogramează-te aici: https://washtuiasi.ro/dashboard."
                     )
 
@@ -524,6 +524,7 @@ def creeaza_rezervare(request):
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_sms(profil_vechi.telefon, mesaj_notificare)
+                            logger.info(f"📲 SMS notificare trimis către {profil_vechi.telefon} ({rez.utilizator.email})")
                         else:
                             admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
                             if admin_camin and admin_camin.telefon:
@@ -536,7 +537,7 @@ def creeaza_rezervare(request):
                     break
                 else:
                     messages.error(request, "Nu poți prelua această rezervare (prioritate mai mare sau egală).")
-                    return redirect(f'{reverse('calendar_rezervari')}?saptamana={saptamana}')
+                    return redirect(f"{reverse('calendar_rezervari')}?saptamana={saptamana}")
 
             # creăm rezervarea nouă
             rezervare = Rezervare.objects.create(
