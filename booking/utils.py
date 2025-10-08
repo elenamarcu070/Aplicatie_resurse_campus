@@ -19,10 +19,11 @@ def trimite_sms(numar, mesaj):
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         msg = client.messages.create(
             to=numar,
-            from_=settings.TWILIO_PHONE_NUMBER,  # ← nu 'WASHTUIASI'
+            messaging_service_sid=settings.TWILIO_MESSAGING_SERVICE_SID,  # ← nu 'WASHTUIASI'
             body=mesaj,
         )
         logger.info(f"✅ Twilio: SID={msg.sid}, STATUS={msg.status}")
     except Exception as e:
         logger.error(f"💥 Eroare Twilio SMS: {e}")
 
+#"twilio-domain-verification=aeef8bb394851e10b5e36ff12d8721f3"
