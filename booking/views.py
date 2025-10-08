@@ -244,14 +244,18 @@ def detalii_camin_admin(request, camin_id):
         elif 'dezactiveaza_masina_id' in request.POST:
             masina_id = request.POST.get('dezactiveaza_masina_id')
             data_str = request.POST.get('data_dezactivare')
-            ora_start_str = request.POST.get('ora_start')
-            ora_end_str = request.POST.get('ora_end')
+            ora_start_str = request.POST.get('ora_start_dezactivare')
+            ora_end_str = request.POST.get('ora_end_dezactivare')
 
             try:
                 masina = Masina.objects.get(id=masina_id)
                 data_selectata = datetime.strptime(data_str, '%Y-%m-%d').date()
                 ora_start = datetime.strptime(ora_start_str, '%H:%M').time()
                 ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
+
+                if ora_start >= ora_end:
+                    messages.error(request, "Interval orar invalid: ora de început trebuie să fie înainte de ora de sfârșit.")
+                    return redirect('detalii_camin_admin', camin_id=camin.id)
 
                 rezervari_afectate = Rezervare.objects.filter(
                     masina=masina,
@@ -263,7 +267,6 @@ def detalii_camin_admin(request, camin_id):
 
                 numar_notificari = 0
                 for rez in rezervari_afectate:
-                    # Notificare SMS
                     mesaj = (
                         f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')} "
                         f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
@@ -317,6 +320,7 @@ def detalii_camin_admin(request, camin_id):
         'programe_masini': programe_masini,
         'programe_uscatoare': programe_uscatoare,
     })
+
 
 
 

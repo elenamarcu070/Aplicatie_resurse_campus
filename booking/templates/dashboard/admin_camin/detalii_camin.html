@@ -51,13 +51,13 @@
             <div class="card-body">
                 <ul class="list-group mb-3">
                     {% for masina in masini %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div class="flex-grow-1">
-                                <form method="post" class="d-inline">
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                            <div class="d-flex align-items-center flex-wrap">
+                                <form method="post" class="d-inline me-2">
                                     {% csrf_token %}
                                     <input type="hidden" name="edit_masina_id" value="{{ masina.id }}">
-                                    <input type="text" name="nume_masina_nou" value="{{ masina.nume }}" class="form-control form-control-sm d-inline w-auto" style="display:inline-block;">
-                                    <button type="submit" class="btn btn-outline-primary btn-sm">Salvează</button>
+                                    <input type="text" name="nume_masina_nou" value="{{ masina.nume }}" class="form-control form-control-sm d-inline w-auto">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm ms-1">Salvează</button>
                                 </form>
                                 {% if masina.activa %}
                                     <span class="badge bg-success ms-2">Activă</span>
@@ -65,7 +65,7 @@
                                     <span class="badge bg-secondary ms-2">Inactivă</span>
                                 {% endif %}
                             </div>
-                            <div class="d-flex gap-1">
+                            <div class="mt-2 mt-sm-0">
                                 <!-- Ștergere -->
                                 <form method="post" class="d-inline" onsubmit="return confirm('Ești sigur că vrei să ștergi această mașină?');">
                                     {% csrf_token %}
@@ -73,54 +73,52 @@
                                     <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
                                 </form>
 
-                                <!-- Activare / Dezactivare completă -->
+                                <!-- Activare / Dezactivare -->
                                 <form method="post" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="toggle_masina_id" value="{{ masina.id }}">
-                                    <button type="submit" class="btn btn-outline-warning btn-sm">
-                                        {% if masina.activa %}Dezactivează complet{% else %}Activează{% endif %}
-                                    </button>
+                                    <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare</button>
                                 </form>
 
-                                <!-- Dezactivare interval -->
-                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#dezactiveazaModal{{ masina.id }}">
-                                    ⏰ Dezactivează interval
+                                <!-- Dezactivează interval -->
+                                <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalDezactiveaza-{{ masina.id }}">
+                                    Dezactivează interval
                                 </button>
                             </div>
                         </li>
 
-                        <!-- Modal pentru dezactivare interval -->
-                        <div class="modal fade" id="dezactiveazaModal{{ masina.id }}" tabindex="-1" aria-labelledby="dezactiveazaModalLabel{{ masina.id }}" aria-hidden="true">
-                          <div class="modal-dialog">
-                            <div class="modal-content">
-                              <form method="post">
-                                {% csrf_token %}
-                                <input type="hidden" name="dezactiveaza_masina_id" value="{{ masina.id }}">
-                                <div class="modal-header">
-                                  <h5 class="modal-title" id="dezactiveazaModalLabel{{ masina.id }}">Dezactivează interval – {{ masina.nume }}</h5>
-                                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
+                        <!-- MODAL dezactivare interval -->
+                        <div class="modal fade" id="modalDezactiveaza-{{ masina.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="dezactiveaza_masina_id" value="{{ masina.id }}">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Dezactivează interval – {{ masina.nume }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Data</label>
+                                                <input type="date" name="data_dezactivare" class="form-control" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Ora început</label>
+                                                <input type="time" name="ora_start_dezactivare" class="form-control" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Ora sfârșit</label>
+                                                <input type="time" name="ora_end_dezactivare" class="form-control" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                                            <button type="submit" class="btn btn-warning">Dezactivează intervalul</button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <div class="modal-body">
-                                  <div class="mb-3">
-                                    <label class="form-label">Data</label>
-                                    <input type="date" class="form-control" name="data_dezactivare" required>
-                                  </div>
-                                  <div class="mb-3">
-                                    <label class="form-label">Ora început</label>
-                                    <input type="time" class="form-control" name="ora_start" required>
-                                  </div>
-                                  <div class="mb-3">
-                                    <label class="form-label">Ora sfârșit</label>
-                                    <input type="time" class="form-control" name="ora_end" required>
-                                  </div>
-                                </div>
-                                <div class="modal-footer">
-                                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
-                                  <button type="submit" class="btn btn-warning">Dezactivează intervalul</button>
-                                </div>
-                              </form>
                             </div>
-                          </div>
                         </div>
                     {% endfor %}
                 </ul>
@@ -151,35 +149,6 @@
                         </li>
                     {% endfor %}
                 </ul>
-
-                <div class="card mt-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Adaugă Program pentru Mașină</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <select name="program_masina_id" class="form-select" required>
-                                        {% for masina in masini %}
-                                            <option value="{{ masina.id }}">{{ masina.nume }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="time" name="ora_start_masina" class="form-control" required>
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="time" name="ora_end_masina" class="form-control" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-success">Adaugă</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
             </div>
         </div>
 
