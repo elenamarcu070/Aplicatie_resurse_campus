@@ -187,6 +187,7 @@ def detalii_camin_admin(request, camin_id):
     camin = get_object_or_404(Camin, id=camin_id)
 
     if request.method == 'POST':
+        # ✅ Adăugare admin
         if 'email_nou_admin' in request.POST:
             email_nou = request.POST.get('email_nou_admin').strip().lower()
             if email_nou:
@@ -194,9 +195,10 @@ def detalii_camin_admin(request, camin_id):
                     AdminCamin.objects.create(camin=camin, email=email_nou)
                     messages.success(request, f"Adminul '{email_nou}' a fost adăugat cu succes.")
                 else:
-                    messages.warning(request, f"'{email_nou}' este deja admin la cămin.")
+                    messages.warning(request, f"'{email_nou}' este deja admin la acest cămin.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
+        # ✅ Ștergere admin
         elif 'sterge_admin_id' in request.POST:
             admin_id = request.POST.get('sterge_admin_id')
             admin = get_object_or_404(AdminCamin, id=admin_id)
@@ -204,6 +206,7 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, f"Adminul '{admin.email}' a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
+        # ✅ Adăugare mașină
         elif 'nume_masina' in request.POST:
             nume = request.POST.get('nume_masina').strip()
             if nume:
@@ -211,19 +214,23 @@ def detalii_camin_admin(request, camin_id):
                 messages.success(request, f"Mașina '{nume}' a fost adăugată.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
+        # ✅ Ștergere mașină
         elif 'sterge_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['sterge_masina_id'])
             masina.delete()
             messages.success(request, f"Mașina '{masina.nume}' a fost ștearsă.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
+        # ✅ Activare / dezactivare completă mașină
         elif 'toggle_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['toggle_masina_id'])
             masina.activa = not masina.activa
             masina.save()
-            messages.success(request, f"Statusul mașinii '{masina.nume}' a fost modificat.")
+            status = "activată" if masina.activa else "dezactivată"
+            messages.success(request, f"Mașina '{masina.nume}' a fost {status}.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
+        # ✅ Editare nume mașină
         elif 'edit_masina_id' in request.POST and 'nume_masina_nou' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['edit_masina_id'])
             nume_nou = request.POST.get('nume_masina_nou').strip()
@@ -233,35 +240,52 @@ def detalii_camin_admin(request, camin_id):
                 messages.success(request, f"Numele mașinii a fost actualizat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        elif 'nume_uscator' in request.POST:
-            nume = request.POST.get('nume_uscator').strip()
-            if nume:
-                Uscator.objects.create(camin=camin, nume=nume, activa=True)
-                messages.success(request, f"Uscătorul '{nume}' a fost adăugat.")
+        # ✅ Dezactivare mașină pe interval ⏰
+        elif 'dezactiveaza_masina_id' in request.POST:
+            masina_id = request.POST.get('dezactiveaza_masina_id')
+            data_str = request.POST.get('data_dezactivare')
+            ora_start_str = request.POST.get('ora_start')
+            ora_end_str = request.POST.get('ora_end')
+
+            try:
+                masina = Masina.objects.get(id=masina_id)
+                data_selectata = datetime.strptime(data_str, '%Y-%m-%d').date()
+                ora_start = datetime.strptime(ora_start_str, '%H:%M').time()
+                ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
+
+                rezervari_afectate = Rezervare.objects.filter(
+                    masina=masina,
+                    data_rezervare=data_selectata,
+                    ora_start__lt=ora_end,
+                    ora_end__gt=ora_start,
+                    anulata=False
+                )
+
+                numar_notificari = 0
+                for rez in rezervari_afectate:
+                    # Notificare SMS
+                    mesaj = (
+                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')} "
+                        f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
+                        f"la mașina '{masina.nume}' a fost anulată deoarece mașina este dezactivată în acel interval."
+                    )
+
+                    profil_student = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
+                    if profil_student and profil_student.telefon:
+                        trimite_sms(profil_student.telefon, mesaj)
+                        numar_notificari += 1
+
+                    rez.anulata = True
+                    rez.save()
+
+                messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată pentru intervalul selectat. "
+                                          f"{numar_notificari} rezervări au fost anulate și notificate.")
+            except Exception as e:
+                messages.error(request, f"Eroare la dezactivarea pe interval: {e}")
+
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        elif 'sterge_uscator_id' in request.POST:
-            uscator = get_object_or_404(Uscator, id=request.POST['sterge_uscator_id'])
-            uscator.delete()
-            messages.success(request, f"Uscătorul '{uscator.nume}' a fost șters.")
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
-        elif 'toggle_uscator_id' in request.POST:
-            uscator = get_object_or_404(Uscator, id=request.POST['toggle_uscator_id'])
-            uscator.activa = not uscator.activa
-            uscator.save()
-            messages.success(request, f"Statusul uscătorului '{uscator.nume}' a fost modificat.")
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
-        elif 'edit_uscator_id' in request.POST and 'nume_uscator_nou' in request.POST:
-            uscator = get_object_or_404(Uscator, id=request.POST['edit_uscator_id'])
-            nume_nou = request.POST.get('nume_uscator_nou').strip()
-            if nume_nou:
-                uscator.nume = nume_nou
-                uscator.save()
-                messages.success(request, f"Numele uscătorului a fost actualizat.")
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
+        # ✅ Programe mașini
         elif 'adauga_program_masina' in request.POST or 'program_masina_id' in request.POST:
             masina_id = request.POST.get('program_masina_id')
             ora_start = request.POST.get('ora_start_masina')
@@ -271,15 +295,6 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, "Programul mașinii a fost adăugat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        elif 'adauga_program_uscator' in request.POST or 'program_uscator_id' in request.POST:
-            uscator_id = request.POST.get('program_uscator_id')
-            ora_start = request.POST.get('ora_start_uscator')
-            ora_end = request.POST.get('ora_end_uscator')
-            uscator = get_object_or_404(Uscator, id=uscator_id)
-            ProgramUscator.objects.create(uscator=uscator, ora_start=ora_start, ora_end=ora_end)
-            messages.success(request, "Programul uscătorului a fost adăugat.")
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
         elif 'sterge_program_masina_id' in request.POST:
             program_id = request.POST.get('sterge_program_masina_id')
             program = get_object_or_404(ProgramMasina, id=program_id)
@@ -287,13 +302,7 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, "Programul mașinii a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        elif 'sterge_program_uscator_id' in request.POST:
-            program_id = request.POST.get('sterge_program_uscator_id')
-            program = get_object_or_404(ProgramUscator, id=program_id)
-            program.delete()
-            messages.success(request, "Programul uscătorului a fost șters.")
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
+    # ✅ date pentru template
     admini = AdminCamin.objects.filter(camin=camin)
     masini = Masina.objects.filter(camin=camin)
     uscatoare = Uscator.objects.filter(camin=camin)
