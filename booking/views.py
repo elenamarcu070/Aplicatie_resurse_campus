@@ -228,7 +228,6 @@ def detalii_camin_admin(request, camin_id):
             masina.save()
 
             if not masina.activa:
-                # 🔴 Mașina tocmai a fost dezactivată complet → anulăm rezervările viitoare + SMS
                 rezervari_viitoare = Rezervare.objects.filter(
                     masina=masina,
                     data_rezervare__gte=date.today(),
@@ -242,12 +241,10 @@ def detalii_camin_admin(request, camin_id):
                         f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
                         f"la mașina '{masina.nume}' a fost anulată deoarece mașina a fost dezactivată."
                     )
-
-                    profil_student = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                    if profil_student and profil_student.telefon:
-                        trimite_sms(profil_student.telefon, mesaj)
+                    profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
+                    if profil and profil.telefon:
+                        trimite_sms(profil.telefon, mesaj)
                         numar_notificari += 1
-
                     rez.anulata = True
                     rez.save()
 
@@ -278,7 +275,7 @@ def detalii_camin_admin(request, camin_id):
             try:
                 masina = Masina.objects.get(id=masina_id)
 
-                # 🔸 Dacă nu e dată selectată => dezactivare totală
+                # 🔸 Dezactivare completă (fără dată)
                 if not data_str:
                     rezervari_viitoare = Rezervare.objects.filter(
                         masina=masina,
@@ -297,7 +294,6 @@ def detalii_camin_admin(request, camin_id):
                         if profil and profil.telefon:
                             trimite_sms(profil.telefon, mesaj)
                             numar_notificari += 1
-
                         rez.anulata = True
                         rez.save()
 
@@ -391,6 +387,7 @@ def detalii_camin_admin(request, camin_id):
         'programe_uscatoare': programe_uscatoare,
     })
 
+
 # =========================
 # Rezervarea mașinilor
 # =========================
@@ -456,6 +453,13 @@ def calendar_rezervari_view(request):
     profil = ProfilStudent.objects.filter(utilizator=user).first()
     este_blocat = profil.este_blocat() if profil else False
 
+    intervale_blocate = IntervalDezactivare.objects.filter(
+        masina__in=masini,
+        data__range=(start_saptamana, end_saptamana)
+        )
+
+
+
     context = {
         'masini': masini,
         'zile_saptamana': zile_saptamana,
@@ -471,6 +475,7 @@ def calendar_rezervari_view(request):
         'este_student': este_student,
         'este_blocat': este_blocat,
         'nume_camin': nume_camin,
+        'intervale_blocate': intervale_blocate,
     }
     return render(request, 'dashboard/student/calendar_orar.html', context)
 
