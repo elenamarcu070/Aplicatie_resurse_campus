@@ -187,6 +187,9 @@ def sterge_camin_view(request, camin_id):
 import logging
 logger = logging.getLogger(__name__)
 
+
+from .utils import trimite_whatsapp_template
+
 @login_required
 @only_admins
 def detalii_camin_admin(request, camin_id):
