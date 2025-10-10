@@ -221,7 +221,7 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, f"Mașina '{masina.nume}' a fost ștearsă.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # ✅ Activare / dezactivare completă mașină
+        # ✅ Activare / Dezactivare completă mașină
         elif 'toggle_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['toggle_masina_id'])
             masina.activa = not masina.activa
@@ -237,7 +237,7 @@ def detalii_camin_admin(request, camin_id):
             if nume_nou:
                 masina.nume = nume_nou
                 masina.save()
-                messages.success(request, f"Numele mașinii a fost actualizat.")
+                messages.success(request, "Numele mașinii a fost actualizat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Dezactivare mașină pe interval ⏰
@@ -252,10 +252,6 @@ def detalii_camin_admin(request, camin_id):
                 data_selectata = datetime.strptime(data_str, '%Y-%m-%d').date()
                 ora_start = datetime.strptime(ora_start_str, '%H:%M').time()
                 ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
-
-                if ora_start >= ora_end:
-                    messages.error(request, "Interval orar invalid: ora de început trebuie să fie înainte de ora de sfârșit.")
-                    return redirect('detalii_camin_admin', camin_id=camin.id)
 
                 rezervari_afectate = Rezervare.objects.filter(
                     masina=masina,
@@ -281,14 +277,17 @@ def detalii_camin_admin(request, camin_id):
                     rez.anulata = True
                     rez.save()
 
-                messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată pentru intervalul selectat. "
-                                          f"{numar_notificari} rezervări au fost anulate și notificate.")
+                messages.success(
+                    request,
+                    f"Mașina '{masina.nume}' a fost dezactivată pentru intervalul selectat. "
+                    f"{numar_notificari} rezervări au fost anulate și notificate."
+                )
             except Exception as e:
                 messages.error(request, f"Eroare la dezactivarea pe interval: {e}")
 
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-        # ✅ Programe mașini
+        # ✅ Adăugare program mașină
         elif 'adauga_program_masina' in request.POST or 'program_masina_id' in request.POST:
             masina_id = request.POST.get('program_masina_id')
             ora_start = request.POST.get('ora_start_masina')
@@ -298,6 +297,7 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, "Programul mașinii a fost adăugat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
+        # ✅ Ștergere program mașină
         elif 'sterge_program_masina_id' in request.POST:
             program_id = request.POST.get('sterge_program_masina_id')
             program = get_object_or_404(ProgramMasina, id=program_id)
@@ -305,7 +305,7 @@ def detalii_camin_admin(request, camin_id):
             messages.success(request, "Programul mașinii a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
-    # ✅ date pentru template
+    # ✅ Date pentru template
     admini = AdminCamin.objects.filter(camin=camin)
     masini = Masina.objects.filter(camin=camin)
     uscatoare = Uscator.objects.filter(camin=camin)
@@ -320,8 +320,6 @@ def detalii_camin_admin(request, camin_id):
         'programe_masini': programe_masini,
         'programe_uscatoare': programe_uscatoare,
     })
-
-
 
 
 
@@ -529,7 +527,7 @@ def creeaza_rezervare(request):
                         f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
                         f"la mașina '{rez.masina.nume}' a fost preluată de alt student. "
                         f"Prioritatea ta a fost {rez.nivel_prioritate}, iar a lui {nr_rezervari + 1}. "
-                        f"Reprogramează-te pe washtuiasi."
+                        f"Reprogramează-te pe site."
                     )
 
                     # 🔔 Trimitere SMS – pentru student sau admin

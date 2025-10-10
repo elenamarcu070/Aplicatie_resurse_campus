@@ -7,13 +7,13 @@
         <h1 class="text-center mb-4">{{ camin.nume }}</h1>
 
         {% if messages %}
-            <div class="mt-3">
-                {% for message in messages %}
-                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+        <div class="mt-3">
+            {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+                {{ message }}
             </div>
+            {% endfor %}
+        </div>
         {% endif %}
 
         <!-- Admini -->
@@ -24,14 +24,14 @@
             <div class="card-body">
                 <ul class="list-group mb-3">
                     {% for admin in admini %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ admin.email }}
-                            <form method="post" class="m-0" onsubmit="return confirm('Ești sigur că vrei să ștergi acest admin?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="sterge_admin_id" value="{{ admin.id }}">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
-                            </form>
-                        </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ admin.email }}
+                        <form method="post" class="m-0" onsubmit="return confirm('Ești sigur că vrei să ștergi acest admin?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="sterge_admin_id" value="{{ admin.id }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
+                        </form>
+                    </li>
                     {% endfor %}
                 </ul>
 
@@ -51,75 +51,44 @@
             <div class="card-body">
                 <ul class="list-group mb-3">
                     {% for masina in masini %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                            <div class="d-flex align-items-center flex-wrap">
-                                <form method="post" class="d-inline me-2">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="edit_masina_id" value="{{ masina.id }}">
-                                    <input type="text" name="nume_masina_nou" value="{{ masina.nume }}" class="form-control form-control-sm d-inline w-auto">
-                                    <button type="submit" class="btn btn-outline-primary btn-sm ms-1">Salvează</button>
-                                </form>
-                                {% if masina.activa %}
-                                    <span class="badge bg-success ms-2">Activă</span>
-                                {% else %}
-                                    <span class="badge bg-secondary ms-2">Inactivă</span>
-                                {% endif %}
-                            </div>
-                            <div class="mt-2 mt-sm-0">
-                                <!-- Ștergere -->
-                                <form method="post" class="d-inline" onsubmit="return confirm('Ești sigur că vrei să ștergi această mașină?');">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="sterge_masina_id" value="{{ masina.id }}">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
-                                </form>
-
-                                <!-- Activare / Dezactivare -->
-                                <form method="post" class="d-inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="toggle_masina_id" value="{{ masina.id }}">
-                                    <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare</button>
-                                </form>
-
-                                <!-- Dezactivează interval -->
-                                <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalDezactiveaza-{{ masina.id }}">
-                                    Dezactivează interval
-                                </button>
-                            </div>
-                        </li>
-
-                        <!-- MODAL dezactivare interval -->
-                        <div class="modal fade" id="modalDezactiveaza-{{ masina.id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <form method="post">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="dezactiveaza_masina_id" value="{{ masina.id }}">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Dezactivează interval – {{ masina.nume }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Data</label>
-                                                <input type="date" name="data_dezactivare" class="form-control" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Ora început</label>
-                                                <input type="time" name="ora_start_dezactivare" class="form-control" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Ora sfârșit</label>
-                                                <input type="time" name="ora_end_dezactivare" class="form-control" required>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
-                                            <button type="submit" class="btn btn-warning">Dezactivează intervalul</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
+                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="edit_masina_id" value="{{ masina.id }}">
+                                <input type="text" name="nume_masina_nou" value="{{ masina.nume }}" class="form-control form-control-sm d-inline w-auto">
+                                <button type="submit" class="btn btn-outline-primary btn-sm ms-1">Salvează</button>
+                            </form>
+                            {% if masina.activa %}
+                                <span class="badge bg-success ms-2">Activă</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-2">Inactivă</span>
+                            {% endif %}
                         </div>
+
+                        <div>
+                            <!-- Ștergere -->
+                            <form method="post" class="d-inline" onsubmit="return confirm('Ești sigur că vrei să ștergi această mașină?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="sterge_masina_id" value="{{ masina.id }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
+                            </form>
+
+                            <!-- Activare / Dezactivare -->
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="toggle_masina_id" value="{{ masina.id }}">
+                                <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare</button>
+                            </form>
+
+                            <!-- Dezactivare interval -->
+                            <button type="button" class="btn btn-outline-warning btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#dezactiveaza-{{ masina.id }}">
+                                Dezactivează interval
+                            </button>
+                        </div>
+                    </li>
                     {% endfor %}
                 </ul>
 
@@ -137,21 +106,93 @@
                 <h5 class="mb-0">Programe Mașini</h5>
             </div>
             <div class="card-body">
-                <ul class="list-group list-group-flush">
+                <ul class="list-group list-group-flush mb-3">
                     {% for program in programe_masini %}
-                        <li class="list-group-item">
-                            Program Mașină: {{ program.masina.nume }} - {{ program.ora_start|time:"H:i" }} - {{ program.ora_end|time:"H:i" }}
-                            <form method="post" class="d-inline float-end" onsubmit="return confirm('Sigur vrei să ștergi?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="sterge_program_masina_id" value="{{ program.id }}">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
-                            </form>
-                        </li>
+                    <li class="list-group-item">
+                        Program Mașină: {{ program.masina.nume }} - {{ program.ora_start|time:"H:i" }} - {{ program.ora_end|time:"H:i" }}
+                        <form method="post" class="d-inline float-end" onsubmit="return confirm('Sigur vrei să ștergi?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="sterge_program_masina_id" value="{{ program.id }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
+                        </form>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Niciun program setat momentan.</li>
                     {% endfor %}
                 </ul>
+
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Adaugă Program pentru Mașină</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <select name="program_masina_id" class="form-select" required>
+                                        {% for masina in masini %}
+                                        <option value="{{ masina.id }}">{{ masina.nume }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="time" name="ora_start_masina" class="form-control" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="time" name="ora_end_masina" class="form-control" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-success" name="adauga_program_masina">Adaugă</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 
     </div>
 </div>
+
+<!-- Modalele sunt puse în afara containerului pentru a nu fi blocate -->
+{% for masina in masini %}
+<div class="modal fade" id="dezactiveaza-{{ masina.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="dezactiveaza_masina_id" value="{{ masina.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dezactivează interval – {{ masina.nume }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Data</label>
+                        <input type="date" name="data_dezactivare" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ora început</label>
+                        <input type="time" name="ora_start_dezactivare" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ora sfârșit</label>
+                        <input type="time" name="ora_end_dezactivare" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                    <button type="submit" class="btn btn-warning">Dezactivează intervalul</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+.modal { z-index: 2000; }
+.modal-backdrop { z-index: 1990; }
+</style>
 {% endblock %}
