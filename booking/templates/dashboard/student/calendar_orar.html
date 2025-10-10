@@ -266,7 +266,7 @@
                                                 </div>
                                             </div>
                                         {% else %}
-                                            {% if (este_admin_camin or este_student) and zi >= today %}
+                                            {% if (este_admin_camin or este_student and zi >= today %}
                                                 <div class="interval-container">
                                                     <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
                                                         {% csrf_token %}
