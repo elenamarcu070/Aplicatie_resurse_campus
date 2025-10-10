@@ -10,23 +10,19 @@
         min-width: 150px;
         width: 100%;
     }
-
     .table td {
         padding: 5px;
         vertical-align: middle;
         min-width: 160px;
         width: 160px;
     }
-
     .table th:first-child {
         min-width: 100px;
         width: 100px;
     }
-
     .table-responsive {
         overflow-x: auto;
     }
-
     .time-slot {
         font-size: 0.9em;
         padding: 5px 8px;
@@ -38,7 +34,6 @@
         transition: all 0.2s ease;
         white-space: nowrap;
     }
-
     .btn-interval {
         width: 100%;
         height: 100%;
@@ -52,12 +47,7 @@
         border-radius: 4px;
         transition: all 0.2s ease;
     }
-
-    .btn-interval:hover {
-        background-color: #28a745;
-        color: white;
-    }
-
+    .btn-interval:hover { background-color: #28a745; color: white; }
     .rezervare {
         height: 100%;
         width: 100%;
@@ -68,7 +58,6 @@
         transition: all 0.3s ease;
         white-space: nowrap;
     }
-
     .bg-danger { background-color: #dc3545 !important; color: white !important; }
     .bg-secondary { background-color: #6c757d !important; color: white !important; }
     .bg-primary { background-color: #0d6efd !important; color: white !important; }
@@ -90,21 +79,13 @@
         cursor: pointer;
         transition: all 0.2s ease;
     }
-
     .btn-icon:hover { color: white; transform: scale(1.1); }
     .btn-icon i { font-size: 0.8rem; }
 
     .container { max-width: 1200px; }
     .shadow { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
 
-    .badge {
-        width: 20px;
-        height: 20px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
+    .badge { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
     .legend-item { display: flex; align-items: center; margin: 0.5rem; }
     .legend-text { margin-left: 0.5rem; font-size: 0.875rem; color: #666; }
 
@@ -159,7 +140,6 @@
                                     {% with ora_sfarsit=ora|add:"2" %}
                                         {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora %}
                                             {% if rezervare %}
-                                                {# --- REZERVARE EXISTENTĂ --- #}
                                                 <div class="interval-container">
                                                     <div class="rezervare 
                                                         {% if zi < today %}bg-warning{% else %}
@@ -181,17 +161,14 @@
                                                     </div>
                                                 </div>
                                             {% else %}
-                                                {# --- VERIFICĂ DACĂ E DEZACTIVAT --- #}
-                                                {% with blocat=False %}
+                                                {% with este_blocat=False %}
                                                     {% for blocaj in intervale_blocate %}
                                                         {% if blocaj.masina.id == masina.id and blocaj.data == zi and ora < blocaj.ora_end.hour and ora|add:"2" > blocaj.ora_start.hour %}
-                                                            {% with blocat=True %}
-                                                                {% include "set_blocaj.html" %}
+                                                            {% with este_blocat=True %}
                                                             {% endwith %}
                                                         {% endif %}
                                                     {% endfor %}
-                                                    
-                                                    {% if blocat %}
+                                                    {% if este_blocat %}
                                                         <div class="interval-container">
                                                             <div class="time-slot bg-blocked">Dezactivat</div>
                                                         </div>
