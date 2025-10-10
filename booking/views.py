@@ -181,6 +181,9 @@ def sterge_camin_view(request, camin_id):
 # =========================
 # Admin cămin - Detalii cămin
 # =========================
+# =========================
+# Admin cămin - Detalii cămin
+# =========================
 @login_required
 @only_admins
 def detalii_camin_admin(request, camin_id):
@@ -228,11 +231,11 @@ def detalii_camin_admin(request, camin_id):
             masina.save()
 
             if not masina.activa:
+                # 🔎 Caută toate rezervările viitoare (inclusiv cele fără anulata=False)
                 rezervari_viitoare = Rezervare.objects.filter(
                     masina=masina,
-                    data_rezervare__gte=date.today(),
-                    anulata=False
-                )
+                    data_rezervare__gte=date.today()
+                ).exclude(anulata=True)
 
                 numar_notificari = 0
                 for rez in rezervari_viitoare:
@@ -244,7 +247,7 @@ def detalii_camin_admin(request, camin_id):
                     profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                     if profil and profil.telefon:
                         trimite_sms(profil.telefon, mesaj)
-                        numar_notificari += 1
+                    numar_notificari += 1
                     rez.anulata = True
                     rez.save()
 
@@ -279,9 +282,8 @@ def detalii_camin_admin(request, camin_id):
                 if not data_str:
                     rezervari_viitoare = Rezervare.objects.filter(
                         masina=masina,
-                        data_rezervare__gte=date.today(),
-                        anulata=False
-                    )
+                        data_rezervare__gte=date.today()
+                    ).exclude(anulata=True)
 
                     numar_notificari = 0
                     for rez in rezervari_viitoare:
@@ -293,7 +295,7 @@ def detalii_camin_admin(request, camin_id):
                         profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil and profil.telefon:
                             trimite_sms(profil.telefon, mesaj)
-                            numar_notificari += 1
+                        numar_notificari += 1
                         rez.anulata = True
                         rez.save()
 
@@ -312,9 +314,8 @@ def detalii_camin_admin(request, camin_id):
                     masina=masina,
                     data_rezervare=data_selectata,
                     ora_start__lt=ora_end,
-                    ora_end__gt=ora_start,
-                    anulata=False
-                )
+                    ora_end__gt=ora_start
+                ).exclude(anulata=True)
 
                 numar_notificari = 0
                 for rez in rezervari_afectate:
@@ -327,7 +328,7 @@ def detalii_camin_admin(request, camin_id):
                     profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                     if profil and profil.telefon:
                         trimite_sms(profil.telefon, mesaj)
-                        numar_notificari += 1
+                    numar_notificari += 1
                     rez.anulata = True
                     rez.save()
 
