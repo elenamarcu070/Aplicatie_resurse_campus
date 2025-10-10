@@ -226,8 +226,36 @@ def detalii_camin_admin(request, camin_id):
             masina = get_object_or_404(Masina, id=request.POST['toggle_masina_id'])
             masina.activa = not masina.activa
             masina.save()
-            status = "activată" if masina.activa else "dezactivată"
-            messages.success(request, f"Mașina '{masina.nume}' a fost {status}.")
+
+            if not masina.activa:
+                # 🔴 Mașina tocmai a fost dezactivată complet → anulăm rezervările viitoare + SMS
+                rezervari_viitoare = Rezervare.objects.filter(
+                    masina=masina,
+                    data_rezervare__gte=date.today(),
+                    anulata=False
+                )
+
+                numar_notificari = 0
+                for rez in rezervari_viitoare:
+                    mesaj = (
+                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')} "
+                        f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
+                        f"la mașina '{masina.nume}' a fost anulată deoarece mașina a fost dezactivată."
+                    )
+
+                    profil_student = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
+                    if profil_student and profil_student.telefon:
+                        trimite_sms(profil_student.telefon, mesaj)
+                        numar_notificari += 1
+
+                    rez.anulata = True
+                    rez.save()
+
+                messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată complet. "
+                                          f"{numar_notificari} rezervări au fost anulate și notificate.")
+            else:
+                messages.success(request, f"Mașina '{masina.nume}' a fost activată.")
+
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Editare nume mașină
@@ -288,7 +316,7 @@ def detalii_camin_admin(request, camin_id):
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Adăugare program mașină
-        elif 'adauga_program_masina' in request.POST or 'program_masina_id' in request.POST:
+        elif 'program_masina_id' in request.POST:
             masina_id = request.POST.get('program_masina_id')
             ora_start = request.POST.get('ora_start_masina')
             ora_end = request.POST.get('ora_end_masina')
@@ -422,13 +450,19 @@ logger = logging.getLogger(__name__)
 
 
 
+from booking.models import (
+    Camin, ProfilStudent, AdminCamin,
+    Rezervare, ProgramMasina, Masina,
+    Avertisment, Uscator, ProgramUscator,
+    IntervalDezactivare   # 🟡 asigură-te că ai acest import
+)
 
 @login_required
 def creeaza_rezervare(request):
     user = request.user
     saptamana = request.POST.get('saptamana', 0)
 
-    # verificare drepturi acces
+    # ✅ Verificare drepturi acces
     if not (AdminCamin.objects.filter(email=user.email).exists() or
             ProfilStudent.objects.filter(utilizator=user).exists()):
         return render(request, 'not_allowed.html', {
@@ -453,7 +487,19 @@ def creeaza_rezervare(request):
             ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
             azi = date.today()
 
-            # avertismente recente
+            # 🟡 Verificăm dacă intervalul cerut este într-un interval dezactivat
+            exista_blocaj = IntervalDezactivare.objects.filter(
+                masina=masina,
+                data=data_rezervare,
+                ora_start__lt=ora_end,
+                ora_end__gt=ora_start
+            ).exists()
+
+            if exista_blocaj:
+                messages.error(request, "Mașina este dezactivată în intervalul selectat. Alege alt interval.")
+                return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
+
+            # ✅ Verificare avertismente recente
             avertismente = Avertisment.objects.filter(
                 utilizator=user,
                 data__gte=azi - timedelta(days=7)
@@ -462,7 +508,7 @@ def creeaza_rezervare(request):
                 messages.error(request, "Cont blocat temporar din cauza avertismentelor.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
-            # verificări de date
+            # ✅ Verificări de date
             if data_rezervare < azi:
                 messages.error(request, "Nu poți face rezervări pentru date din trecut.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
@@ -510,7 +556,7 @@ def creeaza_rezervare(request):
                 anulata=False
             )
 
-            # logica de preluare rezervare
+            # 🔁 Logica de preluare rezervare existentă
             for rez in rezervari_existente:
                 rezervari_alt_user = Rezervare.objects.filter(
                     utilizator=rez.utilizator,
@@ -530,18 +576,16 @@ def creeaza_rezervare(request):
                         f"Reprogramează-te pe site."
                     )
 
-                    # 🔔 Trimitere SMS – pentru student sau admin
+                    # 📲 Trimitere SMS notificare
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_sms(profil_vechi.telefon, mesaj_notificare)
-                            logger.info(f"📲 SMS notificare trimis către {profil_vechi.telefon} ({rez.utilizator.email})")
+                            logger.info(f"📲 SMS trimis către {profil_vechi.telefon}")
                         else:
                             admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
                             if admin_camin and admin_camin.telefon:
                                 trimite_sms(admin_camin.telefon, mesaj_notificare)
-                            else:
-                                logger.warning(f"User {rez.utilizator.email} fără telefon în profil sau admin — nu se trimite SMS.")
                     except Exception as e:
                         logger.error(f"Eroare trimitere SMS: {e}")
 
@@ -550,7 +594,7 @@ def creeaza_rezervare(request):
                     messages.error(request, "Nu poți prelua această rezervare (prioritate mai mare sau egală).")
                     return redirect(f"{reverse('calendar_rezervari')}?saptamana={saptamana}")
 
-            # creăm rezervarea nouă
+            # 🆕 Creăm rezervarea nouă
             rezervare = Rezervare.objects.create(
                 utilizator=user,
                 masina=masina,
@@ -560,7 +604,7 @@ def creeaza_rezervare(request):
                 nivel_prioritate=1
             )
 
-            # actualizare priorități
+            # 🔄 Actualizăm prioritățile după creare
             rezervari_actualizare = Rezervare.objects.filter(
                 utilizator=user,
                 data_rezervare__range=(start_sapt, end_sapt),

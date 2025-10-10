@@ -162,3 +162,9 @@ class Avertisment(models.Model):
     def __str__(self):
         return f"Avertisment pentru {self.utilizator.email} - {self.data}"
 
+# models.py
+class IntervalDezactivare(models.Model):
+    masina = models.ForeignKey(Masina, on_delete=models.CASCADE, related_name="intervale_dezactivate")
+    data = models.DateField()
+    ora_start = models.TimeField()
+    ora_end = models.TimeField()

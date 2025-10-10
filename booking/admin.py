@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Camin, Masina, ProgramMasina, ProfilStudent, Rezervare, Avertisment
+from .models import Camin, Masina, ProgramMasina, ProfilStudent, Rezervare, Avertisment, IntervalDezactivare
 from .models import AdminCamin
 from django.contrib.auth.models import User 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -57,7 +57,11 @@ class AvertismentAdmin(admin.ModelAdmin):
 
 
 
-
+@admin.register(IntervalDezactivare)
+class IntervalDezactivareAdmin(admin.ModelAdmin):
+    list_display = ('masina', 'data', 'ora_start', 'ora_end')
+    search_fields = ('masina__nume',)
+    list_filter = ('masina', 'data')
     
 
 
