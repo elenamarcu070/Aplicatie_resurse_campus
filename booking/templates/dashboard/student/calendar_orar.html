@@ -185,9 +185,12 @@
                                                 {% with blocat=False %}
                                                     {% for blocaj in intervale_blocate %}
                                                         {% if blocaj.masina.id == masina.id and blocaj.data == zi and ora < blocaj.ora_end.hour and ora|add:"2" > blocaj.ora_start.hour %}
-                                                            {% with blocat=True %}{% break %}{% endwith %}
+                                                            {% with blocat=True %}
+                                                                {% include "set_blocaj.html" %}
+                                                            {% endwith %}
                                                         {% endif %}
                                                     {% endfor %}
+                                                    
                                                     {% if blocat %}
                                                         <div class="interval-container">
                                                             <div class="time-slot bg-blocked">Dezactivat</div>
