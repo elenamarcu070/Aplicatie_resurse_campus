@@ -78,14 +78,14 @@
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
                                 <input type="hidden" name="toggle_masina_id" value="{{ masina.id }}">
-                                <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare</button>
+                                <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare totala</button>
                             </form>
 
                             <!-- Dezactivare interval -->
                             <button type="button" class="btn btn-outline-warning btn-sm"
                                     data-bs-toggle="modal"
                                     data-bs-target="#dezactiveaza-{{ masina.id }}">
-                                Dezactivează interval
+                                Dezactivează pe interval
                             </button>
                         </div>
                     </li>
