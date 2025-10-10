@@ -181,10 +181,7 @@ def sterge_camin_view(request, camin_id):
 # =========================
 # Admin cămin - Detalii cămin
 # =========================
-# =========================
-# Admin cămin - Detalii cămin
-# =========================
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -355,7 +352,19 @@ def detalii_camin_admin(request, camin_id):
         'programe_uscatoare': programe_uscatoare,
     })
 
+import os
+from django.http import HttpResponse
 
+
+def test_whatsapp(request):
+    sid = trimite_whatsapp_template(
+        destinatar='+40756752311',  # pune numărul tău real cu prefix internațional
+        data='10 Oct 2025',
+        ora_start='12:00',
+        ora_end='13:00',
+        masina='Samsung 01'
+    )
+    return HttpResponse(f"Mesaj trimis! SID: {sid}")
 
 # =========================
 # Rezervarea mașinilor
