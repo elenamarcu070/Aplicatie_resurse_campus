@@ -184,6 +184,9 @@ def sterge_camin_view(request, camin_id):
 # =========================
 # Admin cămin - Detalii cămin
 # =========================
+import logging
+logger = logging.getLogger(__name__)
+
 @login_required
 @only_admins
 def detalii_camin_admin(request, camin_id):
@@ -231,7 +234,6 @@ def detalii_camin_admin(request, camin_id):
             masina.save()
 
             if not masina.activa:
-                # 🔎 Caută toate rezervările viitoare (inclusiv cele fără anulata=False)
                 rezervari_viitoare = Rezervare.objects.filter(
                     masina=masina,
                     data_rezervare__gte=date.today()
@@ -239,33 +241,34 @@ def detalii_camin_admin(request, camin_id):
 
                 numar_notificari = 0
                 for rez in rezervari_viitoare:
-                    mesaj = (
-                        f"[WashTUIASI] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')} "
-                        f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
-                        f"la mașina '{masina.nume}' a fost anulată deoarece mașina a fost dezactivată."
+                    mesaj_notificare = (
+                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
+                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
+                        f"la mașina '{rez.masina.nume}' a fost anulată deoarece mașina a fost dezactivată complet."
                     )
-                    profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                    if profil and profil.telefon:
-                        trimite_sms(profil.telefon, mesaj)
-                    numar_notificari += 1
+
+                    try:
+                        profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
+                        if profil_vechi and profil_vechi.telefon:
+                            trimite_sms(profil_vechi.telefon, mesaj_notificare)
+                            logger.info(f"📲 SMS trimis către {profil_vechi.telefon}")
+                        else:
+                            admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
+                            if admin_camin and admin_camin.telefon:
+                                trimite_sms(admin_camin.telefon, mesaj_notificare)
+                                logger.info(f"📲 SMS trimis către admin {admin_camin.telefon}")
+                        numar_notificari += 1
+                    except Exception as e:
+                        logger.error(f"Eroare trimitere SMS la dezactivare mașină: {e}")
+
                     rez.anulata = True
                     rez.save()
 
                 messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată complet. "
-                                          f"{numar_notificari} rezervări au fost anulate și notificate.")
+                                          f"{numar_notificari} rezervări anulate și notificate.")
             else:
                 messages.success(request, f"Mașina '{masina.nume}' a fost activată.")
 
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
-        # ✅ Editare nume mașină
-        elif 'edit_masina_id' in request.POST and 'nume_masina_nou' in request.POST:
-            masina = get_object_or_404(Masina, id=request.POST['edit_masina_id'])
-            nume_nou = request.POST.get('nume_masina_nou').strip()
-            if nume_nou:
-                masina.nume = nume_nou
-                masina.save()
-                messages.success(request, "Numele mașinii a fost actualizat.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Dezactivare mașină pe interval ⏰
@@ -277,35 +280,6 @@ def detalii_camin_admin(request, camin_id):
 
             try:
                 masina = Masina.objects.get(id=masina_id)
-
-                # 🔸 Dezactivare completă (fără dată)
-                if not data_str:
-                    rezervari_viitoare = Rezervare.objects.filter(
-                        masina=masina,
-                        data_rezervare__gte=date.today()
-                    ).exclude(anulata=True)
-
-                    numar_notificari = 0
-                    for rez in rezervari_viitoare:
-                        mesaj = (
-                            f"[WashTUIASI] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')} "
-                            f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
-                            f"la mașina '{masina.nume}' a fost anulată deoarece mașina a fost dezactivată complet."
-                        )
-                        profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                        if profil and profil.telefon:
-                            trimite_sms(profil.telefon, mesaj)
-                        numar_notificari += 1
-                        rez.anulata = True
-                        rez.save()
-
-                    masina.activa = False
-                    masina.save()
-                    messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată complet. "
-                                              f"{numar_notificari} rezervări anulate și notificate.")
-                    return redirect('detalii_camin_admin', camin_id=camin.id)
-
-                # 🔹 Dezactivare doar pe un interval specific
                 data_selectata = datetime.strptime(data_str, '%Y-%m-%d').date()
                 ora_start = datetime.strptime(ora_start_str, '%H:%M').time()
                 ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
@@ -319,20 +293,30 @@ def detalii_camin_admin(request, camin_id):
 
                 numar_notificari = 0
                 for rez in rezervari_afectate:
-                    mesaj = (
-                        f"[WashTUIASI] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')} "
-                        f"({rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')}) "
-                        f"la mașina '{masina.nume}' a fost anulată deoarece intervalul "
-                        f"{ora_start.strftime('%H:%M')}–{ora_end.strftime('%H:%M')} a fost dezactivat."
+                    mesaj_notificare = (
+                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
+                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
+                        f"la mașina '{rez.masina.nume}' a fost anulată deoarece acel interval a fost dezactivat."
                     )
-                    profil = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                    if profil and profil.telefon:
-                        trimite_sms(profil.telefon, mesaj)
-                    numar_notificari += 1
+
+                    try:
+                        profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
+                        if profil_vechi and profil_vechi.telefon:
+                            trimite_sms(profil_vechi.telefon, mesaj_notificare)
+                            logger.info(f"📲 SMS trimis către {profil_vechi.telefon}")
+                        else:
+                            admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
+                            if admin_camin and admin_camin.telefon:
+                                trimite_sms(admin_camin.telefon, mesaj_notificare)
+                                logger.info(f"📲 SMS trimis către admin {admin_camin.telefon}")
+                        numar_notificari += 1
+                    except Exception as e:
+                        logger.error(f"Eroare trimitere SMS la dezactivare interval: {e}")
+
                     rez.anulata = True
                     rez.save()
 
-                # 🔒 Salvează blocajul în IntervalDezactivare
+                # 🔒 Salvează blocajul
                 IntervalDezactivare.objects.create(
                     masina=masina,
                     data=data_selectata,
@@ -340,36 +324,16 @@ def detalii_camin_admin(request, camin_id):
                     ora_end=ora_end
                 )
 
-                messages.success(
-                    request,
+                messages.success(request,
                     f"Mașina '{masina.nume}' a fost dezactivată pe {data_selectata.strftime('%d %b %Y')} "
                     f"între orele {ora_start.strftime('%H:%M')}–{ora_end.strftime('%H:%M')}. "
                     f"{numar_notificari} rezervări anulate și notificate."
                 )
 
             except Exception as e:
-                import traceback
-                print("Eroare la dezactivare:", traceback.format_exc())
+                logger.error(f"Eroare la dezactivare mașină: {e}\n{traceback.format_exc()}")
                 messages.error(request, f"Eroare la dezactivare: {e}")
 
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
-        # ✅ Adăugare program mașină
-        elif 'program_masina_id' in request.POST:
-            masina_id = request.POST.get('program_masina_id')
-            ora_start = request.POST.get('ora_start_masina')
-            ora_end = request.POST.get('ora_end_masina')
-            masina = get_object_or_404(Masina, id=masina_id)
-            ProgramMasina.objects.create(masina=masina, ora_start=ora_start, ora_end=ora_end)
-            messages.success(request, "Programul mașinii a fost adăugat.")
-            return redirect('detalii_camin_admin', camin_id=camin.id)
-
-        # ✅ Ștergere program mașină
-        elif 'sterge_program_masina_id' in request.POST:
-            program_id = request.POST.get('sterge_program_masina_id')
-            program = get_object_or_404(ProgramMasina, id=program_id)
-            program.delete()
-            messages.success(request, "Programul mașinii a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
     # ✅ Date pentru template
@@ -387,6 +351,7 @@ def detalii_camin_admin(request, camin_id):
         'programe_masini': programe_masini,
         'programe_uscatoare': programe_uscatoare,
     })
+
 
 
 # =========================
