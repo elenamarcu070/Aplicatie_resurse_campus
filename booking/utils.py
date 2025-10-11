@@ -58,10 +58,6 @@ def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
     message = client.messages.create(
         from_=f'whatsapp:{from_number}',
         to=f'whatsapp:{destinatar}',
-        content_sid=None,
-        body=None,
-        persistent_action=None,
-        interactive_data=None,
         template={
             "name": template_name,
             "language": {"code": language_code},
