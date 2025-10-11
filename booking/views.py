@@ -181,7 +181,7 @@ def sterge_camin_view(request, camin_id):
 # =========================
 # Admin cămin - Detalii cămin
 # =========================
-
+import logging, traceback
 logger = logging.getLogger(__name__)
 
 
