@@ -185,7 +185,7 @@ import logging, traceback
 logger = logging.getLogger(__name__)
 
 
-from .utils import trimite_whatsapp_template
+from booking.utils import trimite_whatsapp_template
 
 @login_required
 @only_admins
