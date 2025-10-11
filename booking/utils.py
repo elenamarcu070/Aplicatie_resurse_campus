@@ -31,7 +31,7 @@ def trimite_sms(numar, mesaj):
 import os
 from twilio.rest import Client
 
-def trimite_whatsapp_anulare(destinatar, data, ora_start, ora_end, masina):
+def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
     """
     Trimite un mesaj WhatsApp folosind un template aprobat din Meta Business Manager.
     """
