@@ -42,7 +42,6 @@ def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
     language_code = os.getenv('WHATSAPP_TEMPLATE_LANGUAGE', 'ro')
 
     client = Client(account_sid, auth_token)
-
     components = [
         {
             "type": "body",
