@@ -355,10 +355,9 @@ def detalii_camin_admin(request, camin_id):
 import os
 from django.http import HttpResponse
 
-
 def test_whatsapp(request):
     sid = trimite_whatsapp_template(
-        destinatar='+40756752311',  # pune numărul tău real cu prefix internațional
+        destinatar='+40756752311',
         data='10 Oct 2025',
         ora_start='12:00',
         ora_end='13:00',
