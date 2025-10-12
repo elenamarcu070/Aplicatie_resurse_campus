@@ -355,15 +355,16 @@ def detalii_camin_admin(request, camin_id):
 import os
 from django.http import HttpResponse
 
-def test_whatsapp(request):
-    sid = trimite_whatsapp_template(
-        destinatar='+40756752311',
-        data='10 Oct 2025',
-        ora_start='12:00',
-        ora_end='13:00',
-        masina='Samsung 01'
+def testeaza_whatsapp(request):
+    from .utils import trimite_whatsapp_template
+    trimite_whatsapp_template(
+        destinatar='+407XXXXXXXX',
+        data='13 octombrie 2025',
+        ora_start='10:00',
+        ora_end='12:00',
+        masina='Mașina 2'
     )
-    return HttpResponse(f"Mesaj trimis! SID: {sid}")
+    return HttpResponse("Mesaj WhatsApp trimis!")
 
 # =========================
 # Rezervarea mașinilor
@@ -463,14 +464,8 @@ def calendar_rezervari_view(request):
 
 
 import logging, traceback
-
-
 from .utils import trimite_sms
-
 logger = logging.getLogger(__name__)
-
-
-
 
 from booking.models import (
     Camin, ProfilStudent, AdminCamin,
