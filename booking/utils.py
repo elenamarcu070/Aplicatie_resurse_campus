@@ -33,7 +33,7 @@ from twilio.rest import Client
 
 def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
     """
-    Trimite un mesaj WhatsApp folosind un template aprobat din Meta Business Manager.
+    Trimite un mesaj WhatsApp folosind un template aprobat din Meta Business Manager (prin Twilio).
     """
     account_sid = os.getenv('TWILIO_ACCOUNT_SID')
     auth_token = os.getenv('TWILIO_AUTH_TOKEN')
@@ -42,26 +42,15 @@ def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
     language_code = os.getenv('WHATSAPP_TEMPLATE_LANGUAGE', 'ro')
 
     client = Client(account_sid, auth_token)
-    components = [
-        {
-            "type": "body",
-            "parameters": [
-                {"type": "text", "text": data},
-                {"type": "text", "text": ora_start},
-                {"type": "text", "text": ora_end},
-                {"type": "text", "text": masina},
-            ],
-        }
-    ]
 
     message = client.messages.create(
         from_=f'whatsapp:{from_number}',
         to=f'whatsapp:{destinatar}',
-        template={
-            "name": template_name,
-            "language": {"code": language_code},
-            "components": components,
-        },
+        content_template_data={
+            "template_name": template_name,
+            "language": language_code,
+            "body_parameters": [data, ora_start, ora_end, masina],
+        }
     )
 
     return message.sid
