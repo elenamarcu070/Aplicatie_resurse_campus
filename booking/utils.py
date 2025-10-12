@@ -28,49 +28,29 @@ def trimite_sms(numar, mesaj):
 
 #"twilio-domain-verification=aeef8bb394851e10b5e36ff12d8721f3"
 
-import os
+import os, json
 from twilio.rest import Client
 
 def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
-    """
-    Trimite un mesaj WhatsApp folosind un template aprobat din Meta Business Manager.
-    """
     account_sid = os.getenv('TWILIO_ACCOUNT_SID')
     auth_token = os.getenv('TWILIO_AUTH_TOKEN')
     from_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
-    template_name = os.getenv('WHATSAPP_TEMPLATE_NAME')
-    language_code = os.getenv('WHATSAPP_TEMPLATE_LANGUAGE', 'ro')
+    content_sid = os.getenv('WHATSAPP_CONTENT_SID')  # <-- acesta trebuie să fie citit
 
     client = Client(account_sid, auth_token)
 
-    components = [
-        {
-            "type": "body",
-            "parameters": [
-                {"type": "text", "text": data},
-                {"type": "text", "text": ora_start},
-                {"type": "text", "text": ora_end},
-                {"type": "text", "text": masina},
-            ],
-        }
-    ]
+    variables = {
+        "1": masina,
+        "2": data,
+        "3": ora_start,
+        "4": ora_end,
+    }
 
     message = client.messages.create(
         from_=f'whatsapp:{from_number}',
         to=f'whatsapp:{destinatar}',
-        content_sid=None,
-        body=None,
-        persistent_action=None,
-        messaging_service_sid=None,
-        provide_feedback=False,
-        media_url=None,
-        status_callback=None,
-        # API nou pentru template-uri
-        content_variables={
-            "template_name": template_name,
-            "language": {"code": language_code},
-            "components": components,
-        },
+        content_sid=content_sid,  # <-- fără asta apare fix eroarea ta
+        content_variables=json.dumps(variables)
     )
 
     print(f"✅ Mesaj WhatsApp trimis către {destinatar}: SID {message.sid}")
