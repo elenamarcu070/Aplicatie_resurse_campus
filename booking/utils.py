@@ -30,12 +30,13 @@ def trimite_sms(numar, mesaj):
 
 import os, json
 from twilio.rest import Client
+from django.conf import settings
 
 def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
-    account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-    auth_token = os.getenv('TWILIO_AUTH_TOKEN')
-    from_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
-    content_sid = os.getenv('WHATSAPP_CONTENT_SID')  # <-- acesta trebuie să fie citit
+    account_sid = settings.TWILIO_ACCOUNT_SID
+    auth_token = settings.TWILIO_AUTH_TOKEN
+    from_number = settings.TWILIO_WHATSAPP_NUMBER
+    content_sid = settings.WHATSAPP_CONTENT_SID  # HX...
 
     client = Client(account_sid, auth_token)
 
@@ -49,8 +50,9 @@ def trimite_whatsapp_template(destinatar, data, ora_start, ora_end, masina):
     message = client.messages.create(
         from_=f'whatsapp:{from_number}',
         to=f'whatsapp:{destinatar}',
-        content_sid=content_sid,  # <-- fără asta apare fix eroarea ta
+        content_sid=content_sid,
         content_variables=json.dumps(variables)
     )
 
-    print(f"✅ Mesaj WhatsApp trimis către {destinatar}: SID {message.sid}")
+    print(f"✅ Trimis către {destinatar}: SID {message.sid}")
+
