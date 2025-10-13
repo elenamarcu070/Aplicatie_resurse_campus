@@ -979,27 +979,37 @@ def adauga_student_view(request):
 @login_required
 def adauga_telefon(request):
     if request.method == "POST":
-        telefon = request.POST.get("telefon")
+        telefon = request.POST.get("telefon", "").strip().replace(" ", "")
+        tara = request.POST.get("tara", "ro")  # default România
+        prefix = "+40" if tara == "ro" else "+373"
+
+        # ✅ Adaugă prefixul dacă lipsește
+        if not telefon.startswith("+"):
+            telefon = prefix + telefon.lstrip("0")
+
+        # 🔍 Verificăm dacă e student sau admin
         profil = ProfilStudent.objects.filter(utilizator=request.user).first()
         if profil:
             profil.telefon = telefon
             profil.save()
-            messages.success(request, "Numărul de telefon a fost actualizat.")
-        else:
-            messages.error(request, "Profilul studentului nu a fost găsit.")
-    return redirect("dashboard_student")
+            messages.success(request, f"Numărul de telefon a fost actualizat: {telefon}")
+            return redirect("dashboard_student")
 
-
-@login_required
-def adauga_telefon_admin(request):
-    if request.method == "POST":
-        telefon = request.POST.get("telefon")
         admin = AdminCamin.objects.filter(email=request.user.email).first()
         if admin:
             admin.telefon = telefon
             admin.save()
-            messages.success(request, "Numărul de telefon a fost actualizat.")
-    return redirect("dashboard_admin_camin")
+            messages.success(request, f"Numărul de telefon a fost actualizat: {telefon}")
+            return redirect("dashboard_admin_camin")
+
+        # ❌ Dacă nu e nici student nici admin
+        messages.error(request, "Nu s-a putut actualiza numărul de telefon (profil inexistent).")
+        return redirect("home")
+
+    # Dacă cineva accesează direct pagina fără POST
+    return redirect("home")
+
+
 
 
 
