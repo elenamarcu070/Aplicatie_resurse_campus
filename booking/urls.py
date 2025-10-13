@@ -16,7 +16,7 @@ urlpatterns = [
     # Dashboard Admin Cămin
     path('dashboard/admin_camin/', views.dashboard_admin_camin, name='dashboard_admin_camin'),
 
-    path('testeaza_whatsapp/', views.testeaza_whatsapp, name='testeaza_whatsapp'),
+   
 
     # Admin cămin - Detalii cămin
     path('dashboard/admin_camin/camine/<int:camin_id>/', views.detalii_camin_admin, name='detalii_camin_admin'),
