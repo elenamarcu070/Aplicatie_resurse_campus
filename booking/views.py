@@ -185,7 +185,7 @@ import logging, traceback
 logger = logging.getLogger(__name__)
 
 
-from booking.utils import trimite_whatsapp_template
+from booking.utils import trimite_whatsapp
 
 @login_required
 @only_admins
@@ -293,10 +293,15 @@ def detalii_camin_admin(request, camin_id):
 
                 numar_notificari = 0
                 for rez in rezervari_afectate:
-                    mesaj_notificare = (
-                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
-                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
-                        f"la mașina '{rez.masina.nume}' a fost anulată deoarece acel interval a fost dezactivat."
+                    trimite_whatsapp(
+                        destinatar=f'+4{profil_vechi.telefon}',
+                        template_name="anulare_rezervare_interval",
+                        variabile={
+                            "1": rez.data_rezervare.strftime('%d %b %Y'),
+                            "2": rez.ora_start.strftime('%H:%M'),
+                            "3": rez.ora_end.strftime('%H:%M'),
+                            "4": rez.masina.nume,
+                        }
                     )
 
                     try:
@@ -356,7 +361,6 @@ import os
 from django.http import HttpResponse
 
 def testeaza_whatsapp(request):
-    from .utils import trimite_whatsapp_template
     trimite_whatsapp(
         destinatar='+40756752311',
         data='13 octombrie 2025',
