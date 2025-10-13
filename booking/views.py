@@ -416,9 +416,14 @@ def calendar_rezervari_view(request):
     intervale_blocate = IntervalDezactivare.objects.filter(
         masina__in=masini,
         data__range=(start_saptamana, end_saptamana)
-        )
+    )
 
-
+    # ✅ Aici adăugăm logica pentru afișarea numărului de telefon
+    telefon = None
+    if student and student.telefon:
+        telefon = student.telefon
+    elif admin_camin and admin_camin.telefon:
+        telefon = admin_camin.telefon
 
     context = {
         'masini': masini,
@@ -436,8 +441,11 @@ def calendar_rezervari_view(request):
         'este_blocat': este_blocat,
         'nume_camin': nume_camin,
         'intervale_blocate': intervale_blocate,
+        'telefon': telefon,  # 🟢 adăugat aici pentru bara din dreapta
     }
+
     return render(request, 'dashboard/student/calendar_orar.html', context)
+
 
 
 
