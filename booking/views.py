@@ -66,6 +66,7 @@ def is_super_admin(user):
     return (admin and admin.is_super_admin) or getattr(user, "is_staff", False) or getattr(user, "is_superuser", False)
 
 
+
 def is_student(user):
     return ProfilStudent.objects.filter(utilizator=user).exists()
 
