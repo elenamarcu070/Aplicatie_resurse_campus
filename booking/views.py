@@ -251,7 +251,7 @@ def detalii_camin_admin(request, camin_id):
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_whatsapp(
-                                destinatar=f'+4{profil_vechi.telefon}',
+                                destinatar=profil_vechi.telefon,
                                 template_name="anulare_rezervare_masina_complet",
                                 variabile={
                                     "1": rez.data_rezervare.strftime('%d %b %Y'),
@@ -300,7 +300,7 @@ def detalii_camin_admin(request, camin_id):
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_whatsapp(
-                                destinatar=f'+4{profil_vechi.telefon}',
+                                destinatar=profil_vechi.telefon,
                                 template_name="anulare_rezervare_interval",
                                 variabile={
                                     "1": rez.data_rezervare.strftime('%d %b %Y'),
@@ -581,7 +581,7 @@ def creeaza_rezervare(request):
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_whatsapp(
-                                destinatar=f'+4{profil_vechi.telefon}',
+                                destinatar=profil_vechi.telefon,
                                 template_name="rezervare_preluata",
                                 variabile={
                                     "1": rez.data_rezervare.strftime('%d %b %Y'),
