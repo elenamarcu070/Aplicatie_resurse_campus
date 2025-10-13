@@ -289,10 +289,10 @@ def detalii_camin_admin(request, camin_id):
                                 destinatar=profil_vechi.telefon,
                                 template_name="dezactivare_masina_complet",
                                 variabile={
-                                    "1": rez.data_rezervare.strftime('%d %b %Y'),
-                                    "2": rez.ora_start.strftime('%H:%M'),
-                                    "3": rez.ora_end.strftime('%H:%M'),
-                                    "4": rez.masina.nume,
+                                    "2": rez.data_rezervare.strftime('%d %b %Y'),
+                                    "3": rez.ora_start.strftime('%H:%M'),
+                                    "4": rez.ora_end.strftime('%H:%M'),
+                                    "1": rez.masina.nume,
                                 }
                             )
                             numar_notificari += 1
