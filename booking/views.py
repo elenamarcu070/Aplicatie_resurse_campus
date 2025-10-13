@@ -963,14 +963,16 @@ def adauga_student_view(request):
     return render(request, 'dashboard/admin_camin/adauga_student.html', {'camin': camin})
 
 @login_required
-
 def adauga_telefon(request):
     if request.method == "POST":
         telefon = request.POST.get("telefon")
-        profil = request.user.profilstudent
-        profil.telefon = telefon
-        profil.save()
-        messages.success(request, "Numărul de telefon a fost actualizat.")
+        profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+        if profil:
+            profil.telefon = telefon
+            profil.save()
+            messages.success(request, "Numărul de telefon a fost actualizat.")
+        else:
+            messages.error(request, "Profilul studentului nu a fost găsit.")
     return redirect("dashboard_student")
 
 
