@@ -26,20 +26,26 @@
                     {% for admin in admini %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ admin.email }}
+                        {% if is_super_admin %}
+                        <!-- 🔸 Butonul de ștergere apare doar la super-admini -->
                         <form method="post" class="m-0" onsubmit="return confirm('Ești sigur că vrei să ștergi acest admin?');">
                             {% csrf_token %}
                             <input type="hidden" name="sterge_admin_id" value="{{ admin.id }}">
                             <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
                         </form>
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>
 
+                {% if is_super_admin %}
+                <!-- 🔸 Formularul de adăugare admin apare doar la super-admini -->
                 <form method="post" class="input-group">
                     {% csrf_token %}
                     <input type="email" name="email_nou_admin" class="form-control" placeholder="Email nou admin" required>
                     <button type="submit" class="btn btn-success">Adaugă Admin</button>
                 </form>
+                {% endif %}
             </div>
         </div>
 

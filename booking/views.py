@@ -386,6 +386,7 @@ def detalii_camin_admin(request, camin_id):
         'uscatoare': uscatoare,
         'programe_masini': programe_masini,
         'programe_uscatoare': programe_uscatoare,
+        'is_super_admin': is_super_admin(request.user),
     })
 
 
