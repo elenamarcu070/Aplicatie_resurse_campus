@@ -38,9 +38,9 @@ def trimite_whatsapp(destinatar, template_name, variabile):
     from_number = settings.TWILIO_WHATSAPP_NUMBER
 
     TEMPLATE_MAP = {
-        "rezervare_preluata": os.getenv("WHATSAPP_CONTENT_SID_PRELUATA"),
-        "anulare_rezervare_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
-        "anulare_rezervare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
+        "rezervare_preluata_student": os.getenv("WHATSAPP_CONTENT_SID_PRELUATA"),
+        "dezactivare_masina_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
+        "dezactivare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
     }
 
     content_sid = TEMPLATE_MAP.get(template_name)
