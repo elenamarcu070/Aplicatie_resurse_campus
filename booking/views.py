@@ -502,17 +502,23 @@ def creeaza_rezervare(request):
             azi = date.today()
 
             # 🟡 Verificăm dacă intervalul cerut este într-un interval dezactivat
-            if IntervalDezactivare.objects.filter(
+            exista_blocaj = IntervalDezactivare.objects.filter(
                 masina=masina,
                 data=data_rezervare,
                 ora_start__lt=ora_end,
                 ora_end__gt=ora_start
-            ).exists():
+            ).exists()
+
+            if exista_blocaj:
                 messages.error(request, "Mașina este dezactivată în intervalul selectat. Alege alt interval.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
             # ✅ Verificare avertismente recente
-            if Avertisment.objects.filter(utilizator=user, data__gte=azi - timedelta(days=7)).count() >= 3:
+            avertismente = Avertisment.objects.filter(
+                utilizator=user,
+                data__gte=azi - timedelta(days=7)
+            ).count()
+            if avertismente >= 3:
                 messages.error(request, "Cont blocat temporar din cauza avertismentelor.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
@@ -549,14 +555,14 @@ def creeaza_rezervare(request):
             elif sapt_rezervare > sapt_curenta + 4:
                 messages.error(request, "Nu poți face rezervări cu mai mult de 4 săptămâni în avans.")
                 return redirect('calendar_rezervari')
-            elif sapt_rezervare == sapt_curenta and nr_rezervari >= 4:
+
+            if sapt_rezervare == sapt_curenta and nr_rezervari >= 4:
                 messages.error(request, "Ai atins numărul maxim de rezervări pentru această săptămână.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             elif sapt_rezervare != sapt_curenta and nr_rezervari >= 1:
                 messages.error(request, "Poți face doar o rezervare pe săptămână pentru săptămânile viitoare.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
-            # 🔁 Logica de preluare rezervare existentă
             rezervari_existente = Rezervare.objects.filter(
                 masina=masina,
                 data_rezervare=data_rezervare,
@@ -565,6 +571,7 @@ def creeaza_rezervare(request):
                 anulata=False
             )
 
+            # 🔁 Logica de preluare rezervare existentă
             for rez in rezervari_existente:
                 rezervari_alt_user = Rezervare.objects.filter(
                     utilizator=rez.utilizator,
@@ -576,13 +583,13 @@ def creeaza_rezervare(request):
                     rez.anulata = True
                     rez.save()
 
-                    # ✅ Trimitere WhatsApp în loc de SMS
+                    # 📲 Notificare — WhatsApp dacă are nr., altfel fallback
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
                             trimite_whatsapp(
                                 destinatar=profil_vechi.telefon,
-                                template_name="rezervare_preluata",
+                                template_name="rezervare_preluata_student",
                                 variabile={
                                     "1": rez.data_rezervare.strftime('%d %b %Y'),
                                     "2": rez.ora_start.strftime('%H:%M'),
@@ -595,6 +602,7 @@ def creeaza_rezervare(request):
                             logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
                         else:
                             logger.warning(f"Niciun număr de telefon pentru {rez.utilizator.email}")
+                            # opțional fallback trimite_sms(...) sau email aici
                     except Exception as e:
                         logger.error(f"Eroare trimitere WhatsApp: {e}")
 
@@ -633,7 +641,6 @@ def creeaza_rezervare(request):
             return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
-
 
 
 
