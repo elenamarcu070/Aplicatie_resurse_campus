@@ -252,7 +252,7 @@ def detalii_camin_admin(request, camin_id):
                         if profil_vechi and profil_vechi.telefon:
                             trimite_whatsapp(
                                 destinatar=profil_vechi.telefon,
-                                template_name="anulare_rezervare_masina_complet",
+                                template_name="dezactivare_masina_complet",
                                 variabile={
                                     "1": rez.data_rezervare.strftime('%d %b %Y'),
                                     "2": rez.ora_start.strftime('%H:%M'),
@@ -301,7 +301,7 @@ def detalii_camin_admin(request, camin_id):
                         if profil_vechi and profil_vechi.telefon:
                             trimite_whatsapp(
                                 destinatar=profil_vechi.telefon,
-                                template_name="anulare_rezervare_interval",
+                                template_name="dezactivare_masina_interval",
                                 variabile={
                                     "1": rez.data_rezervare.strftime('%d %b %Y'),
                                     "2": rez.ora_start.strftime('%H:%M'),
