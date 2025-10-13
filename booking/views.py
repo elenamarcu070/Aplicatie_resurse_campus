@@ -241,28 +241,25 @@ def detalii_camin_admin(request, camin_id):
 
                 numar_notificari = 0
                 for rez in rezervari_viitoare:
-                    mesaj_notificare = (
-                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
-                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
-                        f"la mașina '{rez.masina.nume}' a fost anulată deoarece mașina a fost dezactivată complet."
-                    )
-
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
-                            trimite_sms(profil_vechi.telefon, mesaj_notificare)
-                            logger.info(f"📲 SMS trimis către {profil_vechi.telefon}")
-                        else:
-                            admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
-                            if admin_camin and admin_camin.telefon:
-                                trimite_sms(admin_camin.telefon, mesaj_notificare)
-                                logger.info(f"📲 SMS trimis către admin {admin_camin.telefon}")
-                        numar_notificari += 1
+                            trimite_whatsapp(
+                                destinatar=f'+4{profil_vechi.telefon}',
+                                template_name="anulare_rezervare_masina_complet",
+                                variabile={
+                                    "1": rez.data_rezervare.strftime('%d %b %Y'),
+                                    "2": rez.ora_start.strftime('%H:%M'),
+                                    "3": rez.ora_end.strftime('%H:%M'),
+                                    "4": rez.masina.nume,
+                                }
+                            )
+                            numar_notificari += 1
+                            logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
+                        rez.anulata = True
+                        rez.save()
                     except Exception as e:
-                        logger.error(f"Eroare trimitere SMS la dezactivare mașină: {e}")
-
-                    rez.anulata = True
-                    rez.save()
+                        logger.error(f"Eroare trimitere WhatsApp la dezactivare mașină: {e}")
 
                 messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată complet. "
                                           f"{numar_notificari} rezervări anulate și notificate.")
@@ -293,33 +290,25 @@ def detalii_camin_admin(request, camin_id):
 
                 numar_notificari = 0
                 for rez in rezervari_afectate:
-                    trimite_whatsapp(
-                        destinatar=f'+4{profil_vechi.telefon}',
-                        template_name="anulare_rezervare_interval",
-                        variabile={
-                            "1": rez.data_rezervare.strftime('%d %b %Y'),
-                            "2": rez.ora_start.strftime('%H:%M'),
-                            "3": rez.ora_end.strftime('%H:%M'),
-                            "4": rez.masina.nume,
-                        }
-                    )
-
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
-                            trimite_sms(profil_vechi.telefon, mesaj_notificare)
-                            logger.info(f"📲 SMS trimis către {profil_vechi.telefon}")
-                        else:
-                            admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
-                            if admin_camin and admin_camin.telefon:
-                                trimite_sms(admin_camin.telefon, mesaj_notificare)
-                                logger.info(f"📲 SMS trimis către admin {admin_camin.telefon}")
-                        numar_notificari += 1
+                            trimite_whatsapp(
+                                destinatar=f'+4{profil_vechi.telefon}',
+                                template_name="anulare_rezervare_interval",
+                                variabile={
+                                    "1": rez.data_rezervare.strftime('%d %b %Y'),
+                                    "2": rez.ora_start.strftime('%H:%M'),
+                                    "3": rez.ora_end.strftime('%H:%M'),
+                                    "4": rez.masina.nume,
+                                }
+                            )
+                            numar_notificari += 1
+                            logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
+                        rez.anulata = True
+                        rez.save()
                     except Exception as e:
-                        logger.error(f"Eroare trimitere SMS la dezactivare interval: {e}")
-
-                    rez.anulata = True
-                    rez.save()
+                        logger.error(f"Eroare trimitere WhatsApp la dezactivare interval: {e}")
 
                 # 🔒 Salvează blocajul
                 IntervalDezactivare.objects.create(
@@ -329,7 +318,8 @@ def detalii_camin_admin(request, camin_id):
                     ora_end=ora_end
                 )
 
-                messages.success(request,
+                messages.success(
+                    request,
                     f"Mașina '{masina.nume}' a fost dezactivată pe {data_selectata.strftime('%d %b %Y')} "
                     f"între orele {ora_start.strftime('%H:%M')}–{ora_end.strftime('%H:%M')}. "
                     f"{numar_notificari} rezervări anulate și notificate."
@@ -357,18 +347,6 @@ def detalii_camin_admin(request, camin_id):
         'programe_uscatoare': programe_uscatoare,
     })
 
-import os
-from django.http import HttpResponse
-
-def testeaza_whatsapp(request):
-    trimite_whatsapp(
-        destinatar='+40756752311',
-        data='13 octombrie 2025',
-        ora_start='10:00',
-        ora_end='12:00',
-        masina='Mașina 2'
-    )
-    return HttpResponse("Mesaj WhatsApp trimis!")
 
 # =========================
 # Rezervarea mașinilor
