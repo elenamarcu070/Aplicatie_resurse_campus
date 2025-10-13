@@ -457,6 +457,9 @@ from booking.models import (
 )
 
 @login_required
+from booking.utils import trimite_whatsapp
+
+@login_required
 def creeaza_rezervare(request):
     user = request.user
     saptamana = request.POST.get('saptamana', 0)
@@ -487,23 +490,17 @@ def creeaza_rezervare(request):
             azi = date.today()
 
             # 🟡 Verificăm dacă intervalul cerut este într-un interval dezactivat
-            exista_blocaj = IntervalDezactivare.objects.filter(
+            if IntervalDezactivare.objects.filter(
                 masina=masina,
                 data=data_rezervare,
                 ora_start__lt=ora_end,
                 ora_end__gt=ora_start
-            ).exists()
-
-            if exista_blocaj:
+            ).exists():
                 messages.error(request, "Mașina este dezactivată în intervalul selectat. Alege alt interval.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
             # ✅ Verificare avertismente recente
-            avertismente = Avertisment.objects.filter(
-                utilizator=user,
-                data__gte=azi - timedelta(days=7)
-            ).count()
-            if avertismente >= 3:
+            if Avertisment.objects.filter(utilizator=user, data__gte=azi - timedelta(days=7)).count() >= 3:
                 messages.error(request, "Cont blocat temporar din cauza avertismentelor.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
@@ -532,6 +529,7 @@ def creeaza_rezervare(request):
 
             nr_rezervari = rezervari_sapt.count()
 
+            # 🔒 Restricții pe săptămână
             if sapt_rezervare == sapt_curenta:
                 if nr_rezervari >= 1 and data_rezervare > azi + timedelta(days=1):
                     messages.error(request, "În săptămâna curentă doar prima rezervare poate fi făcută oricând, restul doar pentru azi și mâine.")
@@ -539,14 +537,14 @@ def creeaza_rezervare(request):
             elif sapt_rezervare > sapt_curenta + 4:
                 messages.error(request, "Nu poți face rezervări cu mai mult de 4 săptămâni în avans.")
                 return redirect('calendar_rezervari')
-
-            if sapt_rezervare == sapt_curenta and nr_rezervari >= 4:
+            elif sapt_rezervare == sapt_curenta and nr_rezervari >= 4:
                 messages.error(request, "Ai atins numărul maxim de rezervări pentru această săptămână.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
             elif sapt_rezervare != sapt_curenta and nr_rezervari >= 1:
                 messages.error(request, "Poți face doar o rezervare pe săptămână pentru săptămânile viitoare.")
                 return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
+            # 🔁 Logica de preluare rezervare existentă
             rezervari_existente = Rezervare.objects.filter(
                 masina=masina,
                 data_rezervare=data_rezervare,
@@ -555,7 +553,6 @@ def creeaza_rezervare(request):
                 anulata=False
             )
 
-            # 🔁 Logica de preluare rezervare existentă
             for rez in rezervari_existente:
                 rezervari_alt_user = Rezervare.objects.filter(
                     utilizator=rez.utilizator,
@@ -567,26 +564,27 @@ def creeaza_rezervare(request):
                     rez.anulata = True
                     rez.save()
 
-                    mesaj_notificare = (
-                        f"[WashTuiasi] Rezervarea ta din {rez.data_rezervare.strftime('%d %b %Y')}, "
-                        f"interval {rez.ora_start.strftime('%H:%M')} - {rez.ora_end.strftime('%H:%M')} "
-                        f"la mașina '{rez.masina.nume}' a fost preluată de alt student. "
-                        f"Prioritatea ta a fost {rez.nivel_prioritate}, iar a lui {nr_rezervari + 1}. "
-                        f"Reprogramează-te pe site."
-                    )
-
-                    # 📲 Trimitere SMS notificare
+                    # ✅ Trimitere WhatsApp în loc de SMS
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
                         if profil_vechi and profil_vechi.telefon:
-                            trimite_sms(profil_vechi.telefon, mesaj_notificare)
-                            logger.info(f"📲 SMS trimis către {profil_vechi.telefon}")
+                            trimite_whatsapp(
+                                destinatar=f'+4{profil_vechi.telefon}',
+                                template_name="rezervare_preluata",
+                                variabile={
+                                    "1": rez.data_rezervare.strftime('%d %b %Y'),
+                                    "2": rez.ora_start.strftime('%H:%M'),
+                                    "3": rez.ora_end.strftime('%H:%M'),
+                                    "4": rez.masina.nume,
+                                    "5": rez.nivel_prioritate,
+                                    "6": nr_rezervari + 1,
+                                }
+                            )
+                            logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
                         else:
-                            admin_camin = AdminCamin.objects.filter(email=rez.utilizator.email).first()
-                            if admin_camin and admin_camin.telefon:
-                                trimite_sms(admin_camin.telefon, mesaj_notificare)
+                            logger.warning(f"Niciun număr de telefon pentru {rez.utilizator.email}")
                     except Exception as e:
-                        logger.error(f"Eroare trimitere SMS: {e}")
+                        logger.error(f"Eroare trimitere WhatsApp: {e}")
 
                     break
                 else:
@@ -623,6 +621,7 @@ def creeaza_rezervare(request):
             return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
+
 
 
 
