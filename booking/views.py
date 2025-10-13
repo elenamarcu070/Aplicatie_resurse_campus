@@ -456,7 +456,6 @@ from booking.models import (
     IntervalDezactivare   # 🟡 asigură-te că ai acest import
 )
 
-from booking.utils import trimite_whatsapp
 
 @login_required
 def creeaza_rezervare(request):
