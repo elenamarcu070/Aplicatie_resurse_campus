@@ -15,14 +15,10 @@ urlpatterns = [
     path('dashboard/student/', views.dashboard_student, name='dashboard_student'),
     # Dashboard Admin Cămin
     path('dashboard/admin_camin/', views.dashboard_admin_camin, name='dashboard_admin_camin'),
-
-   
-
-    # Admin cămin - Detalii cămin
-    path('dashboard/admin_camin/camine/<int:camin_id>/', views.detalii_camin_admin, name='detalii_camin_admin'),
     path('dashboard/admin_camin/camine/', views.administrare_camin, name='administrare_camin'),
-    path('dashboard/admin_camin/adauga/', views.adauga_camin_view, name='adauga_camin'),
-    path('dashboard/admin_camin/sterge/<int:camin_id>/', views.sterge_camin_view, name='sterge_camin'),
+    path('dashboard/admin_camin/camine/adauga/', views.adauga_camin_view, name='adauga_camin'),
+    path('dashboard/admin_camin/camine/<int:camin_id>/sterge/', views.sterge_camin_view, name='sterge_camin'),
+    path('dashboard/admin_camin/camine/<int:camin_id>/', views.detalii_camin_admin, name='detalii_camin_admin'),
 
 
     # Dashboard Student - Programări

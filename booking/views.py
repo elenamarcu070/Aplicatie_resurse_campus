@@ -50,6 +50,22 @@ def only_admins(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+def only_super_admins(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not is_super_admin(request.user):
+            return render(request, 'not_allowed.html', {'message': 'Acces permis doar super-adminilor.'})
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+
+def is_super_admin(user):
+    admin = AdminCamin.objects.filter(email=user.email).first()
+    # acceptăm și staff/superuser ca fallback, dacă folosești adminul Django
+    return (admin and admin.is_super_admin) or getattr(user, "is_staff", False) or getattr(user, "is_superuser", False)
+
+
 def is_student(user):
     return ProfilStudent.objects.filter(utilizator=user).exists()
 
@@ -138,14 +154,23 @@ def dashboard_admin_camin(request):
 # =========================
 # Admin cămin - Administrare cămine
 # =========================
+
+
+
 @login_required
 @only_admins
 def administrare_camin(request):
+    if not is_super_admin(request.user):
+        admin = AdminCamin.objects.filter(email=request.user.email).select_related("camin").first()
+        if admin and admin.camin_id:
+            return redirect('detalii_camin_admin', camin_id=admin.camin_id)
+        return render(request, 'not_allowed.html', {'message': 'Nu ai acces la administrarea tuturor căminelor.'})
+
     camine = Camin.objects.all()
     return render(request, 'dashboard/admin_camin/administrare_camin.html', {
-        'camine': camine
+        'camine': camine,
+        'is_super_admin': True,   # pt. template
     })
-
 
 # =========================
 # Admin cămin - Lista cămine
@@ -157,32 +182,25 @@ def lista_camine_admin(request):
     return render(request, 'dashboard/admin_camin/lista_camine.html', {'camine': camine})
 
 
-# =========================
-# Admin cămin - Adăugare cămin
-# =========================
 @login_required
-@only_admins
+@only_super_admins
 def adauga_camin_view(request):
     if request.method == 'POST':
-        nume = request.POST.get('nume')
+        nume = request.POST.get('nume', '').strip().upper()
         if nume:
-            Camin.objects.create(nume=nume)
+            Camin.objects.get_or_create(nume=nume)
             messages.success(request, 'Cămin adăugat cu succes!')
             return redirect('administrare_camin')
     return render(request, 'dashboard/admin_camin/adauga_camin.html')
 
-
-# =========================
-# Admin cămin - Ștergere cămin
-# =========================
 @login_required
-@only_admins
+@only_super_admins
 def sterge_camin_view(request, camin_id):
     camin = get_object_or_404(Camin, id=camin_id)
-    camin.delete()
-    messages.success(request, f'Căminul "{camin.nume}" a fost șters.')
+    if request.method == "POST":
+        camin.delete()
+        messages.success(request, f'Căminul "{camin.nume}" a fost șters.')
     return redirect('administrare_camin')
-
 
 # =========================
 # Admin cămin - Detalii cămin
@@ -193,15 +211,31 @@ logger = logging.getLogger(__name__)
 
 from booking.utils import trimite_whatsapp
 
+            
 @login_required
 @only_admins
 def detalii_camin_admin(request, camin_id):
     camin = get_object_or_404(Camin, id=camin_id)
+    current_admin = AdminCamin.objects.filter(email=request.user.email).first()
 
+    # ✅ 1. Verificăm drepturile
+    # super-adminii văd tot, ceilalți doar căminul lor
+    if not is_super_admin(request.user):
+        if not current_admin or current_admin.camin_id != camin.id:
+            return render(request, 'not_allowed.html', {
+                'message': 'Nu ai acces la acest cămin.'
+            })
+
+    # ✅ 2. Blocăm modificările de admini pentru non-super-admini
     if request.method == 'POST':
+        if 'email_nou_admin' in request.POST or 'sterge_admin_id' in request.POST:
+            if not is_super_admin(request.user):
+                messages.error(request, "Doar super-adminii pot modifica lista de administratori.")
+                return redirect('detalii_camin_admin', camin_id=camin.id)
+
         # ✅ Adăugare admin
         if 'email_nou_admin' in request.POST:
-            email_nou = request.POST.get('email_nou_admin').strip().lower()
+            email_nou = request.POST.get('email_nou_admin', '').strip().lower()
             if email_nou:
                 if not AdminCamin.objects.filter(camin=camin, email=email_nou).exists():
                     AdminCamin.objects.create(camin=camin, email=email_nou)
@@ -211,7 +245,7 @@ def detalii_camin_admin(request, camin_id):
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Ștergere admin
-        elif 'sterge_admin_id' in request.POST:
+        if 'sterge_admin_id' in request.POST:
             admin_id = request.POST.get('sterge_admin_id')
             admin = get_object_or_404(AdminCamin, id=admin_id)
             admin.delete()
@@ -219,22 +253,22 @@ def detalii_camin_admin(request, camin_id):
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Adăugare mașină
-        elif 'nume_masina' in request.POST:
-            nume = request.POST.get('nume_masina').strip()
+        if 'nume_masina' in request.POST:
+            nume = request.POST.get('nume_masina', '').strip()
             if nume:
                 Masina.objects.create(camin=camin, nume=nume, activa=True)
                 messages.success(request, f"Mașina '{nume}' a fost adăugată.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Ștergere mașină
-        elif 'sterge_masina_id' in request.POST:
+        if 'sterge_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['sterge_masina_id'])
             masina.delete()
             messages.success(request, f"Mașina '{masina.nume}' a fost ștearsă.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Activare / Dezactivare completă mașină
-        elif 'toggle_masina_id' in request.POST:
+        if 'toggle_masina_id' in request.POST:
             masina = get_object_or_404(Masina, id=request.POST['toggle_masina_id'])
             masina.activa = not masina.activa
             masina.save()
@@ -261,21 +295,23 @@ def detalii_camin_admin(request, camin_id):
                                 }
                             )
                             numar_notificari += 1
-                            logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
                         rez.anulata = True
                         rez.save()
                     except Exception as e:
                         logger.error(f"Eroare trimitere WhatsApp la dezactivare mașină: {e}")
 
-                messages.success(request, f"Mașina '{masina.nume}' a fost dezactivată complet. "
-                                          f"{numar_notificari} rezervări anulate și notificate.")
+                messages.success(
+                    request,
+                    f"Mașina '{masina.nume}' a fost dezactivată complet. "
+                    f"{numar_notificari} rezervări anulate și notificate."
+                )
             else:
                 messages.success(request, f"Mașina '{masina.nume}' a fost activată.")
 
             return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Dezactivare mașină pe interval ⏰
-        elif 'dezactiveaza_masina_id' in request.POST:
+        if 'dezactiveaza_masina_id' in request.POST:
             masina_id = request.POST.get('dezactiveaza_masina_id')
             data_str = request.POST.get('data_dezactivare')
             ora_start_str = request.POST.get('ora_start_dezactivare')
@@ -310,13 +346,11 @@ def detalii_camin_admin(request, camin_id):
                                 }
                             )
                             numar_notificari += 1
-                            logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
                         rez.anulata = True
                         rez.save()
                     except Exception as e:
                         logger.error(f"Eroare trimitere WhatsApp la dezactivare interval: {e}")
 
-                # 🔒 Salvează blocajul
                 IntervalDezactivare.objects.create(
                     masina=masina,
                     data=data_selectata,
@@ -352,6 +386,7 @@ def detalii_camin_admin(request, camin_id):
         'programe_masini': programe_masini,
         'programe_uscatoare': programe_uscatoare,
     })
+
 
 
 # =========================
