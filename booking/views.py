@@ -357,7 +357,7 @@ from django.http import HttpResponse
 
 def testeaza_whatsapp(request):
     from .utils import trimite_whatsapp_template
-    trimite_whatsapp_template(
+    trimite_whatsapp(
         destinatar='+40756752311',
         data='13 octombrie 2025',
         ora_start='10:00',
