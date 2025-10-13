@@ -75,11 +75,16 @@ def callback(request):
     if AdminCamin.objects.filter(email=email).exists():
         return redirect('dashboard_admin_camin')
 
-    # Student existent
-    if ProfilStudent.objects.filter(utilizator=user).exists():
+    # 🧠 Caută profilul studentului după email
+    profil = ProfilStudent.objects.filter(email=email).first()
+    if profil:
+        # dacă profilul nu e legat de userul curent → reatașează-l
+        if profil.utilizator != user:
+            profil.utilizator = user
+            profil.save()
         return redirect('dashboard_student')
 
-    # Dacă nu are profil încă → creează unul de bază
+    # dacă nu are profil deloc → creează unul nou
     email_parts = email.split('@')[0].split('.')
     nume_email = email_parts[-1].replace('-', ' ').title() if len(email_parts) >= 2 else ""
     prenume_email = email_parts[0].replace('-', ' ').title() if len(email_parts) >= 1 else ""
@@ -91,6 +96,7 @@ def callback(request):
         nume=nume_email,
         prenume=prenume_email
     )
+
     return redirect('dashboard_student')
 
 
