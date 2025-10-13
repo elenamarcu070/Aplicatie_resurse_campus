@@ -33,17 +33,10 @@ from twilio.rest import Client
 from django.conf import settings
 
 def trimite_whatsapp(destinatar, template_name, variabile):
-    """
-    Trimite un mesaj WhatsApp pe baza unui template aprobat în Twilio.
-    :param destinatar: ex. '+40756752311'
-    :param template_name: 'rezervare_preluata', 'anulare_rezervare_interval', etc.
-    :param variabile: dict ex. {"1": "Mașina 1", "2": "13 oct 2025", ...}
-    """
     account_sid = settings.TWILIO_ACCOUNT_SID
     auth_token = settings.TWILIO_AUTH_TOKEN
     from_number = settings.TWILIO_WHATSAPP_NUMBER
 
-    # Alege Content SID-ul în funcție de template
     TEMPLATE_MAP = {
         "rezervare_preluata": os.getenv("WHATSAPP_CONTENT_SID_PRELUATA"),
         "anulare_rezervare_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
@@ -55,8 +48,11 @@ def trimite_whatsapp(destinatar, template_name, variabile):
         print(f"⚠️ Template necunoscut: {template_name}")
         return
 
-    client = Client(account_sid, auth_token)
+    # 🧼 Curățăm numărul și variabilele
+    destinatar = destinatar.replace(" ", "")
+    variabile = {str(k): str(v) for k, v in variabile.items()}
 
+    client = Client(account_sid, auth_token)
     message = client.messages.create(
         from_=f'whatsapp:{from_number}',
         to=f'whatsapp:{destinatar}',
@@ -65,4 +61,4 @@ def trimite_whatsapp(destinatar, template_name, variabile):
     )
 
     print(f"✅ WhatsApp trimis către {destinatar} (template: {template_name}) — SID: {message.sid}")
-    
+
