@@ -1,17 +1,20 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}Dashboard Administrator{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="content-box fade-in">
-        <h1 class="text-center mb-4">Administrare Cămin</h1>
+    <div class="content-box p-4 bg-white rounded shadow">
+        <h2 class="mb-4 text-center">
+            👋 Bine ai venit, {{ request.user.first_name|default:request.user.email }}!
+        </h2>
 
-        <!-- 🟢 ALERTA pentru completare telefon (dacă lipsește) -->
+        <!-- 🟢 ALERTĂ completare telefon -->
         {% if admin and not admin.telefon %}
         <div class="alert alert-info d-flex justify-content-between align-items-center">
             <div>
                 <strong>Completează numărul tău de telefon</strong><br>
-                Numărul de telefon este util pentru a putea fi contactat rapid de studenți.
+                Numărul este necesar pentru a primi notificări automate prin <b>WhatsApp</b> și pentru a putea comunica ușor cu studenții din cămin.
             </div>
             <form method="post" action="{% url 'adauga_telefon' %}" class="d-flex align-items-center">
                 {% csrf_token %}
@@ -26,8 +29,8 @@
         </div>
         {% endif %}
 
-        <!-- 🟢 Afișare email și telefon -->
-        <p class="text-muted mb-4 text-center">
+        <!-- 🟢 Afișare date profil -->
+        <p class="text-muted mb-4">
             <strong>Email:</strong> {{ request.user.email }}<br>
             <strong>Telefon:</strong>
             {% if admin.telefon %}
@@ -43,154 +46,92 @@
             {% endif %}
         </p>
 
-        <p>Bine ai venit în panoul de administrare al căminului! Aici poți gestiona resursele și utilizatorii căminului tău.</p>
-
-        <!-- 🔷 Card funcționalități -->
-        <div class="card mb-4 shadow-sm">
+        <!-- 📜 Regulile generale (identic cu STUDENT) -->
+        <div class="card mb-4 border-0 shadow-sm">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Funcționalități disponibile</h5>
+                <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Cum funcționează sistemul de rezervări?</h4>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <i class="fas fa-washing-machine me-2"></i>
-                                <a href="{% url 'administrare_camin'  %}" class="text-decoration-none disabled">Gestionare mașini</a>
-                            </li>
-                            <li class="list-group-item">
-                                <i class="fas fa-building me-2"></i>
-                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none">Gestionare cămine</a>
-                            </li>
-                            <li class="list-group-item">
-                                <i class="fas fa-users-cog me-2"></i>
-                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare administratori</a>
-                            </li>
-                            <li class="list-group-item">
-                                <i class="fas fa-clock me-2"></i>
-                                <a href="{% url 'administrare_camin' %}" class="text-decoration-none disabled">Gestionare program</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                <a href="{% url 'calendar_rezervari_admin' %}" class="text-decoration-none disabled">Calendar rezervări</a>
-                            </li>
-                            <li class="list-group-item">
-                                <i class="fas fa-user-graduate me-2"></i>
-                                <a href="{% url 'incarca_studenti' %}" class="text-decoration-none">Importă Studenți</a>
-                            </li>
-                            <li class="list-group-item">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <a href="{% url 'calendar_rezervari_admin' %}" class="text-decoration-none disabled">Avertismente</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 🔷 Card reguli -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Cum funcționează sistemul de rezervări?</h4>
-            </div>
-            <div class="card-body">
-                <h5 class="mb-3">Reguli generale:</h5>
+                <h5 class="mb-3 text-primary">Reguli generale:</h5>
                 <ul class="list-group list-group-flush mb-4">
-                    <li class="list-group-item">
-                        <i class="fas fa-clock text-primary me-2"></i>
-                        Poți face rezervări pentru ziua curentă și ziua următoare în săptămâna curentă
-                    </li>
-                    <li class="list-group-item">
-                        <i class="fas fa-calendar-alt text-primary me-2"></i>
-                        Pentru săptămânile viitoare, poți face o singură rezervare pe săptămână
-                    </li>
-                    <li class="list-group-item">
-                        <i class="fas fa-calendar-check text-primary me-2"></i>
-                        Poți face rezervări cu până la 4 săptămâni în avans
-                    </li>
+                    <li class="list-group-item"><i class="fas fa-clock text-primary me-2"></i> Poți face rezervări pentru ziua curentă și ziua următoare în săptămâna curentă.</li>
+                    <li class="list-group-item"><i class="fas fa-calendar-alt text-primary me-2"></i> Pentru săptămânile viitoare, poți face o singură rezervare protejată.</li>
+                    <li class="list-group-item"><i class="fas fa-calendar-check text-primary me-2"></i> Poți face rezervări cu până la 4 săptămâni în avans.</li>
+                    <li class="list-group-item"><i class="fas fa-bell text-success me-2"></i> Vei primi notificări prin WhatsApp pentru toate modificările legate de rezervările tale.</li>
                 </ul>
 
-                <h5 class="mb-3">Niveluri de prioritate:</h5>
+                <h5 class="mb-3 text-primary">Niveluri de prioritate:</h5>
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        <div class="card border-danger mb-2">
-                            <div class="card-body py-2">
-                                <span class="badge bg-danger me-2">1</span>
-                                Prima rezervare - nu poate fi preluată de alți studenți
-                            </div>
-                        </div>
-                        <div class="card border-secondary mb-2">
-                            <div class="card-body py-2">
-                                <span class="badge bg-secondary me-2">2</span>
-                                A doua rezervare - poate fi preluată
-                            </div>
-                        </div>
-                        <div class="card border-primary mb-2">
-                            <div class="card-body py-2">
-                                <span class="badge bg-primary me-2">3</span>
-                                A treia rezervare - poate fi preluată
-                            </div>
-                        </div>
-                        <div class="card border mb-2">
-                            <div class="card-body py-2">
-                                <span class="badge bg-brown me-2">4</span>
-                                A patra rezervare - poate fi preluată
-                            </div>
-                        </div>
+                        <div class="card border-danger mb-2"><div class="card-body py-2"><span class="badge bg-danger me-2">1</span> Prima rezervare – protejată, nu poate fi preluată.</div></div>
+                        <div class="card border-secondary mb-2"><div class="card-body py-2"><span class="badge bg-secondary me-2">2</span> A doua rezervare – poate fi preluată.</div></div>
+                        <div class="card border-primary mb-2"><div class="card-body py-2"><span class="badge bg-primary me-2">3</span> A treia rezervare – preluabilă.</div></div>
+                        <div class="card border-brown mb-2"><div class="card-body py-2"><span class="badge bg-brown me-2">4</span> A patra rezervare – preluabilă.</div></div>
                     </div>
                 </div>
 
-                <h5 class="mb-3">Sistem de preluare rezervări:</h5>
+                <h5 class="mb-3 text-primary">Sistem de preluare rezervări:</h5>
                 <ul class="list-group list-group-flush mb-4">
-                    <li class="list-group-item">
-                        <i class="fas fa-exchange-alt text-success me-2"></i>
-                        Poți prelua rezervările altor studenți dacă ai mai puține rezervări decât ei
-                    </li>
-                    <li class="list-group-item">
-                        <i class="fas fa-shield-alt text-danger me-2"></i>
-                        Prima rezervare (roșie) nu poate fi preluată de nimeni
-                    </li>
-                    <li class="list-group-item">
-                        <i class="fas fa-bell text-warning me-2"></i>
-                        Vei primi notificări prin email când rezervările tale sunt preluate
-                    </li>
+                    <li class="list-group-item"><i class="fas fa-user-check text-success me-2"></i> Poți prelua o rezervare dacă ai mai puține programări active decât cel care a făcut-o.</li>
+                    <li class="list-group-item"><i class="fas fa-shield-alt text-danger me-2"></i> Rezervările roșii (Prioritate 1) nu pot fi preluate de nimeni.</li>
+                    <li class="list-group-item"><i class="fas fa-bell text-warning me-2"></i> Studenții sunt notificați automat prin WhatsApp când rezervarea lor a fost preluată.</li>
                 </ul>
 
-                <h5 class="mb-3">Avertismente:</h5>
+                <h5 class="mb-3 text-primary">Avertismente:</h5>
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item">
-                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                        Dacă nu folosești o rezervare și nu o anulezi, poți primi un avertisment
-                    </li>
-                    <li class="list-group-item">
-                        <i class="fas fa-ban text-danger me-2"></i>
-                        Trei avertismente duc la blocarea temporară a contului pentru o săptămână
-                    </li>
-                    <li class="list-group-item">
-                        <i class="fas fa-undo text-success me-2"></i>
-                        Poți anula o rezervare oricând înainte de intervalul rezervat
-                    </li>
+                    <li class="list-group-item"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Dacă un student nu folosește rezervarea și nu o anulează, primește un avertisment.</li>
+                    <li class="list-group-item"><i class="fas fa-ban text-danger me-2"></i> Trei avertismente duc la blocarea contului pentru 7 zile.</li>
+                    <li class="list-group-item"><i class="fas fa-undo text-success me-2"></i> Rezervările pot fi anulate oricând înainte de intervalul programat.</li>
                 </ul>
             </div>
         </div>
 
-        <div class="alert alert-info" role="alert">
+        <!-- 🔵 Notă informativă -->
+        <div class="alert alert-info text-center mb-4">
             <i class="fas fa-info-circle me-2"></i>
-            Pentru a face o rezervare, accesează secțiunea "Calendar" din meniul principal.
+            Aceleași reguli de rezervare se aplică și administratorilor, însă tu ai acces la funcții suplimentare de gestionare.
         </div>
 
-        <div class="alert alert-info" role="alert">
-            <i class="fas fa-info-circle me-2"></i>
-            Pentru a începe, alege o acțiune din lista de mai sus.
+        <!-- 🧭 Secțiunea 2: Funcționalități Admin -->
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Funcționalități suplimentare pentru administratori</h4>
+            </div>
+            <div class="card-body">
+                <p>
+                    În calitate de administrator, ai acces la instrumente pentru gestionarea completă a căminului:
+                </p>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item"><i class="fas fa-washing-machine text-primary me-2"></i> <b>Gestionare mașini:</b> Adaugă, redenumește sau dezactivează mașinile de spălat. Dacă o mașină este dezactivată, rezervările viitoare sunt anulate automat, iar studenții sunt anunțați pe WhatsApp.</li>
+                    <li class="list-group-item"><i class="fas fa-clock text-primary me-2"></i> <b>Program mașini:</b> Definește orele zilnice de funcționare. Sistemul va genera automat intervale orare pentru rezervări.</li>
+                    <li class="list-group-item"><i class="fas fa-user-graduate text-primary me-2"></i> <b>Gestionare studenți:</b>
+                        <ul class="mt-2">
+                            <li>📤 <b>Import Excel</b> – încarcă lista de studenți de la administrația căminului;</li>
+                            <li>➕ <b>Adaugă student</b> – pentru cazuri individuale (de exemplu, transferuri în timpul semestrului);</li>
+                            <li>✏️ <b>Editează</b> – actualizează datele unui student (ex: cameră, telefon);</li>
+                            <li>🔍 <b>Caută</b> – filtrează studenții după nume, cameră sau email;</li>
+                            <li>🗑️ <b>Șterge</b> – elimină un student sau curăță întreaga listă la început de semestru.</li>
+                        </ul>
+                    </li>
+                    <li class="list-group-item"><i class="fas fa-exclamation-triangle text-warning me-2"></i> <b>Avertismente:</b> Trimite avertismente studenților care nu își folosesc rezervările. La 3 avertismente, contul este blocat automat.</li>
+                </ul>
+
+                <div class="alert alert-warning mt-4">
+                    <i class="fas fa-user-shield me-2"></i>
+                    <b>Admin Suprem:</b> Doar administratorul suprem poate adăuga sau șterge cămine și administratori de cămin.<br>
+                    Dacă este necesară o modificare de acest tip, te rog să contactezi <b>Elena Marcu</b> la adresa <b>elenamarcu070@gmail.com</b>.
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info text-center">
+            <i class="fas fa-lightbulb me-2"></i>
+            <b>Recomandare:</b> Verifică periodic programul mașinilor și lista studenților pentru a menține sistemul actualizat.
         </div>
     </div>
 </div>
 
-<!-- 🔵 MODAL pentru adăugare/modificare telefon -->
+<!-- 🔵 Modal modificare telefon -->
 <div class="modal fade" id="modalTelefon" tabindex="-1" aria-labelledby="modalTelefonLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -214,6 +155,7 @@
                                value="{{ admin.telefon|default:'' }}"
                                class="form-control" placeholder="7xx xxx xxx" required>
                     </div>
+                    <p class="small text-muted mt-2">Asigură-te că numărul introdus are WhatsApp activ pentru notificări automate.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
@@ -233,23 +175,8 @@ function seteazaPrefix() {
 </script>
 
 <style>
-    .bg-brown {
-        background-color: #D2B48C !important;
-        color: white !important;
-    }
-    .border-brown {
-        border-color: #D2B48C !important;
-    }
-    .list-group-item i {
-        width: 20px;
-        text-align: center;
-    }
-    .list-group-item a {
-        color: #007bff;
-        text-decoration: none;
-    }
-    .list-group-item a:hover {
-        text-decoration: underline;
-    }
+.bg-brown { background-color: #D2B48C !important; color: white !important; }
+.border-brown { border-color: #D2B48C !important; }
+.list-group-item i { width: 20px; text-align: center; }
 </style>
 {% endblock %}
