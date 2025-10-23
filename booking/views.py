@@ -766,27 +766,20 @@ def adauga_avertisment_din_calendar(request):
     rezervare_id = request.POST.get('rezervare_id')
     rezervare = get_object_or_404(Rezervare, id=rezervare_id)
     utilizator = rezervare.utilizator
-
-    # verifică dacă adminul e din același cămin
     admin = AdminCamin.objects.filter(email=request.user.email).first()
+
     if not admin or rezervare.masina.camin_id != admin.camin_id:
         messages.error(request, "Nu poți trimite avertismente pentru alt cămin.")
         return redirect('calendar_rezervari_admin')
 
     azi = timezone.localdate()
 
-    # vezi dacă deja există avertisment azi
     if Avertisment.objects.filter(utilizator=utilizator, data=azi).exists():
         messages.warning(request, "Ai trimis deja un avertisment acestui utilizator astăzi.")
         return redirect('calendar_rezervari_admin')
 
-    # creează avertisment
-    Avertisment.objects.create(
-        utilizator=utilizator,
-        motiv="Rezervare neutilizată"
-    )
+    Avertisment.objects.create(utilizator=utilizator, motiv="Rezervare neutilizată")
 
-    # număr total avertismente în ultimele 30 zile
     avertismente_recente = Avertisment.objects.filter(
         utilizator=utilizator,
         data__gte=azi - timedelta(days=30)
@@ -795,50 +788,29 @@ def adauga_avertisment_din_calendar(request):
     profil = ProfilStudent.objects.filter(utilizator=utilizator).first()
     data_blocare_pana = None
 
-    # dacă e al 3-lea avertisment → blocare 7 zile
     if avertismente_recente >= 3 and profil:
         data_blocare_pana = azi + timedelta(days=7)
         profil.suspendat_pana_la = data_blocare_pana
         profil.save()
 
-    # compunem email
-    data_str = rezervare.data_rezervare.strftime("%d %b %Y")
-    interval_str = f"{rezervare.ora_start.strftime('%H:%M')} - {rezervare.ora_end.strftime('%H:%M')}"
-    subject = "Avertisment pentru rezervare neutilizată"
-
-    text_body = (
-        f"Bună {utilizator.get_full_name() or utilizator.username},\n\n"
-        f"Ai primit un avertisment pentru rezervarea din {data_str}, interval {interval_str}, "
-        f"la mașina '{rezervare.masina.nume}'.\n\n"
-    )
-
-    if data_blocare_pana:
-        text_body += (
-            f"Acesta este al treilea avertisment din ultima perioadă. "
-            f"Contul tău a fost blocat până la {data_blocare_pana.strftime('%d %b %Y')}.\n"
-        )
+    # 🔥 Trimitere WhatsApp dacă studentul are număr
+    if profil and profil.telefon:
+        try:
+            trimite_whatsapp(
+                destinatar=profil.telefon,
+                template_name="avertisment_rezervare",
+                variabile={
+                    "1": utilizator.get_full_name() or utilizator.username,
+                    "2": rezervare.data_rezervare.strftime('%d %b %Y'),
+                    "3": f"{rezervare.ora_start.strftime('%H:%M')}–{rezervare.ora_end.strftime('%H:%M')}",
+                    "4": rezervare.masina.nume,
+                }
+            )
+            messages.success(request, "Avertisment trimis și notificare WhatsApp către student.")
+        except Exception as e:
+            messages.warning(request, f"Avertisment creat, dar nu s-a putut trimite mesajul WhatsApp: {e}")
     else:
-        text_body += (
-            "Dacă acumulezi 3 avertismente într-o lună, contul tău va fi blocat temporar.\n"
-        )
-
-    html_body = text_body.replace("\n", "<br>")
-
-    try:
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_body,
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            to=[utilizator.email],
-        )
-        email.attach_alternative(html_body, "text/html")
-        email.send(fail_silently=False)
-        messages.success(request, "Avertisment trimis și notificare prin email.")
-    except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Eroare la trimiterea emailului: {e}")
-            messages.warning(request, f"Avertisment creat, dar emailul nu a putut fi trimis: {e}")
+        messages.warning(request, "Avertisment trimis, dar studentul nu are număr de telefon.")
 
     return redirect('calendar_rezervari_admin')
 
