@@ -8,6 +8,28 @@
             👋 Bine ai venit, {{ request.user.first_name|default:request.user.email }}!
         </h2>
 
+        {% if rezervare_activa %}
+        <div class="alert alert-success d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <strong>✅ Ai o rezervare activă!</strong><br>
+                {{ rezervare_activa.masina.nume }} –
+                {{ rezervare_activa.data_rezervare|date:"d M Y" }},
+                {{ rezervare_activa.ora_start|time:"H:i" }} – {{ rezervare_activa.ora_end|time:"H:i" }}
+            </div>
+            <a href="{% url 'programari_student' %}" class="btn btn-outline-light btn-sm bg-success-subtle">
+                Vezi toate
+            </a>
+        </div>
+        {% else %}
+        <div class="alert alert-secondary shadow-sm text-center">
+            <strong>📭 Nu ai nicio rezervare activă.</strong><br>
+            <a href="{% url 'calendar_rezervari' %}" class="btn btn-outline-primary btn-sm mt-2">
+                Fă o rezervare
+            </a>
+        </div>
+        {% endif %}
+
+
         <!-- 🔵 ALERTĂ completare telefon -->
         {% if request.user.profilstudent and not request.user.profilstudent.telefon %}
         <div class="alert alert-info d-flex justify-content-between align-items-center">

@@ -130,14 +130,34 @@ def custom_logout(request):
 # =========================
 # Dashboard-uri după rol
 # =========================
-@login_required
+from datetime import date, timedelta
+from booking.models import Rezervare, ProfilStudent
+
+@login_required 
 @only_students
 def dashboard_student(request):
+    # 🔒 Verificare acces
     if not ProfilStudent.objects.filter(utilizator=request.user).exists():
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților.'
         })
-    return render(request, 'dashboard/student.html')
+
+    # 🔍 Căutăm rezervarea activă pentru azi sau mâine
+    azi = date.today()
+    maine = azi + timedelta(days=1)
+
+    rezervare_activa = Rezervare.objects.filter(
+        utilizator=request.user,
+        data_rezervare__range=(azi, maine),
+        anulata=False
+    ).order_by('data_rezervare', 'ora_start').first()
+
+    # 🔁 Trimitem informația către template
+    context = {
+        'rezervare_activa': rezervare_activa
+    }
+
+    return render(request, 'dashboard/student.html', context)
 
 
 # =========================
@@ -152,6 +172,10 @@ def dashboard_admin_camin(request):
             'message': 'Acces permis doar administratorilor de cămin.'
         })
     return render(request, 'dashboard/admin_camin.html', {'admin': admin})
+
+
+
+
 # =========================
 # Admin cămin - Administrare cămine
 # =========================
