@@ -41,7 +41,7 @@ def trimite_whatsapp(destinatar, template_name, variabile):
         "rezervare_preluata_student": os.getenv("WHATSAPP_CONTENT_SID_PRELUATA"),
         "dezactivare_masina_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
         "dezactivare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
-        "advertisment_rezervare": os.getenv("WHATSAPP_CONTENT_SID_AVERTISMENT"),
+        "advertisment_rezervare": os.getenv("WHATSAPP_CONTENT_SID_ADVERTISMENT"),
     }
 
     content_sid = TEMPLATE_MAP.get(template_name)
