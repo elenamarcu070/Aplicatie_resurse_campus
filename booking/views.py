@@ -761,7 +761,7 @@ from django.shortcuts import redirect, get_object_or_404
 @only_admins
 def adauga_avertisment_din_calendar(request):
     if request.method != 'POST':
-        return redirect('calendar_rezervari')
+        return redirect('calendar_rezervari_admin')
 
     rezervare_id = request.POST.get('rezervare_id')
     rezervare = get_object_or_404(Rezervare, id=rezervare_id)
@@ -771,14 +771,14 @@ def adauga_avertisment_din_calendar(request):
     admin = AdminCamin.objects.filter(email=request.user.email).first()
     if not admin or rezervare.masina.camin_id != admin.camin_id:
         messages.error(request, "Nu poți trimite avertismente pentru alt cămin.")
-        return redirect('calendar_rezervari')
+        return redirect('calendar_rezervari_admin')
 
     azi = timezone.localdate()
 
     # vezi dacă deja există avertisment azi
     if Avertisment.objects.filter(utilizator=utilizator, data=azi).exists():
         messages.warning(request, "Ai trimis deja un avertisment acestui utilizator astăzi.")
-        return redirect('calendar_rezervari')
+        return redirect('calendar_rezervari_admin')
 
     # creează avertisment
     Avertisment.objects.create(
@@ -840,7 +840,7 @@ def adauga_avertisment_din_calendar(request):
             logger.error(f"Eroare la trimiterea emailului: {e}")
             messages.warning(request, f"Avertisment creat, dar emailul nu a putut fi trimis: {e}")
 
-    return redirect('calendar_rezervari')
+    return redirect('calendar_rezervari_admin')
 
 
 
