@@ -798,7 +798,7 @@ def adauga_avertisment_din_calendar(request):
         try:
             trimite_whatsapp(
                 destinatar=profil.telefon,
-                template_name="avertisment_rezervare",
+                template_name="advertisment_rezervare",
                 variabile={
                     "1": utilizator.get_full_name() or utilizator.username,
                     "2": rezervare.data_rezervare.strftime('%d %b %Y'),
