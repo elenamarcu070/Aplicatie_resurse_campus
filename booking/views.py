@@ -136,25 +136,25 @@ from booking.models import Rezervare, ProfilStudent
 @login_required 
 @only_students
 def dashboard_student(request):
-    # 🔒 Verificare acces
-    if not ProfilStudent.objects.filter(utilizator=request.user).exists():
+    # 🔒 verificare acces
+    profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+    if not profil:
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților.'
         })
 
-    # 🔍 Căutăm rezervarea activă pentru azi sau mâine
+    # 🔍 rezervarea activă (azi sau mâine)
     azi = date.today()
     maine = azi + timedelta(days=1)
-
     rezervare_activa = Rezervare.objects.filter(
         utilizator=request.user,
         data_rezervare__range=(azi, maine),
         anulata=False
     ).order_by('data_rezervare', 'ora_start').first()
 
-    # 🔁 Trimitem informația către template
     context = {
-        'rezervare_activa': rezervare_activa
+        'profil': profil,
+        'rezervare_activa': rezervare_activa,
     }
 
     return render(request, 'dashboard/student.html', context)
