@@ -165,7 +165,13 @@
     }
 
     .tooltip {
-        font-size: 0.8rem;
+    font-size: 0.8rem;
+    }
+
+    .bg-own {
+    background-color: #d4edda !important; /* Verde deschis */
+    border: 1px solid #28a745 !important;
+    color: #155724 !important;
     }
 </style>
 
@@ -216,7 +222,9 @@
                                         {% if rezervare %}
                                             <div class="interval-container">
                                                 <div class="rezervare 
-                                                    {% if zi < today %}bg-warning{% else %}
+                                                    {% if zi < today %} bg-warning
+                                                    {% elif rezervare.utilizator == request.user %} bg-own
+                                                    {% else %}
                                                         {% if rezervare.nivel_prioritate == 1 %}bg-danger{% endif %}
                                                         {% if rezervare.nivel_prioritate == 2 %}bg-secondary{% endif %}
                                                         {% if rezervare.nivel_prioritate == 3 %}bg-primary{% endif %}
