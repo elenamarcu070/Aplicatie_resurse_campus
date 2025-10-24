@@ -5,17 +5,26 @@
 {% block content %}
 <style>
     .interval-container {
-        height: 34px;
-        margin-bottom: 4px;
-        min-width: 150px;
-        width: 100%;
+    height: 34px;
+    margin-bottom: 4px;
+    min-width: 150px;
+    width: 100%;
     }
 
     .table td {
-        padding: 5px;
-        vertical-align: middle;
-        min-width: 160px;
-        width: 160px;
+    padding: 5px;
+    vertical-align: middle;
+    width: calc(100% / 8); /* 1 col pt mașină + 7 zile = 8 total */
+    white-space: nowrap;
+    }
+
+    .table th:first-child {
+    width: 12%; /* Mașină */
+    }
+
+    .table th:not(:first-child),
+    .table td:not(:first-child) {
+    width: 12.5%; /* Cele 7 zile împărțite egal */
     }
 
     .table-responsive {
@@ -132,7 +141,7 @@
     }
 
     .container {
-        max-width: 1200px;
+        max-width: 100%;
     }
 
     .shadow {
