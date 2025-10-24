@@ -168,6 +168,9 @@ def dashboard_student(request):
 # =========================
 # Dashboard Admin Cămin
 # =========================
+from datetime import date, timedelta
+from booking.models import AdminCamin, Rezervare
+
 @login_required
 @only_admins
 def dashboard_admin_camin(request):
@@ -177,10 +180,25 @@ def dashboard_admin_camin(request):
             'message': 'Acces permis doar administratorilor de cămin.'
         })
 
-    # ✅ reîncărcăm datele reale din baza de date
+    # 🔁 Reîncărcăm datele reale din DB (ca să nu fie cache vechi)
     admin.refresh_from_db()
 
-    return render(request, 'dashboard/admin_camin.html', {'admin': admin})
+    # 🔍 Căutăm rezervarea activă (azi sau mâine)
+    azi = date.today()
+    maine = azi + timedelta(days=1)
+    rezervare_activa = Rezervare.objects.filter(
+        utilizator=request.user,
+        data_rezervare__range=(azi, maine),
+        anulata=False
+    ).order_by('data_rezervare', 'ora_start').first()
+
+    context = {
+        'admin': admin,
+        'rezervare_activa': rezervare_activa,
+    }
+
+    return render(request, 'dashboard/admin_camin.html', context)
+
 
 
 
@@ -1025,39 +1043,70 @@ def adauga_student_view(request):
 
     return render(request, 'dashboard/admin_camin/adauga_student.html', {'camin': camin})
 
+
+
+
+from django.contrib import messages
+import re
+
 @login_required
 def adauga_telefon(request):
-    if request.method == "POST":
-        telefon = request.POST.get("telefon", "").strip().replace(" ", "")
-        tara = request.POST.get("tara", "ro")  # default România
-        prefix = "+40" if tara == "ro" else "+373"
+    if request.method != "POST":
+        return redirect("home")
 
-        # ✅ Adaugă prefixul dacă lipsește
-        if not telefon.startswith("+"):
-            telefon = prefix + telefon.lstrip("0")
+    # 1) Colectare & normalizare
+    telefon_raw = (request.POST.get("telefon") or "").strip()
+    tara = (request.POST.get("tara") or "ro").lower()
+    rol_hint = (request.POST.get("rol") or "").lower()
 
-        # 🔍 Verificăm dacă e student sau admin
-        profil = ProfilStudent.objects.filter(utilizator=request.user).first()
-        if profil:
-            profil.telefon = telefon
-            profil.save()
-            messages.success(request, f"Numărul de telefon a fost actualizat: {telefon}")
-            return redirect("dashboard_student")
+    # scoatem spații / liniuțe / paranteze
+    digits = re.sub(r"[^\d+]", "", telefon_raw)
 
-        admin = AdminCamin.objects.filter(email=request.user.email).first()
-        if admin:
-            admin.telefon = telefon
+    # prefix implicit
+    prefix = "+40" if tara == "ro" else "+373"
+
+    # dacă nu începe cu +, adăugăm prefixul și tăiem 0 din față
+    if not digits.startswith("+"):
+        digits = prefix + digits.lstrip("0")
+
+    # 2) Identificare roluri
+    admin = AdminCamin.objects.filter(email=request.user.email).first()
+    profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+
+    # 3) Prioritate pe baza hint-ului din formular, apoi pe rolul existent
+    try:
+        if rol_hint == "admin" and admin:
+            admin.telefon = digits
             admin.save()
-            messages.success(request, f"Numărul de telefon a fost actualizat: {telefon}")
+            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
             return redirect("dashboard_admin_camin")
 
-        # ❌ Dacă nu e nici student nici admin
+        if rol_hint == "student" and profil:
+            profil.telefon = digits
+            profil.save()
+            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+            return redirect("dashboard_student")
+
+        # Fără hint: preferăm adminul dacă există
+        if admin:
+            admin.telefon = digits
+            admin.save()
+            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+            return redirect("dashboard_admin_camin")
+
+        if profil:
+            profil.telefon = digits
+            profil.save()
+            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+            return redirect("dashboard_student")
+
         messages.error(request, "Nu s-a putut actualiza numărul de telefon (profil inexistent).")
         return redirect("home")
 
-    # Dacă cineva accesează direct pagina fără POST
-    return redirect("home")
-
+    except Exception as e:
+        messages.error(request, f"Eroare la salvarea numărului: {e}")
+        # revenim pe pagina anterioară dacă se poate
+        return redirect(request.META.get("HTTP_REFERER") or "home")
 
 
 

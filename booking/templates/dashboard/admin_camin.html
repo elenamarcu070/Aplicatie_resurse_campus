@@ -9,6 +9,28 @@
             👋 Bine ai venit, {{ request.user.first_name|default:request.user.email }}!
         </h2>
 
+        {% if rezervare_activa %}
+        <div class="alert alert-success d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <strong>✅ Ai o rezervare activă!</strong><br>
+                {{ rezervare_activa.masina.nume }} –
+                {{ rezervare_activa.data_rezervare|date:"d M Y" }},
+                {{ rezervare_activa.ora_start|time:"H:i" }} – {{ rezervare_activa.ora_end|time:"H:i" }}
+            </div>
+            <a href="{% url 'calendar_rezervari_admin' %}" class="btn btn-outline-light btn-sm bg-success-subtle">
+                Vezi în calendar
+            </a>
+        </div>
+        {% else %}
+        <div class="alert alert-secondary shadow-sm text-center">
+            <strong>📭 Nu ai nicio rezervare activă.</strong><br>
+            <a href="{% url 'calendar_rezervari_admin' %}" class="btn btn-outline-primary btn-sm mt-2">
+                Fă o rezervare
+            </a>
+        </div>
+        {% endif %}
+
+
         <!-- 🟢 ALERTĂ completare telefon -->
         {% if admin and not admin.telefon %}
         <div class="alert alert-info d-flex justify-content-between align-items-center">
@@ -18,6 +40,7 @@
             </div>
             <form method="post" action="{% url 'adauga_telefon' %}" class="d-flex align-items-center">
                 {% csrf_token %}
+                <input type="hidden" name="rol" value="admin">
                 <select name="tara" class="form-select me-2" style="max-width:130px;" onchange="this.nextElementSibling.textContent = this.value === 'ro' ? '+40' : '+373'">
                     <option value="ro" selected>🇷🇴 +40</option>
                     <option value="md">🇲🇩 +373</option>
@@ -137,6 +160,7 @@
         <div class="modal-content">
             <form method="post" action="{% url 'adauga_telefon' %}">
                 {% csrf_token %}
+                <input type="hidden" name="rol" value="admin">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalTelefonLabel">Actualizează numărul de telefon</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
