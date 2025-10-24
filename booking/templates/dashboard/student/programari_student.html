@@ -37,7 +37,13 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="text-muted">Nu ai programări viitoare.</p>
+        <div class="text-center p-4 bg-light rounded shadow-sm">
+          <p class="fw-semibold mb-2">📭 Nu ai nicio rezervare activă.</p>
+          <p class="text-muted mb-3">Poți face o rezervare nouă din calendarul spălătoriei.</p>
+          <a href="{% url 'calendar_rezervari' %}" class="btn btn-primary">
+            <i class="fas fa-calendar-alt me-1"></i> Vezi calendarul
+          </a>
+        </div>
         {% endif %}
       </div>
 
