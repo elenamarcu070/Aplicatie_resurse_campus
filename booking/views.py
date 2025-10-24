@@ -176,8 +176,11 @@ def dashboard_admin_camin(request):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar administratorilor de cămin.'
         })
-    return render(request, 'dashboard/admin_camin.html', {'admin': admin})
 
+    # ✅ reîncărcăm datele reale din baza de date
+    admin.refresh_from_db()
+
+    return render(request, 'dashboard/admin_camin.html', {'admin': admin})
 
 
 
