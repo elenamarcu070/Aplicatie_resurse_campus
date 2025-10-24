@@ -185,13 +185,28 @@
 
         <div class="mb-4">
             <div class="d-flex justify-content-center flex-wrap">
-                <div class="legend-item"><span class="badge bg-danger">■</span><span class="legend-text">Prima rezervare</span></div>
-                <div class="legend-item"><span class="badge bg-secondary">■</span><span class="legend-text">A doua rezervare</span></div>
-                <div class="legend-item"><span class="badge bg-primary">■</span><span class="legend-text">A treia rezervare</span></div>
-                <div class="legend-item"><span class="badge bg-brown">■</span><span class="legend-text">A patra rezervare</span></div>
-                <div class="legend-item"><span class="badge bg-warning">■</span><span class="legend-text">Rezervare trecută</span></div>
-                <div class="legend-item"><span class="badge bg-success">■</span><span class="legend-text">Slot disponibil</span></div>
-                <div class="legend-item"><span class="badge bg-own">■</span><span class="legend-text">Rezervările mele</span></div>
+                <div class="legend-item" data-bs-toggle="tooltip"
+                    title="Prima rezervare – protejată, nu poate fi preluată">
+                    <span class="badge bg-danger">■</span><span class="legend-text">Prima rezervare</span>
+                </div>
+                <div class="legend-item" data-bs-toggle="tooltip" title="A doua rezervare – preluabilă">
+                    <span class="badge bg-secondary">■</span><span class="legend-text">A doua rezervare</span>
+                </div>
+                <div class="legend-item" data-bs-toggle="tooltip" title="A treia rezervare – preluabilă">
+                    <span class="badge bg-primary">■</span><span class="legend-text">A treia rezervare</span>
+                </div>
+                <div class="legend-item" data-bs-toggle="tooltip" title="A patra rezervare – preluabilă">
+                    <span class="badge bg-brown">■</span><span class="legend-text">A patra rezervare</span>
+                </div>
+                <div class="legend-item" data-bs-toggle="tooltip" title="Rezervare trecută (expirată)">
+                    <span class="badge bg-warning">■</span><span class="legend-text">Rezervare trecută</span>
+                </div>
+                <div class="legend-item" data-bs-toggle="tooltip" title="Interval liber – poți face o rezervare">
+                    <span class="badge bg-success">■</span><span class="legend-text">Slot disponibil</span>
+                </div>
+                <div class="legend-item" data-bs-toggle="tooltip" title="Rezervările mele active">
+                    <span class="badge bg-own">■</span><span class="legend-text">Rezervările mele</span>
+                </div>
             </div>
         </div>
 
