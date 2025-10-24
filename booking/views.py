@@ -135,20 +135,20 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from booking.models import ProfilStudent, Rezervare
 
+from datetime import date, timedelta
+from booking.models import Rezervare, ProfilStudent, Avertisment
+
 @login_required 
 @only_students
 def dashboard_student(request):
-    # 🔒 verificare acces
     profil = ProfilStudent.objects.filter(utilizator=request.user).first()
     if not profil:
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților.'
         })
 
-    # 🔍 reîncărcăm explicit din DB pentru a evita cache-ul
     profil.refresh_from_db()
 
-    # 🔍 rezervarea activă (azi sau mâine)
     azi = date.today()
     maine = azi + timedelta(days=1)
     rezervare_activa = Rezervare.objects.filter(
@@ -157,12 +157,21 @@ def dashboard_student(request):
         anulata=False
     ).order_by('data_rezervare', 'ora_start').first()
 
+    # 🔍 Număr avertismente în ultimele 30 de zile
+    data_limita = azi - timedelta(days=30)
+    avertismente_active = Avertisment.objects.filter(
+        utilizator=request.user,
+        data__gte=data_limita
+    ).count()
+
     context = {
         'profil': profil,
         'rezervare_activa': rezervare_activa,
+        'avertismente_active': avertismente_active,
     }
 
     return render(request, 'dashboard/student.html', context)
+
 
 
 # =========================

@@ -29,6 +29,17 @@
         </div>
         {% endif %}
 
+        {% if avertismente_active > 0 %}
+        <div class="alert alert-warning d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <strong>⚠️ Ai {{ avertismente_active }} avertisment{% if avertismente_active > 1 %}e{% endif %}
+                    activ{% if avertismente_active > 1 %}e{% endif %}.</strong><br>
+                La 3 avertismente contul tău va fi blocat temporar timp de 7 zile.
+            </div>
+            <a href="{% url 'programari_student' %}" class="btn btn-outline-dark btn-sm">Vezi rezervările</a>
+        </div>
+        {% endif %}
+
 
         <!-- 🔵 ALERTĂ completare telefon -->
         {% if not profil.telefon %}
@@ -181,8 +192,14 @@ function seteazaPrefix() {
         border-color: #D2B48C !important;
     }
     .list-group-item i {
-        width: 20px;
-        text-align: center;
+    width: 20px;
+    text-align: center;
+    }
+
+    .alert-warning {
+    background-color: #fff3cd !important;
+    border: 1px solid #ffeeba !important;
+    color: #856404 !important;
     }
 </style>
 {% endblock %}
