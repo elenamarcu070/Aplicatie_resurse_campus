@@ -131,7 +131,9 @@ def custom_logout(request):
 # Dashboard-uri după rol
 # =========================
 from datetime import date, timedelta
-from booking.models import Rezervare, ProfilStudent
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from booking.models import ProfilStudent, Rezervare
 
 @login_required 
 @only_students
@@ -142,6 +144,9 @@ def dashboard_student(request):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților.'
         })
+
+    # 🔍 reîncărcăm explicit din DB pentru a evita cache-ul
+    profil.refresh_from_db()
 
     # 🔍 rezervarea activă (azi sau mâine)
     azi = date.today()
