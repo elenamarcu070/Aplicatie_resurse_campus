@@ -257,6 +257,13 @@
         >
           <i class="fas fa-building"></i> Cămin
         </a>
+
+        <button
+          id="darkModeToggle"
+          class="btn btn-outline-secondary btn-sm ms-2"
+        >
+          🌙
+        </button>
         {% endif %} {% if user.is_authenticated %}
         <div class="d-flex align-items-center ms-3">
           <span class="me-3 fw-bold text-dark">{{ user.email }}</span>
