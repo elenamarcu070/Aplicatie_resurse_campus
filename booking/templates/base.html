@@ -322,5 +322,79 @@
         });
       });
     </script>
+
+    <!-- 🔥 Firebase pentru notificări -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyCSpEw7T1FZL-SF7L6UP3LKptDvtjoMtOw",
+        authDomain: "washtuiasi-push.firebaseapp.com",
+        projectId: "washtuiasi-push",
+        storageBucket: "washtuiasi-push.firebasestorage.app",
+        messagingSenderId: "452249356230",
+        appId: "1:452249356230:web:21ebdc556b3bd56abed4c7",
+      };
+      firebase.initializeApp(firebaseConfig);
+      const messaging = firebase.messaging();
+      const vapidKey = "dXrRa1IdNwFNol6xbRYz8xWjRpKiahCjd2U2aPDNbaI";
+      async function getFCMToken() {
+        try {
+          const currentToken = await messaging.getToken({
+            vapidKey,
+          });
+          if (currentToken) {
+            console.log("✅ Token FCM:", currentToken);
+            // Trimitem tokenul la serverul Django
+            await fetch("/save-fcm-token/", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+              },
+              body: JSON.stringify({
+                token: currentToken,
+              }),
+            });
+          } else {
+            console.warn(
+              "⚠️ Niciun token obținut. Permisiunea de notificări este blocată."
+            );
+          }
+        } catch (err) {
+          console.error("❌ Eroare la obținerea tokenului FCM:", err);
+        }
+      }
+
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+      // Cerem permisiunea de notificări când se încarcă site-ul
+      document.addEventListener("DOMContentLoaded", async () => {
+        if ("Notification" in window) {
+          const permission = await Notification.requestPermission();
+          if (permission === "granted") {
+            console.log("🔔 Permisiune notificări acordată.");
+            getFCMToken();
+          } else {
+            console.log("🔕 Utilizatorul a refuzat notificările.");
+          }
+        }
+      });
+    </script>
   </body>
 </html>

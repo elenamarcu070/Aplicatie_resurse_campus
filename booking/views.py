@@ -1203,3 +1203,30 @@ def update_student(request, student_id):
             'success': False,
             'error': f'Eroare la actualizare: {str(e)}'
         })
+
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+from booking.models import ProfilStudent
+
+@csrf_exempt
+def save_fcm_token(request):
+    if request.method == "POST" and request.user.is_authenticated:
+        try:
+            data = json.loads(request.body)
+            token = data.get("token")
+            if not token:
+                return JsonResponse({"error": "Token lipsă"}, status=400)
+            
+            profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+            if profil:
+                profil.fcm_token = token
+                profil.save()
+                return JsonResponse({"success": True})
+            else:
+                return JsonResponse({"error": "Profil inexistent"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Metodă invalidă sau utilizator neautentificat"}, status=400)

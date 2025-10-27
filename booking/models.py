@@ -82,6 +82,8 @@ class ProfilStudent(models.Model):
     suspendat_pana_la = models.DateField(null=True, blank=True)
 
     telefon = models.CharField(max_length=15, blank=True, null=True)
+    fcm_token = models.TextField(null=True, blank=True)
+
 
     def clean(self):
         if not self.utilizator.email:
