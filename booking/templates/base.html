@@ -328,17 +328,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
     <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyCSpEw7T1FZL-SF7L6UP3LKptDvtjoMtOw",
-        authDomain: "washtuiasi-push.firebaseapp.com",
-        projectId: "washtuiasi-push",
-        storageBucket: "washtuiasi-push.firebasestorage.app",
-        messagingSenderId: "452249356230",
-        appId: "1:452249356230:web:21ebdc556b3bd56abed4c7",
-      };
-      firebase.initializeApp(firebaseConfig);
-      const messaging = firebase.messaging();
-      const vapidKey = "dXrRa1IdNwFNol6xbRYz8xWjRpKiahCjd2U2aPDNbaI";
+      
       async function getFCMToken() {
         try {
           const currentToken = await messaging.getToken({
