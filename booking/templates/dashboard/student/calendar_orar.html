@@ -192,7 +192,6 @@ content %}
         color: #01579b !important;
     }
 </style>
-
 <div class="container mt-4 fade-in">
     <div class="py-3 px-4 mb-4 rounded shadow text-black" style="background-color: rgb(255, 255, 255)">
         <h2 class="mb-3 text-center fw-bold" style="font-size: 1.8rem">
@@ -313,7 +312,11 @@ content %}
                                 {{ ora }}:00 - {{ ora_sfarsit }}:00
                             </div>
                         </div>
-                        {% endif %} {% endif %} {% endwith %} {% endwith %} {% endfor %}
+                        {% endif %}
+                        {% endif %}
+                        {% endwith %}
+                        {% endwith %}
+                        {% endfor %}
                     </td>
                     {% endfor %}
                 </tr>
