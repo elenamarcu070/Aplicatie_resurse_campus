@@ -275,9 +275,9 @@ content %}
                                         title="Trimite avertisment">
                                         <i class="fas fa-exclamation-triangle"></i>
                                     </button>
-                                    {% endif %} {% if not zi < today and
-                  rezervare.nivel_prioritate != 1 %} {% if este_admin_camin or
-                  este_student %}
+                                    {% endif %}
+                                    {% if not zi < today and rezervare.nivel_prioritate != 1 %}
+                                    {% if este_admin_camin or este_student %}
                                     <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin: 0">
                                         {% csrf_token %}
                                         <input type="hidden" name="masina_id" value="{{ masina.id }}" />
