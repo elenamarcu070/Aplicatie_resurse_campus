@@ -87,6 +87,28 @@
     border: 1px solid #0288d1 !important;
     color: #01579b !important;
   }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-icon:hover {
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .container { max-width: 100%; }
 </style>
 
 <div class="container mt-4 fade-in">
@@ -96,7 +118,7 @@
       ({{ start_saptamana|date:"d M" }} – {{ end_saptamana|date:"d M" }})
     </h2>
 
-    <!-- legendă -->
+    <!-- Legendă -->
     <div class="d-flex justify-content-center flex-wrap mb-4">
       <div class="legend-item"><span class="badge bg-danger">■</span><span class="legend-text">Prima rezervare</span></div>
       <div class="legend-item"><span class="badge bg-secondary">■</span><span class="legend-text">A doua rezervare</span></div>
@@ -150,10 +172,12 @@
                       style="cursor: pointer;"
                       data-bs-toggle="tooltip"
                       title="{% if este_admin_camin or zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}">
+                      
                       <div class="d-flex align-items-center w-100">
                         <span class="flex-grow-1">{{ ora }}:00 - {{ ora_sfarsit }}:00</span>
 
                         {% if este_admin_camin and zi < today %}
+                          <!-- ⚠️ Buton avertisment -->
                           <button type="button" class="btn-icon text-warning"
                             data-bs-toggle="modal" data-bs-target="#confirmModal"
                             data-rezervare-id="{{ rezervare.id }}"
