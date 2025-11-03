@@ -488,7 +488,8 @@ def calendar_rezervari_view(request):
         index_saptamana = 0
 
     azi = date.today()
-    current_time = datetime.now().time()  # 🔥 ora curentă
+    now = datetime.now()
+    now_hour = timezone.localtime().hour  # ← folosim acest întreg în template
     start_saptamana = azi - timedelta(days=azi.weekday()) + timedelta(weeks=index_saptamana)
     end_saptamana = start_saptamana + timedelta(days=6)
     zile_saptamana = [start_saptamana + timedelta(days=i) for i in range(7)]
@@ -545,7 +546,7 @@ def calendar_rezervari_view(request):
         'nume_camin': nume_camin,
         'intervale_blocate': intervale_blocate,
         'telefon': telefon,  # 🟢 adăugat aici pentru bara din dreapta
-        'current_time': current_time,  # ⏰ ora curentă adăugată pentru filtrarea intervalelor trecute
+        'now_hour': now_hour,
 
     }
 
