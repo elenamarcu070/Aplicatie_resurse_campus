@@ -51,7 +51,7 @@
     top: 0;
     z-index: 3;
     background: #ffffff;
-    box-shadow: 0 2px 0 #e9edf2;
+    box-shadow: 0 2px 0 #454647ff;
     }
 
     /* Prima coloană (Mașină) lipită pe stânga când derulezi orizontal */
@@ -61,13 +61,13 @@
     left: 0;
     z-index: 2;
     background: #ffffff !important;
-    box-shadow: 2px 0 0 #e9edf2; /* linie verticală clară după coloană */
+    box-shadow: 2px 0 0 #454647ff; /* linie verticală clară după coloană */
     }
 
     /* Zebra pe coloane (zile) pentru separare vizuală mai clară */
     .calendar-grid thead th:nth-child(n+2):nth-child(odd),
     .calendar-grid tbody td:nth-child(n+2):nth-child(odd) {
-    background-color: #fbfdff; /* albastru foarte discret */
+    background-color: #454647ff; /* albastru foarte discret */
     }
 
     /* Linie verticală fină între zile */
@@ -89,10 +89,10 @@
     }
 
     /* Evidențiere ușoară pentru weekend (col. 7-8 după prima coloană "Mașină") */
+    .calendar-grid thead th:nth-child(7),
     .calendar-grid thead th:nth-child(8),
-    .calendar-grid thead th:nth-child(9),
-    .calendar-grid tbody td:nth-child(8),
-    .calendar-grid tbody td:nth-child(9) {
+    .calendar-grid tbody td:nth-child(7),
+    .calendar-grid tbody td:nth-child(8) {
     background-color: #f9fafb; /* foarte discret gri */
     }
 
