@@ -1061,65 +1061,118 @@ def adauga_student_view(request):
 
 
 
+# @login_required
+# def adauga_telefon(request):
+#     if request.method != "POST":
+#         return redirect("home")
+
+#     # 1) Colectare & normalizare
+#     telefon_raw = (request.POST.get("telefon") or "").strip()
+#     tara = (request.POST.get("tara") or "ro").lower()
+#     rol_hint = (request.POST.get("rol") or "").lower()
+
+#     # scoatem spații / liniuțe / paranteze
+#     digits = re.sub(r"[^\d+]", "", telefon_raw)
+
+#     # prefix implicit
+#     prefix = "+40" if tara == "ro" else "+373"
+
+#     # dacă nu începe cu +, adăugăm prefixul și tăiem 0 din față
+#     if not digits.startswith("+"):
+#         digits = prefix + digits.lstrip("0")
+
+#     # 2) Identificare roluri
+#     admin = AdminCamin.objects.filter(email=request.user.email).first()
+#     profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+
+#     # 3) Prioritate pe baza hint-ului din formular, apoi pe rolul existent
+#     try:
+#         if rol_hint == "admin" and admin:
+#             admin.telefon = digits
+#             admin.save()
+#             messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+#             return redirect("dashboard_admin_camin")
+
+#         if rol_hint == "student" and profil:
+#             profil.telefon = digits
+#             profil.save()
+#             messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+#             return redirect("dashboard_student")
+
+#         # Fără hint: preferăm adminul dacă există
+#         if admin:
+#             admin.telefon = digits
+#             admin.save()
+#             messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+#             return redirect("dashboard_admin_camin")
+
+#         if profil:
+#             profil.telefon = digits
+#             profil.save()
+#             messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
+#             return redirect("dashboard_student")
+
+#         messages.error(request, "Nu s-a putut actualiza numărul de telefon (profil inexistent).")
+#         return redirect("home")
+
+#     except Exception as e:
+#         messages.error(request, f"Eroare la salvarea numărului: {e}")
+#         # revenim pe pagina anterioară dacă se poate
+#         return redirect(request.META.get("HTTP_REFERER") or "home")
+
+
+# views.py
+import re
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+
+from booking.models import ProfilStudent, AdminCamin  # ajustează importul dacă ai alt app
+
 @login_required
 def adauga_telefon(request):
+    # Accept doar POST; altfel, întoarce utilizatorul înapoi.
     if request.method != "POST":
-        return redirect("home")
+        return redirect(request.META.get("HTTP_REFERER") or "home")
 
     # 1) Colectare & normalizare
     telefon_raw = (request.POST.get("telefon") or "").strip()
-    tara = (request.POST.get("tara") or "ro").lower()
-    rol_hint = (request.POST.get("rol") or "").lower()
+    tara = (request.POST.get("tara") or "ro").strip().lower()
 
-    # scoatem spații / liniuțe / paranteze
-    digits = re.sub(r"[^\d+]", "", telefon_raw)
+    # elimină spații/liniuțe/paranteze/puncte, păstrând + și cifre
+    num = re.sub(r"[^\d+]", "", telefon_raw)
 
-    # prefix implicit
-    prefix = "+40" if tara == "ro" else "+373"
+    # prefix implicit după țară
+    prefix = "+40"
+    if tara == "md":
+        prefix = "+373"
 
-    # dacă nu începe cu +, adăugăm prefixul și tăiem 0 din față
-    if not digits.startswith("+"):
-        digits = prefix + digits.lstrip("0")
+    # dacă nu începe cu +, adaugă prefixul și taie 0 din față (ex: 07xx…)
+    if not num.startswith("+"):
+        num = prefix + num.lstrip("0")
 
-    # 2) Identificare roluri
-    admin = AdminCamin.objects.filter(email=request.user.email).first()
-    profil = ProfilStudent.objects.filter(utilizator=request.user).first()
-
-    # 3) Prioritate pe baza hint-ului din formular, apoi pe rolul existent
-    try:
-        if rol_hint == "admin" and admin:
-            admin.telefon = digits
-            admin.save()
-            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
-            return redirect("dashboard_admin_camin")
-
-        if rol_hint == "student" and profil:
-            profil.telefon = digits
-            profil.save()
-            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
-            return redirect("dashboard_student")
-
-        # Fără hint: preferăm adminul dacă există
-        if admin:
-            admin.telefon = digits
-            admin.save()
-            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
-            return redirect("dashboard_admin_camin")
-
-        if profil:
-            profil.telefon = digits
-            profil.save()
-            messages.success(request, f"Numărul de telefon a fost actualizat: {digits}")
-            return redirect("dashboard_student")
-
-        messages.error(request, "Nu s-a putut actualiza numărul de telefon (profil inexistent).")
-        return redirect("home")
-
-    except Exception as e:
-        messages.error(request, f"Eroare la salvarea numărului: {e}")
-        # revenim pe pagina anterioară dacă se poate
+    # validare simplă E.164: + urmat de 9–15 cifre
+    if not re.fullmatch(r"^\+\d{9,15}$", num):
+        messages.error(request, "Numărul introdus nu este valid. Verifică și încearcă din nou.")
         return redirect(request.META.get("HTTP_REFERER") or "home")
 
+    # 2) Actualizare în toate locurile unde poate fi stocat
+    updated = 0
+
+    # — AdminCamin: pot exista mai multe rânduri pentru același email (cămine diferite)
+    updated += AdminCamin.objects.filter(email=request.user.email).update(telefon=num)
+
+    # — ProfilStudent: de obicei unic; folosim update pentru consistență
+    updated += ProfilStudent.objects.filter(utilizator=request.user).update(telefon=num)
+
+    # 3) Feedback
+    if updated:
+        messages.success(request, f"Numărul de telefon a fost actualizat la {num}.")
+    else:
+        messages.warning(request, "Nu am găsit un profil de student sau admin asociat utilizatorului curent.")
+
+    # 4) Înapoi la pagina de unde a venit utilizatorul
+    return redirect(request.META.get("HTTP_REFERER") or "home")
 
 
 
