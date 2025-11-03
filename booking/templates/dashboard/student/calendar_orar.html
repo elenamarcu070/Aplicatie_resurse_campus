@@ -260,24 +260,8 @@
                                                 </div>
                                             </div>
                                         {% else %}
-                                            {% if zi < today %}
-                                                <!-- 🔸 zi trecută -->
-                                             
-                                                <div class="interval-container">
-                                                    <div class="time-slot text-muted">{{ ora }}:00 - {{ ora_sfarsit }}:00</div>
-                                                </div>
-
-                                            {% elif zi == today and ora|add:":00" <= current_time|stringformat:"H:i:s" %}
-
-                                                <!-- 🔸 interval trecut în ziua curentă -->
-                                                <div class="interval-container">
-                                                    <div class="time-slot text-muted">{{ ora }}:00 - {{ ora_sfarsit }}:00</div>
-                                                </div>
-
-                                            
-                                            {% elif zi == today or zi > today and este_admin_camin or este_student %}
-                                                <!-- 🔸 interval viitor -->
-
+                                        
+                                            {% if zi >= today and este_admin_camin or zi >= today and este_student %}
                                                 <div class="interval-container">
                                                     <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
                                                         {% csrf_token %}
