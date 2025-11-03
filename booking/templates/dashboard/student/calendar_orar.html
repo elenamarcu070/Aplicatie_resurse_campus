@@ -41,10 +41,63 @@
     .badge{ width:20px;height:20px;padding:0;display:inline-flex;align-items:center;justify-content:center; }
     .legend-item{ display:flex;align-items:center;margin:.5rem; }
     .legend-text{ margin-left:.5rem;font-size:.875rem;color:#666; }
-
     .toast{ opacity:1!important;background-color:#fff!important; }
     .toast .toast-body{ color:#000!important;font-weight:500; }
     .tooltip{ font-size:.8rem; }
+
+    /* HEADERE "lipite" sus când derulezi */
+    .calendar-grid thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #ffffff;
+    box-shadow: 0 2px 0 #e9edf2;
+    }
+
+    /* Prima coloană (Mașină) lipită pe stânga când derulezi orizontal */
+    .calendar-grid th.bg-light,
+    .calendar-grid tbody th.bg-light {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #ffffff !important;
+    box-shadow: 2px 0 0 #e9edf2; /* linie verticală clară după coloană */
+    }
+
+    /* Zebra pe coloane (zile) pentru separare vizuală mai clară */
+    .calendar-grid thead th:nth-child(n+2):nth-child(odd),
+    .calendar-grid tbody td:nth-child(n+2):nth-child(odd) {
+    background-color: #fbfdff; /* albastru foarte discret */
+    }
+
+    /* Linie verticală fină între zile */
+    .calendar-grid thead th:nth-child(n+2),
+    .calendar-grid tbody td:nth-child(n+2) {
+    border-left: 1px solid #e6eef5 !important;
+    }
+
+    /* Linie verticală puțin mai groasă la fiecare a 2-a zi (accent) */
+    .calendar-grid thead th:nth-child(2n+2),
+    .calendar-grid tbody td:nth-child(2n+2) {
+    box-shadow: inset 1px 0 0 #dbe5ef;
+    }
+
+    /* Linie orizontală groasă între mașini (separă rândurile) */
+    .calendar-grid tbody tr + tr td,
+    .calendar-grid tbody tr + tr th.bg-light {
+    border-top: 3px solid #e6edf5 !important;
+    }
+
+    /* Evidențiere ușoară pentru weekend (col. 7-8 după prima coloană "Mașină") */
+    .calendar-grid thead th:nth-child(8),
+    .calendar-grid thead th:nth-child(9),
+    .calendar-grid tbody td:nth-child(8),
+    .calendar-grid tbody td:nth-child(9) {
+    background-color: #f9fafb; /* foarte discret gri */
+    }
+
+
+
 </style>
 
 <div class="container mt-4 fade-in">
@@ -87,7 +140,8 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered text-center align-middle">
+        <table class="table table-bordered text-center align-middle calendar-grid">
+
             <thead>
                 <tr>
                     <th>Mașină</th>
