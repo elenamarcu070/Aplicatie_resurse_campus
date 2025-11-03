@@ -1055,8 +1055,6 @@ def adauga_student_view(request):
 
 
 
-from django.contrib import messages
-import re
 
 @login_required
 def adauga_telefon(request):
