@@ -141,6 +141,8 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_ADAPTER = "booking.adapters.MySocialAccountAdapter"
 
+ACCOUNT_ADAPTER = "allauth.account.adapter.DefaultAccountAdapter"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # --------------------
 # STATIC & MEDIA
