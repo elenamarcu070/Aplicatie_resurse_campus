@@ -63,3 +63,31 @@ def trimite_whatsapp(destinatar, template_name, variabile):
 
     print(f"✅ WhatsApp trimis către {destinatar} (template: {template_name}) — SID: {message.sid}")
 
+from booking.models import Camin, AdminCamin, ProfilStudent
+
+def get_camin_curent(request):
+    """
+    Returnează căminul asociat utilizatorului logat:
+     - Super-admin  → căminul selectat din dropdown (sesiune)
+     - Admin cămin  → căminul asociat contului
+     - Student      → căminul în care e cazat
+     - Altfel       → None
+    """
+    user = request.user
+    if not user.is_authenticated:
+        return None
+
+    # Verificăm dacă este admin
+    admin = AdminCamin.objects.filter(email=user.email).first()
+    if admin:
+        if admin.is_super_admin:
+            camin_id = request.session.get("camin_selectat")
+            return Camin.objects.filter(id=camin_id).first() if camin_id else None
+        return admin.camin
+
+    # Verificăm dacă este student
+    profil = ProfilStudent.objects.filter(utilizator=user).first()
+    if profil and profil.camin:
+        return profil.camin
+
+    return None

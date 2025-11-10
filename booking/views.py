@@ -26,7 +26,7 @@ from booking.models import (
 )
 
 from booking.utils import trimite_sms
-
+from booking.utils import get_camin_curent
 
 # =========================
 # Decoratori pentru roluri
@@ -458,30 +458,27 @@ def detalii_camin_admin(request, camin_id):
 def calendar_rezervari_view(request):
     user = request.user
 
+
     # verificăm dacă e student sau admin
     admin_camin = AdminCamin.objects.filter(email=user.email).first()
     student = ProfilStudent.objects.filter(utilizator=user).first()
 
-    if not admin_camin and not student:
+    camin = get_camin_curent(request)
+
+       # ✅ folosim căminul curent din funcția comună
+    if not camin:
         return render(request, 'not_allowed.html', {
-            'message': 'Acces permis doar studenților sau administratorilor.'
+            'message': 'Nu ești asociat niciunui cămin sau nu ai selectat unul activ.'
         })
 
-    masini = []
-    nume_camin = "Cămin necunoscut"
-    este_admin_camin = False
-    este_student = False
+    # 🔹 determinăm automat rolul
+    este_admin_camin = AdminCamin.objects.filter(email=user.email, camin=camin).exists()
+    este_student = ProfilStudent.objects.filter(utilizator=user, camin=camin).exists()
 
-    if admin_camin:
-        camin = admin_camin.camin
-        masini = Masina.objects.filter(camin=camin, activa=True)
-        nume_camin = camin.nume
-        este_admin_camin = True
-    elif student and student.camin:
-        camin = student.camin
-        masini = Masina.objects.filter(camin=camin, activa=True)
-        nume_camin = camin.nume
-        este_student = True
+    # 🔹 mașinile active din căminul curent
+    masini = Masina.objects.filter(camin=camin, activa=True)
+    nume_camin = camin.nume
+
 
     try:
         index_saptamana = int(request.GET.get('saptamana', 0))
@@ -912,8 +909,15 @@ def incarca_studenti_view(request):
     close_old_connections()
     
     studenti_importati = []
-    admin = AdminCamin.objects.get(email=request.user.email)
-    camin = admin.camin
+
+    camin = get_camin_curent(request)
+    if not camin:
+       return render(request, 'not_allowed.html', {
+            'message': 'Nu ești asociat niciunui cămin sau nu ai selectat unul activ.'
+        })
+
+
+
     camine = Camin.objects.all()
 
     if request.method == 'POST' and request.FILES.get('fisier'):
@@ -1226,3 +1230,13 @@ def save_fcm_token(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Metodă invalidă sau utilizator neautentificat"}, status=400)
+
+
+
+@login_required
+def selecteaza_camin(request):
+    if request.method == "POST":
+        camin_id = request.POST.get("camin_id")
+        if camin_id:
+            request.session["camin_selectat"] = camin_id
+    return redirect(request.META.get("HTTP_REFERER", "dashboard_admin_camin"))

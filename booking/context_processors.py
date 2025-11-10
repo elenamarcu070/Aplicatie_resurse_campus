@@ -49,3 +49,29 @@ def firebase_config(request):
             "vapidKey": settings.FIREBASE_VAPID_KEY,
         }
     }
+
+from booking.models import Camin, AdminCamin
+
+def camin_selectat_context(request):
+    user = request.user
+    camin_selectat = None
+    camine = None
+    is_super_admin = False
+
+    if user.is_authenticated:
+        admin = AdminCamin.objects.filter(email=user.email).first()
+        if admin and admin.is_super_admin:
+            is_super_admin = True
+            camine = Camin.objects.all()
+            camin_id = request.session.get("camin_selectat")
+            if camin_id:
+                camin_selectat = Camin.objects.filter(id=camin_id).first()
+                if not camin_selectat and camine.exists():
+                    camin_selectat = camine.first()
+                    request.session["camin_selectat"] = camin_selectat.id
+
+    return {
+        "is_super_admin": is_super_admin,
+        "camine_disponibile": camine,
+        "camin_selectat": camin_selectat,
+    }

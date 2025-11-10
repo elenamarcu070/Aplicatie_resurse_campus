@@ -230,6 +230,23 @@
         <i class="fas fa-building"></i> Cămin
       </a>
 
+      {% if is_super_admin %}
+      <li class="nav-item ms-3 d-flex align-items-center">
+        <form method="post" action="{% url 'selecteaza_camin' %}" class="d-flex align-items-center">
+          {% csrf_token %}
+          <label for="camin_id" class="me-2 fw-semibold text-dark">Cămin:</label>
+          <select name="camin_id" id="camin_id" class="form-select form-select-sm" onchange="this.form.submit()"
+            style="width:160px;">
+            {% for c in camine_disponibile %}
+            <option value="{{ c.id }}" {% if camin_selectat and c.id == camin_selectat.id %}selected{% endif %}>
+              {{ c.nume }}
+            </option>
+            {% endfor %}
+          </select>
+        </form>
+      </li>
+      {% endif %}
+
       <button id="darkModeToggle" class="btn btn-outline-secondary btn-sm ms-2">
         🌙
       </button>
@@ -243,6 +260,8 @@
       {% endif %}
     </div>
   </div>
+
+  
 
   <div class="content">{% block content %}{% endblock %}</div>
 
@@ -288,95 +307,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
-  <script>
-    async function getFCMToken() {
-        try {
-          const currentToken = await messaging.getToken({
-            vapidKey,
-          });
-          if (currentToken) {
-            console.log("✅ Token FCM:", currentToken);
-            // Trimitem tokenul la serverul Django
-            await fetch("/save-fcm-token/", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
-              },
-              body: JSON.stringify({
-                token: currentToken,
-              }),
-            });
-          } else {
-            console.warn(
-              "⚠️ Niciun token obținut. Permisiunea de notificări este blocată."
-            );
-            const firebaseConfig = {
-              {
-                firebase_config | safe
-              }
-            };
-            const vapidKey = firebaseConfig.vapidKey;
-            // Inițializare Firebase
-            firebase.initializeApp(firebaseConfig);
-            const messaging = firebase.messaging();
-            // Helper CSRF din Django
-            function getCookie(name) {
-              let v = null;
-              document.cookie.split(";").forEach(c => {
-                c = c.trim();
-                if (c.startsWith(name + "=")) {
-                  v = decodeURIComponent(c.slice(name.length + 1));
-                }
-              });
-              return v;
-            }
-            // 🔹 Inițiere notificări push
-            async function initPushNotifications() {
-              try {
-                // Înregistrare service worker (necesar pentru primirea notificărilor)
-                const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-                // Cerem permisiunea utilizatorului
-                const permission = await Notification.requestPermission();
-                if (permission !== "granted") {
-                  console.warn("❌ Utilizatorul a refuzat notificările.");
-                  return;
-                }
-                // Obținem tokenul FCM
-                const token = await messaging.getToken({
-                  vapidKey: vapidKey,
-                  serviceWorkerRegistration: reg,
-                });
-                if (!token) {
-                  console.warn("⚠️ Nu s-a putut genera tokenul FCM.");
-                  return;
-                }
-                console.log("✅ Token FCM obținut:", token);
-                // Trimitem tokenul către Django
-                await fetch("/save-fcm-token/", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken"),
-                  },
-                  body: JSON.stringify({
-                    token
-                  }),
-                });
-                console.log("📩 Token FCM salvat pe server.");
-              } catch (err) {
-                console.error("💥 Eroare la inițializarea notificărilor:", err);
-              }
-            }
-            // 🔸 Pornim logica doar dacă browserul suportă notificări
-            document.addEventListener("DOMContentLoaded", () => {
-              if ("Notification" in window && "serviceWorker" in navigator) {
-                initPushNotifications();
-              } else {
-                console.warn("🚫 Browserul nu suportă notificări push.");
-              }
-            });
-  </script>
+  
 </body>
 
 </html>

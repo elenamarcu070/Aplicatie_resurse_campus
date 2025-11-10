@@ -46,6 +46,9 @@ urlpatterns = [
 
     path("save-fcm-token/", views.save_fcm_token, name="save_fcm_token"),
 
+    path('selecteaza-camin/', views.selecteaza_camin, name='selecteaza_camin'),
+
+
  
 
 ]
