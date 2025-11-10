@@ -1009,52 +1009,59 @@ def incarca_studenti_view(request):
 @login_required
 @only_admins
 def adauga_student_view(request):
-    admin = AdminCamin.objects.get(email=request.user.email)
-    camin = admin.camin
+    user = request.user
+    admin = AdminCamin.objects.filter(email=user.email).first()
+    camin = get_camin_curent(request)  # 🟢 acum și super-adminul are cămin selectat
+
+    # dacă e admin normal — forțăm căminul propriu
+    if admin and not admin.is_super_admin:
+        camin = admin.camin
+
+    if not camin:
+        messages.error(request, "Selectează mai întâi un cămin din bara de sus.")
+        return redirect('incarca_studenti')
 
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip().lower()  # Add default empty string
-        # Verify that email is not empty
-        if not email:
-            messages.error(request, "Emailul este obligatoriu!")
-            return redirect('adauga_student')
-            
+        email = request.POST.get('email', '').strip().lower()
         nume = request.POST.get('nume', '').strip().title()
         prenume = request.POST.get('prenume', '').strip().title()
         camera = request.POST.get('camera', '').strip()
-        
+
+        if not email:
+            messages.error(request, "Emailul este obligatoriu!")
+            return redirect('adauga_student')
 
         try:
-            # Create or get user first
-            user, created = User.objects.get_or_create(
+            # 👤 Creăm sau actualizăm utilizatorul
+            user, _ = User.objects.get_or_create(
                 username=email,
-                defaults={
-                    'email': email,
-                    'first_name': prenume,
-                    'last_name': nume
-                }
+                defaults={'email': email, 'first_name': prenume, 'last_name': nume}
             )
-            
-            # Then create or update the student profile
-            profil, _ = ProfilStudent.objects.update_or_create(
+
+            # 🧩 Creăm sau actualizăm profilul studentului
+            ProfilStudent.objects.update_or_create(
                 utilizator=user,
                 defaults={
                     'email': email,
+                    'nume': nume,
+                    'prenume': prenume,
                     'camin': camin,
-                    'numar_camera': camera,
-                    'nume': nume,    # Asigură-te că salvezi numele și prenumele
-                    'prenume': prenume
+                    'numar_camera': camera
                 }
             )
-            
-            messages.success(request, "Student adăugat cu succes.")
+
+            messages.success(request, f"Studentul a fost adăugat cu succes în {camin.nume}.")
             return redirect('incarca_studenti')
-            
+
         except Exception as e:
             messages.error(request, f"Eroare la adăugarea studentului: {str(e)}")
             return redirect('adauga_student')
 
-    return render(request, 'dashboard/admin_camin/adauga_student.html', {'camin': camin})
+    return render(request, 'dashboard/admin_camin/adauga_student.html', {
+        'camin': camin,
+        'is_super_admin': admin.is_super_admin if admin else False,
+    })
+
 
 
 
