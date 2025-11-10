@@ -9,22 +9,35 @@ def rol_utilizator(request):
     if user.is_authenticated:
         context['user'] = user
 
+        from booking.models import AdminCamin, ProfilStudent, Camin
+
         # Verifică dacă e admin de cămin
         admin_camin = AdminCamin.objects.filter(email=user.email).first()
         if admin_camin:
             context['rol'] = 'admin_camin'
-            context['nume_camin'] = admin_camin.camin.nume
             context['is_admin_camin'] = True
+
+            # ✅ dacă e super-admin, are acces la toate căminele
+            if admin_camin.is_super_admin:
+                context['nume_camin'] = "Super Admin"
+                context['is_super_admin'] = True
+                context['camine_disponibile'] = Camin.objects.all()
+            else:
+                context['is_super_admin'] = False
+                context['nume_camin'] = admin_camin.camin.nume if admin_camin.camin else "Fără cămin"
+                context['camine_disponibile'] = [admin_camin.camin] if admin_camin.camin else []
+
         else:
             # Verifică dacă e student
             student = ProfilStudent.objects.filter(utilizator=user).first()
             if student:
                 context['rol'] = 'student'
                 context['is_admin_camin'] = False
-                if student.camin:
-                    context['nume_camin'] = student.camin.nume
+                context['is_super_admin'] = False
+                context['nume_camin'] = student.camin.nume if student.camin else "Nedefinit"
 
     return context
+
 
 
 # Un mic helper pentru template-uri (dacă mai folosești în HTML)
