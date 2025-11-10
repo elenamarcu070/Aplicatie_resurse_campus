@@ -985,11 +985,17 @@ def incarca_studenti_view(request):
             if 'path' in locals():
                 default_storage.delete(path)
 
+
+
     # 🧩 Adminii de cămin văd doar lista studenților lor
     if admin_camin.is_super_admin:
-        studenti = ProfilStudent.objects.all()
+        if camin:  # dacă super-adminul a selectat un cămin din dropdown
+            studenti = ProfilStudent.objects.filter(camin=camin)
+        else:
+           studenti = ProfilStudent.objects.all()
     else:
         studenti = ProfilStudent.objects.filter(camin=admin_camin.camin)
+
 
     return render(request, 'dashboard/admin_camin/incarca_studenti.html', {
         'studenti_importati': studenti_importati,
