@@ -89,33 +89,29 @@ def callback(request):
     user = request.user
     email = user.email.lower()
 
-    # Admin de cămin
+    # 🟢 1. Verificăm dacă e admin de cămin
     if AdminCamin.objects.filter(email=email).exists():
         return redirect('dashboard_admin_camin')
 
-    # 🧠 Caută profilul studentului după email
+    # 🟢 2. Verificăm dacă e student valid în baza de date
     profil = ProfilStudent.objects.filter(email=email).first()
     if profil:
-        # dacă profilul nu e legat de userul curent → reatașează-l
+        # dacă există profil, dar nu e legat de userul curent → îl reatașăm
         if profil.utilizator != user:
             profil.utilizator = user
             profil.save()
         return redirect('dashboard_student')
 
-    # dacă nu are profil deloc → creează unul nou
-    email_parts = email.split('@')[0].split('.')
-    nume_email = email_parts[-1].replace('-', ' ').title() if len(email_parts) >= 2 else ""
-    prenume_email = email_parts[0].replace('-', ' ').title() if len(email_parts) >= 1 else ""
+    # 🔴 3. Dacă nu e găsit în baza de date → NU îl creăm, doar blocăm accesul
+    logout(request)
+    return render(request, 'not_allowed.html', {
+        'message': (
+            f'Adresa <b>{email}</b> nu este înregistrată în sistem.<br>'
+            'Te rugăm să contactezi administratorul  pentru a fi adăugat în baza de date:<br>'
+            '<b>Marcu Elena – +40 756 752 311</b>'
+        )
+    })
 
-    ProfilStudent.objects.create(
-        utilizator=user,
-        camin=None,
-        email=email,
-        nume=nume_email,
-        prenume=prenume_email
-    )
-
-    return redirect('dashboard_student')
 
 
 
