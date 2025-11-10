@@ -7,14 +7,23 @@
         <h3 class="mb-4 fw-bold">Studenți cazați în {{ camin.nume }}</h3>
 
         <!-- Formularul de încărcare fișier -->
+        {% if is_super_admin %}
+        <div class="alert alert-warning mb-4">
+            <strong>Mod import global:</strong> Acest formular este disponibil doar pentru Super Admin 👑.
+            Poți adăuga studenți în mai multe cămine simultan.
+        </div>
+
         <form method="post" enctype="multipart/form-data" class="mb-4">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="fisier" class="form-label">Fișier Excel (.xlsx):</label>
-                <input type="file" class="form-control" id="fisier" name="fisier" required>
+                <label for="fisier" class="form-label fw-semibold">Fișier Excel (.xlsx):</label>
+                <input type="file" class="form-control" id="fisier" name="fisier" accept=".xlsx,.xls" required>
             </div>
-            <button type="submit" class="btn btn-primary">Importă</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-file-import"></i> Importă lista Excel
+            </button>
         </form>
+        {% endif %}
 
         <!-- Mesaje -->
         {% if messages %}
