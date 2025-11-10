@@ -901,53 +901,50 @@ def programari_admin_camin_view(request):
 @login_required
 @only_admins
 def incarca_studenti_view(request):
-    if not AdminCamin.objects.filter(email=request.user.email).exists():
+    user = request.user
+    admin_camin = AdminCamin.objects.filter(email=user.email).first()
+
+    # 🧱 Verifică dacă e admin înregistrat
+    if not admin_camin:
         return render(request, 'not_allowed.html', {
             'message': 'Nu ai drepturi de administrator.'
         })
-    # Închide conexiunile vechi la început
-    close_old_connections()
-    
-    studenti_importati = []
 
+    # 🧱 Obține căminul selectat / curent
     camin = get_camin_curent(request)
-    if not camin:
-       return render(request, 'not_allowed.html', {
+    if not camin and not admin_camin.is_super_admin:
+        return render(request, 'not_allowed.html', {
             'message': 'Nu ești asociat niciunui cămin sau nu ai selectat unul activ.'
         })
 
+    # 🧱 Închide conexiunile vechi
+    close_old_connections()
 
-
+    studenti_importati = []
     camine = Camin.objects.all()
 
-    if request.method == 'POST' and request.FILES.get('fisier'):
+    # 🧩 Dacă e super-admin — are voie să importe Excel
+    if admin_camin.is_super_admin and request.method == 'POST' and request.FILES.get('fisier'):
         fisier = request.FILES['fisier']
         path = default_storage.save(f"temp/{fisier.name}", fisier)
 
         try:
-            # Verifică formatul fișierului
-            if not path.endswith('.xlsx') and not path.endswith('.xls'):
+            # ✅ Verifică formatul fișierului
+            if not (path.endswith('.xlsx') or path.endswith('.xls')):
                 messages.error(request, "Fișierul trebuie să fie în format Excel (.xlsx sau .xls).")
                 return redirect('incarca_studenti')
 
-            # Încărcă datele din Excel
             df = pd.read_excel(default_storage.path(path))
-            
-            # Verificări preliminare
+
             if df.empty:
                 raise ValueError("Fișierul este gol sau nu conține date valide.")
-            
+
             df.columns = df.columns.str.strip().str.lower()
             required_cols = ['email', 'nume', 'prenume', 'camin', 'camera']
-            
             if not all(col in df.columns for col in required_cols):
                 raise ValueError("Fișierul trebuie să conțină coloanele: email, nume, prenume, camin, camera.")
 
-            # Folosește o tranzacție pentru toate operațiunile pe baza de date
             with transaction.atomic():
-                # Șterge studenții existenți (exceptând userul logat)
-
-                # Procesează fiecare rând
                 for _, row in df.iterrows():
                     email = str(row['email']).strip().lower()
                     nume = str(row['nume']).strip().title()
@@ -955,28 +952,21 @@ def incarca_studenti_view(request):
                     camin_nume = str(row['camin']).strip().upper()
                     camera = str(row['camera']).strip()
 
-                    # Creează sau actualizează căminul
-                    camin, _ = Camin.objects.get_or_create(nume=camin_nume)
-                    
-                    # Actualizează sau creează utilizatorul
-                    user, created = User.objects.update_or_create(
+                    camin_obj, _ = Camin.objects.get_or_create(nume=camin_nume)
+
+                    user, _ = User.objects.update_or_create(
                         username=email,
-                        defaults={
-                            'email': email,
-                            'first_name': prenume,
-                            'last_name': nume,
-                        }
+                        defaults={'email': email, 'first_name': prenume, 'last_name': nume}
                     )
 
-                    # Actualizează sau creează profilul studentului
-                    profil, _ = ProfilStudent.objects.update_or_create(
+                    ProfilStudent.objects.update_or_create(
                         utilizator=user,
                         defaults={
-                            'camin': camin,
-                            'numar_camera': camera,
-                            'email': email,  # Asigură-te că salvezi email-ul și în ProfilStudent
-                            'nume': nume,    # Asigură-te că salvezi numele și prenumele
-                            'prenume': prenume
+                            'email': email,
+                            'nume': nume,
+                            'prenume': prenume,
+                            'camin': camin_obj,
+                            'numar_camera': camera
                         }
                     )
 
@@ -988,24 +978,27 @@ def incarca_studenti_view(request):
                         'camera': camera
                     })
 
-            # Șterge fișierul temporar
             default_storage.delete(path)
             messages.success(request, "Lista de studenți a fost importată cu succes.")
-
         except Exception as e:
             messages.error(request, f"Eroare la procesare: {e}")
             if 'path' in locals():
                 default_storage.delete(path)
 
-    # Obține lista actualizată de studenți
-    studenti = ProfilStudent.objects.filter(camin=camin)
+    # 🧩 Adminii de cămin văd doar lista studenților lor
+    if admin_camin.is_super_admin:
+        studenti = ProfilStudent.objects.all()
+    else:
+        studenti = ProfilStudent.objects.filter(camin=admin_camin.camin)
 
     return render(request, 'dashboard/admin_camin/incarca_studenti.html', {
         'studenti_importati': studenti_importati,
         'camin': camin,
         'studenti': studenti,
-        'camine': camine
+        'camine': camine,
+        'is_super_admin': admin_camin.is_super_admin
     })
+
 
 
 # =========================
