@@ -17,12 +17,14 @@ class Camin(models.Model):
 
 class AdminCamin(models.Model):
     email = models.EmailField(unique=True)
-    camin = models.ForeignKey(Camin, on_delete=models.CASCADE)
+    camin = models.ForeignKey(Camin, on_delete=models.CASCADE, null=True, blank=True)
+
     telefon = models.CharField(max_length=20, blank=True, null=True)
     is_super_admin = models.BooleanField(default=False)  # 🔥 nou
 
     def __str__(self):
-        return f"{self.email} — {self.camin.nume}"
+        return f"{self.email} — {self.camin.nume if self.camin else 'Super Admin'}"
+
 
 # ------------------------------------------
 # MAȘINĂ DE SPĂLAT 
