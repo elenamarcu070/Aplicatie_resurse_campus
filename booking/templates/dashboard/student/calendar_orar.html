@@ -131,6 +131,18 @@
         </div>
     </div>
 
+    {% if not are_telefon %}
+    <div class="alert alert-warning mt-3 fade-in" style="max-width: 400px;">
+        ⚠️ <strong>Te rugăm să adaugi numărul tău de telefon!</strong><br>
+        Fără el nu vei putea primi notificări WhatsApp daca cineva iti preia rezervarea.
+        <br>
+        <a href="{% url 'adauga_telefon' %}" class="btn btn-sm btn-outline-primary mt-2">
+            <i class="fas fa-phone"></i> Adaugă număr
+        </a>
+    </div>
+    {% endif %}
+
+    
     <div class="table-responsive">
         <table class="table table-bordered text-center align-middle calendar-grid">
 

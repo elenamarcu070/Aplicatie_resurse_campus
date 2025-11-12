@@ -523,6 +523,9 @@ def calendar_rezervari_view(request):
     elif admin_camin and admin_camin.telefon:
         telefon = admin_camin.telefon
 
+    are_telefon = profil.telefon if profil else None
+
+
     context = {
         'masini': masini,
         'zile_saptamana': zile_saptamana,
@@ -541,6 +544,7 @@ def calendar_rezervari_view(request):
         'intervale_blocate': intervale_blocate,
         'telefon': telefon,  # 🟢 adăugat aici pentru bara din dreapta
         'now_hour': now_hour,
+        'are_telefon': bool(profil and profil.telefon),
 
     }
 
@@ -581,6 +585,11 @@ def creeaza_rezervare(request):
     if profil and profil.suspendat_pana_la and profil.suspendat_pana_la >= date.today():
         messages.error(request, f"Contul tău este blocat până la {profil.suspendat_pana_la.strftime('%d %B %Y')}.")
         return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
+    
+    if profil and not profil.telefon:
+        messages.warning(request, "Trebuie să adaugi un număr de telefon înainte de a face o rezervare.")
+        return redirect('adauga_telefon')
+
 
     if request.method == 'POST':
         masina_id = request.POST.get('masina_id')
@@ -1061,9 +1070,6 @@ def adauga_student_view(request):
         'camin': camin,
         'is_super_admin': admin.is_super_admin if admin else False,
     })
-
-
-
 
 
 
