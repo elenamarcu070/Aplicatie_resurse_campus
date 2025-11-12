@@ -1095,9 +1095,20 @@ def adauga_telefon(request):
     num = re.sub(r"[^\d+]", "", telefon_raw)
 
     # prefix implicit după țară
-    prefix = "+40"
-    if tara == "md":
-        prefix = "+373"
+       # 2️⃣ Mapare prefixe pentru mai multe țări
+    prefix_map = {
+        "ro": "+40",   # România
+        "md": "+373",  # Moldova
+        "bg": "+359",  # Bulgaria
+        "hu": "+36",   # Ungaria
+        "de": "+49",   # Germania
+        "it": "+39",   # Italia
+        "fr": "+33",   # Franța
+        "es": "+34",   # Spania
+        "uk": "+44",   # Marea Britanie
+        "gr": "+30",   # Grecia
+    }
+    prefix = prefix_map.get(tara, "+40")  # fallback la România
 
     # dacă nu începe cu +, adaugă prefixul și taie 0 din față (ex: 07xx…)
     if not num.startswith("+"):

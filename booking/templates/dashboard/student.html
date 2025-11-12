@@ -52,8 +52,16 @@
             <form method="post" action="{% url 'adauga_telefon' %}" class="d-flex align-items-center">
                 {% csrf_token %}
                 <select name="tara" class="form-select me-2" style="max-width:130px;" onchange="this.nextElementSibling.textContent = this.value === 'ro' ? '+40' : '+373'">
-                    <option value="ro" selected>🇷🇴 +40</option>
-                    <option value="md">🇲🇩 +373</option>
+                            <option value="ro" selected>🇷🇴 RO +40</option>
+                            <option value="md">🇲🇩 MD +373</option>
+                            <option value="bg">🇧🇬 BG +359</option>
+                            <option value="hu">🇭🇺 HU +36</option>
+                            <option value="de">🇩🇪 DE +49</option>
+                            <option value="it">🇮🇹 IT +39</option>
+                            <option value="fr">🇫🇷 FR +33</option>
+                            <option value="es">🇪🇸 ES +34</option>
+                            <option value="uk">🇬🇧 UK +44</option>
+                            <option value="gr">🇬🇷 GR +30</option>
                 </select>
                 
                 <input type="text" name="telefon" class="form-control me-2" placeholder="7xx xxx xxx" required>
