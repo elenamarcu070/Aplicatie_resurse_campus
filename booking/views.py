@@ -464,6 +464,48 @@ def detalii_camin_admin(request, camin_id):
                 messages.error(request, f"Eroare la dezactivare: {e}")
 
             return redirect('detalii_camin_admin', camin_id=camin.id)
+        
+                # ✅ Adăugare program pentru mașină
+        if 'adauga_program_masina' in request.POST:
+            masina_id = request.POST.get('program_masina_id')
+            ora_start_str = request.POST.get('ora_start_masina')
+            ora_end_str = request.POST.get('ora_end_masina')
+
+            try:
+                masina = get_object_or_404(Masina, id=masina_id)
+
+                if not ora_start_str or not ora_end_str:
+                    messages.error(request, "Completează orele de început și sfârșit.")
+                    return redirect('detalii_camin_admin', camin_id=camin.id)
+
+                ora_start = datetime.strptime(ora_start_str, '%H:%M').time()
+                ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
+
+                # Verificare dacă deja există un program similar
+                exista = ProgramMasina.objects.filter(
+                    masina=masina,
+                    ora_start=ora_start,
+                    ora_end=ora_end
+                ).exists()
+
+                if exista:
+                    messages.warning(request, "Acest program există deja pentru mașină.")
+                else:
+                    ProgramMasina.objects.create(
+                        masina=masina,
+                        ora_start=ora_start,
+                        ora_end=ora_end
+                    )
+                    messages.success(
+                        request,
+                        f"Program adăugat pentru {masina.nume}: {ora_start.strftime('%H:%M')} - {ora_end.strftime('%H:%M')}."
+                    )
+
+            except Exception as e:
+                messages.error(request, f"Eroare la adăugarea programului: {e}")
+
+            return redirect('detalii_camin_admin', camin_id=camin.id)
+
 
     # ✅ Date pentru template
     admini = AdminCamin.objects.filter(camin=camin)
