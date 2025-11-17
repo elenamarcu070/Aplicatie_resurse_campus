@@ -471,7 +471,7 @@ def calendar_rezervari_view(request):
     # verificăm dacă e student sau admin
     admin_camin = AdminCamin.objects.filter(email=user.email).first()
     student = ProfilStudent.objects.filter(utilizator=user).first()
-
+    
     camin = get_camin_curent(request)
 
        # ✅ folosim căminul curent din funcția comună
@@ -500,7 +500,8 @@ def calendar_rezervari_view(request):
     start_saptamana = azi - timedelta(days=azi.weekday()) + timedelta(weeks=index_saptamana)
     end_saptamana = start_saptamana + timedelta(days=6)
     zile_saptamana = [start_saptamana + timedelta(days=i) for i in range(7)]
-    intervale_ore = list(range(8, 22, camin.durata_interval))
+    durata = getattr(camin, "durata_interval", 2)
+    intervale_ore = list(range(8, 23, camin.durata_interval))
 
 
     rezervari = Rezervare.objects.filter(
@@ -596,8 +597,7 @@ def creeaza_rezervare(request):
         })
     
     camin = get_camin_curent(request)
-    durata = timedelta(hours=camin.durata_interval)
-    ora_end = (datetime.combine(date.today(), ora_start) + durata).time()
+
 
 
     profil = ProfilStudent.objects.filter(utilizator=user).first()
@@ -614,13 +614,14 @@ def creeaza_rezervare(request):
         masina_id = request.POST.get('masina_id')
         data_str = request.POST.get('data')
         ora_start_str = request.POST.get('ora_start')
-        ora_end_str = request.POST.get('ora_end')
+
 
         try:
             masina = Masina.objects.get(id=masina_id)
             data_rezervare = datetime.strptime(data_str, '%Y-%m-%d').date()
             ora_start = datetime.strptime(ora_start_str, '%H:%M').time()
-            ora_end = datetime.strptime(ora_end_str, '%H:%M').time()
+            durata = timedelta(hours=camin.durata_interval)
+            ora_end = (datetime.combine(date.today(), ora_start) + durata).time()
             azi = date.today()
 
             # 🟡 Verificăm dacă intervalul cerut este într-un interval dezactivat
