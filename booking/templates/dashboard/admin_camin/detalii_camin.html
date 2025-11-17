@@ -16,6 +16,32 @@
         </div>
         {% endif %}
 
+        <!-- 🔧 Setări generale cămin -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Setări cămin</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label mb-0">Durata interval (ore):</label>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" name="durata_interval" class="form-control"
+                                   min="1" max="4" value="{{ camin.durata_interval }}">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" name="update_durata_interval" class="btn btn-primary">
+                                Actualizează
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Admini -->
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-primary text-white">
@@ -27,7 +53,6 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ admin.email }}
                         {% if is_super_admin %}
-                        <!-- 🔸 Butonul de ștergere apare doar la super-admini -->
                         <form method="post" class="m-0" onsubmit="return confirm('Ești sigur că vrei să ștergi acest admin?');">
                             {% csrf_token %}
                             <input type="hidden" name="sterge_admin_id" value="{{ admin.id }}">
@@ -39,7 +64,6 @@
                 </ul>
 
                 {% if is_super_admin %}
-                <!-- 🔸 Formularul de adăugare admin apare doar la super-admini -->
                 <form method="post" class="input-group">
                     {% csrf_token %}
                     <input type="email" name="email_nou_admin" class="form-control" placeholder="Email nou admin" required>
@@ -73,21 +97,18 @@
                         </div>
 
                         <div>
-                            <!-- Ștergere -->
                             <form method="post" class="d-inline" onsubmit="return confirm('Ești sigur că vrei să ștergi această mașină?');">
                                 {% csrf_token %}
                                 <input type="hidden" name="sterge_masina_id" value="{{ masina.id }}">
                                 <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
                             </form>
 
-                            <!-- Activare / Dezactivare -->
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
                                 <input type="hidden" name="toggle_masina_id" value="{{ masina.id }}">
-                                <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare totala</button>
+                                <button type="submit" class="btn btn-outline-warning btn-sm">Activare/Dezactivare totală</button>
                             </form>
 
-                            <!-- Dezactivare interval -->
                             <button type="button" class="btn btn-outline-warning btn-sm"
                                     data-bs-toggle="modal"
                                     data-bs-target="#dezactiveaza-{{ masina.id }}">
@@ -161,7 +182,6 @@
     </div>
 </div>
 
-<!-- Modalele sunt puse în afara containerului pentru a nu fi blocate -->
 {% for masina in masini %}
 <div class="modal fade" id="dezactiveaza-{{ masina.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">

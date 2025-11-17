@@ -308,6 +308,19 @@ def detalii_camin_admin(request, camin_id):
             admin.delete()
             messages.success(request, f"Adminul '{admin.email}' a fost șters.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
+        
+
+        # ✅ în detalii_camin_admin (sub alte if-uri din POST)
+        if 'update_durata_interval' in request.POST:
+            try:
+                durata = int(request.POST.get('durata_interval', 2))
+                camin.durata_interval = durata
+                camin.save()
+                messages.success(request, f"Durata intervalului a fost actualizată la {durata} ore.")
+            except Exception as e:
+                messages.error(request, f"Eroare la actualizarea duratei: {e}")
+            return redirect('detalii_camin_admin', camin_id=camin.id)
+
 
         # ✅ Adăugare mașină
         if 'nume_masina' in request.POST:
@@ -487,7 +500,8 @@ def calendar_rezervari_view(request):
     start_saptamana = azi - timedelta(days=azi.weekday()) + timedelta(weeks=index_saptamana)
     end_saptamana = start_saptamana + timedelta(days=6)
     zile_saptamana = [start_saptamana + timedelta(days=i) for i in range(7)]
-    intervale_ore = list(range(8, 22, 2))
+    intervale_ore = list(range(8, 22, camin.durata_interval))
+
 
     rezervari = Rezervare.objects.filter(
         masina__in=masini,
@@ -580,6 +594,11 @@ def creeaza_rezervare(request):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților sau administratorilor.'
         })
+    
+    camin = get_camin_curent(request)
+    durata = timedelta(hours=camin.durata_interval)
+    ora_end = (datetime.combine(date.today(), ora_start) + durata).time()
+
 
     profil = ProfilStudent.objects.filter(utilizator=user).first()
     if profil and profil.suspendat_pana_la and profil.suspendat_pana_la >= date.today():
@@ -1034,7 +1053,7 @@ def adauga_student_view(request):
         email = request.POST.get('email', '').strip().lower()
         nume = request.POST.get('nume', '').strip().title()
         prenume = request.POST.get('prenume', '').strip().title()
-        camera = request.POST.get('camera', '').strip()
+        camera = request.POST.get('numar_camera', '').strip()
 
         if not email:
             messages.error(request, "Emailul este obligatoriu!")

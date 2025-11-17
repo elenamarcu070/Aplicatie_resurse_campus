@@ -9,7 +9,8 @@ from django.forms import ValidationError
 # ------------------------------------------
 
 class Camin(models.Model):
-    nume = models.CharField(max_length=50)
+    nume = models.CharField(max_length=100, unique=True)
+    durata_interval = models.PositiveIntegerField(default=2, help_text="Durata fiecărui interval de rezervare (ore)")
 
     def __str__(self):
         return self.nume
