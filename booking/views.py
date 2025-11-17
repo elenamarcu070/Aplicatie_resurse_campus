@@ -501,7 +501,7 @@ def calendar_rezervari_view(request):
     end_saptamana = start_saptamana + timedelta(days=6)
     zile_saptamana = [start_saptamana + timedelta(days=i) for i in range(7)]
     durata = getattr(camin, "durata_interval", 2)
-    intervale_ore = list(range(8, 23, camin.durata_interval))
+    intervale_ore = list(range(8, 22, camin.durata_interval))
 
 
     rezervari = Rezervare.objects.filter(
