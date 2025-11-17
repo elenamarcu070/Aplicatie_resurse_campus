@@ -28,12 +28,36 @@ from booking.models import (
 from booking.utils import trimite_sms
 from booking.utils import get_camin_curent
 
+
+import logging, traceback
+from .utils import trimite_sms
+logger = logging.getLogger(__name__)
+
+from booking.models import (
+    Camin, ProfilStudent, AdminCamin,
+    Rezervare, ProgramMasina, Masina,
+    Avertisment, Uscator, ProgramUscator,
+    IntervalDezactivare   # 🟡 asigură-te că ai acest import
+)
+from datetime import datetime, timedelta, date, time
+from django.db.models import Min, Max
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.contrib import messages
+
+from booking.models import (
+    Camin, ProfilStudent, AdminCamin,
+    Masina, Rezervare, Avertisment,
+    IntervalDezactivare, ProgramMasina
+)
+from booking.utils import get_camin_curent
+
+
+
 # =========================
 # Decoratori pentru roluri
 # =========================
-
-
-
 
 def only_students(view_func):
     @wraps(view_func)
@@ -497,11 +521,22 @@ def calendar_rezervari_view(request):
     azi = date.today()
     now = datetime.now()
     now_hour = timezone.localtime().hour  # ← folosim acest întreg în template
+
+
     start_saptamana = azi - timedelta(days=azi.weekday()) + timedelta(weeks=index_saptamana)
     end_saptamana = start_saptamana + timedelta(days=6)
     zile_saptamana = [start_saptamana + timedelta(days=i) for i in range(7)]
-    durata = getattr(camin, "durata_interval", 2)
-    intervale_ore = list(range(8, 22, camin.durata_interval))
+
+
+    # Găsim cel mai devreme început și cel mai târziu sfârșit al programului mașinilor din cămin
+    program = ProgramMasina.objects.filter(masina__in=masini)
+
+    ora_start_min = program.aggregate(Min("ora_start"))["ora_start__min"] or time(8, 0)
+    ora_end_max  = program.aggregate(Max("ora_end"))["ora_end__max"]   or time(22, 0)
+
+    durata_interval = getattr(camin, "durata_interval", 2)
+    intervale_ore = list(range(ora_start_min.hour, ora_end_max.hour, durata_interval))
+
 
 
     rezervari = Rezervare.objects.filter(
@@ -560,7 +595,7 @@ def calendar_rezervari_view(request):
         'telefon': telefon,  # 🟢 adăugat aici pentru bara din dreapta
         'now_hour': now_hour,
         'are_telefon': bool(profil and profil.telefon),
-        'durata_interval': durata,
+        'durata_interval': durata_interval,
 
     }
 
@@ -572,17 +607,6 @@ def calendar_rezervari_view(request):
 
 
 
-
-import logging, traceback
-from .utils import trimite_sms
-logger = logging.getLogger(__name__)
-
-from booking.models import (
-    Camin, ProfilStudent, AdminCamin,
-    Rezervare, ProgramMasina, Masina,
-    Avertisment, Uscator, ProgramUscator,
-    IntervalDezactivare   # 🟡 asigură-te că ai acest import
-)
 
 
 @login_required
