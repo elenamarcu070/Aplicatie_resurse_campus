@@ -560,6 +560,7 @@ def calendar_rezervari_view(request):
         'telefon': telefon,  # 🟢 adăugat aici pentru bara din dreapta
         'now_hour': now_hour,
         'are_telefon': bool(profil and profil.telefon),
+        'durata_interval': durata,
 
     }
 

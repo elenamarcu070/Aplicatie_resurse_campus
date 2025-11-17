@@ -166,7 +166,7 @@
                         {% for zi in zile_saptamana %}
                             <td>
                                 {% for ora in intervale_ore %}
-                                    {% with ora_sfarsit=ora|add:"2" %}
+                                    {% with ora_sfarsit=ora|add:durata_interval %}
                                     {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora %}
 
                                         {# ====== SLOT CU REZERVARE ====== #}
