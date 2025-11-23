@@ -360,6 +360,19 @@ def detalii_camin_admin(request, camin_id):
             masina.delete()
             messages.success(request, f"Mașina '{masina.nume}' a fost ștearsă.")
             return redirect('detalii_camin_admin', camin_id=camin.id)
+        # ✅ Editare nume mașină
+        if 'edit_masina_id' in request.POST:
+            masina_id = request.POST.get('edit_masina_id')
+            nume_nou = request.POST.get('nume_masina_nou', '').strip()
+            masina = get_object_or_404(Masina, id=masina_id)
+            if nume_nou:
+                masina.nume = nume_nou
+                masina.save()
+                messages.success(request, f"Numele mașinii a fost actualizat la '{nume_nou}'.")
+            else:
+                messages.warning(request, "Numele nu poate fi gol.")
+            return redirect('detalii_camin_admin', camin_id=camin.id)
+
 
         # ✅ Activare / Dezactivare completă mașină
         if 'toggle_masina_id' in request.POST:
