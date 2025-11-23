@@ -119,7 +119,8 @@
                                         <span class="flex-grow-1">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</span>
 
                                         {# buton avertisment – rezervări trecute #}
-                                        {% if este_admin_camin and (zi < today or zi == today and ora_sfarsit <= now_hour) %}
+                                        {% if este_admin_camin and zi < today or este_admin_camin and zi == today and ora_sfarsit <= now_hour %}
+
                                             <button type="button" class="btn-icon text-warning"
                                                 data-bs-toggle="modal" data-bs-target="#confirmModal"
                                                 data-rezervare-id="{{ rezervare.id }}"
