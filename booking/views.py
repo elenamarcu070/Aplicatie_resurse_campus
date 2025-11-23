@@ -601,7 +601,20 @@ def calendar_rezervari_view(request):
     ora_end_max  = program.aggregate(Max("ora_end"))["ora_end__max"]   or time(22, 0)
 
     durata_interval = getattr(camin, "durata_interval", 2)
-    intervale_ore = list(range(ora_start_min.hour, ora_end_max.hour, durata_interval))
+    # ✔️ Generăm intervalele corect, inclusiv peste miezul nopții (ex: 22 → 01)
+    intervale_ore = []
+    h = ora_start_min.hour
+    while True:
+        intervale_ore.append(h)
+        # adaugăm durata intervalului
+        h = h + camin.durata_interval
+        # dacă trece peste 24 → reluăm de la 0
+        if h >= 24:
+            h -= 24
+        # oprire: dacă am revenit la ora de start (altfel ar fi buclă infinită)
+        if h == ora_start_min.hour:
+            break
+
 
 
 
