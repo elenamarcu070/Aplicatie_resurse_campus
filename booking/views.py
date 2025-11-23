@@ -505,6 +505,17 @@ def detalii_camin_admin(request, camin_id):
                 messages.error(request, f"Eroare la adăugarea programului: {e}")
 
             return redirect('detalii_camin_admin', camin_id=camin.id)
+                # ✅ Ștergere program mașină
+        if 'sterge_program_masina_id' in request.POST:
+            prog_id = request.POST.get('sterge_program_masina_id')
+            try:
+                program = get_object_or_404(ProgramMasina, id=prog_id)
+                program.delete()
+                messages.success(request, "Programul a fost șters cu succes.")
+            except Exception as e:
+                messages.error(request, f"Eroare la ștergerea programului: {e}")
+            return redirect('detalii_camin_admin', camin_id=camin.id)
+
 
 
     # ✅ Date pentru template
