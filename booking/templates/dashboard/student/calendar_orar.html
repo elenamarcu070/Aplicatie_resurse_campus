@@ -218,7 +218,8 @@
 
                                                         {# buton preluare – doar dacă NU a trecut și nu e prioritatea 1 #}
                                                         {% if rezervare.nivel_prioritate != 1 %}
-                                                            {% if (zi > today) or (zi == today and ora_sfarsit > now_hour) %}
+                                                           {% if zi > today or zi == today and ora_sfarsit > now_hour %}
+
                                                                 {% if este_admin_camin or este_student %}
                                                                     <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
                                                                         {% csrf_token %}
