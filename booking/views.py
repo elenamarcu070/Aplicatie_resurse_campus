@@ -621,9 +621,13 @@ def calendar_rezervari_view(request):
 
     ora_start_min = program.aggregate(Min("ora_start"))["ora_start__min"] or time(8, 0)
     ora_end_max  = program.aggregate(Max("ora_end"))["ora_end__max"]   or time(22, 0)
-    intervale_ore = genereaza_intervale(ora_start_min, ora_end_max, camin.durata_interval)
-
-
+    raw_intervals = genereaza_intervale(ora_start_min, ora_end_max, camin.durata_interval)
+    intervale_ore = []
+    
+    for minute in raw_intervals:
+        ora_start = minute // 60
+        ora_end = ora_start + camin.durata_interval
+        intervale_ore.append((ora_start, ora_end))
 
 
 
