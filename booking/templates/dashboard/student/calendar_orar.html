@@ -12,126 +12,59 @@
     .table th:first-child { min-width: 100px; width: 100px; }
 
     .time-slot { font-size: 0.9em; padding: 5px 8px; height: 100%; width: 100%;
-                 display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
-                 text-decoration: none; white-space: nowrap; }
+                 display: flex; align-items: center; justify-content: center;
+                 white-space: nowrap; }
 
-    .btn-interval { width: 100%; height: 100%; min-width: 150px; display: flex; align-items: center; justify-content: center;
-                    border: 1px solid #28a745; color: #28a745; background-color: transparent; border-radius: 4px;
-                    transition: all 0.2s ease; white-space: nowrap; }
+    .btn-interval {
+        width: 100%; height: 100%; min-width: 150px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid #28a745; color: #28a745;
+        background-color: transparent; border-radius: 4px;
+    }
     .btn-interval:hover { background-color: #28a745; color: white; }
 
-    .rezervare { height: 100%; width: 100%; padding: 5px 8px; border-radius: 4px; display: flex; align-items: center;
-                 transition: all 0.3s ease; white-space: nowrap; }
-
-    .bg-danger{ background-color:#dc3545!important;color:#fff!important;border:1px solid #bd2130;}
-    .bg-secondary{ background-color:#6c757d!important;color:#fff!important;border:1px solid #545b62;}
-    .bg-primary{ background-color:#0d6efd!important;color:#fff!important;border:1px solid #0257d5;}
-    .bg-brown{ background-color:#D2B48C!important;color:#fff!important;border:1px solid #bc9f7b;}
-    .bg-warning{ background-color:#ffc107!important;color:#000!important;border:1px solid #d39e00;}
-    .bg-own{ background-color:#b3e5fc!important;border:1px solid #0288d1!important;color:#01579b!important;}
-
-    .btn-icon{ background:none;border:none;color:rgba(255,255,255,0.8);padding:0;width:20px;height:20px;display:flex;
-               align-items:center;justify-content:center;margin-left:8px;cursor:pointer;transition:all .2s ease;}
-    .btn-icon:hover{ color:#fff; transform:scale(1.1); }
-    .btn-icon i{ font-size:.8rem; }
-
-    .container{ max-width:100%; }
-    .shadow{ box-shadow:0 .5rem 1rem rgba(0,0,0,.15)!important; }
-
-    .badge{ width:20px;height:20px;padding:0;display:inline-flex;align-items:center;justify-content:center; }
-    .legend-item{ display:flex;align-items:center;margin:.5rem; }
-    .legend-text{ margin-left:.5rem;font-size:.875rem;color:#666; }
-    .toast{ opacity:1!important;background-color:#fff!important; }
-    .toast .toast-body{ color:#000!important;font-weight:500; }
-    .tooltip{ font-size:.8rem; }
-
-    /* HEADERE sticky */
-    .calendar-grid thead th {
-        position: sticky;
-        top: 0;
-        z-index: 3;
-        background: #ffffff;
-        box-shadow: 0 2px 0 #e9edf2;
+    .rezervare {
+        height: 100%; width: 100%; padding: 5px 8px;
+        border-radius: 4px; display: flex; align-items: center;
+        white-space: nowrap;
     }
-    /* Prima coloană sticky */
-    .calendar-grid th.bg-light,
-    .calendar-grid tbody th.bg-light {
-        position: sticky;
-        left: 0;
-        z-index: 2;
-        background: #ffffff !important;
-        box-shadow: 2px 0 0 #e9edf2;
-    }
-    /* Zebra pe zile */
-    .calendar-grid thead th:nth-child(n+2):nth-child(odd),
-    .calendar-grid tbody td:nth-child(n+2):nth-child(odd) {
-        background-color: #fbfdff;
-    }
-    /* Linii verticale între zile */
-    .calendar-grid thead th:nth-child(n+1),
-    .calendar-grid tbody td:nth-child(n+1) {
-        border-left: 1px solid #4b4c4cff !important;
-        box-shadow: inset 1px 0 0 #454647ff;
-    }
-    /* Linie orizontală groasă între mașini */
-    .calendar-grid tbody tr + tr td,
-    .calendar-grid tbody tr + tr th.bg-light {
-        border-top: 3px solid #454647ff !important;
-    }
+
+    .bg-danger{ background-color:#dc3545!important;color:#fff!important; }
+    .bg-secondary{ background-color:#6c757d!important;color:#fff!important; }
+    .bg-primary{ background-color:#0d6efd!important;color:#fff!important; }
+    .bg-brown{ background-color:#D2B48C!important;color:#fff!important; }
+    .bg-warning{ background-color:#ffc107!important;color:#000!important; }
+    .bg-own{ background-color:#b3e5fc!important;color:#01579b!important; }
+
+    .btn-icon{ background:none;border:none;color:white; width:20px;height:20px; }
+    .btn-icon i { font-size: .8rem; }
+
+    /* sticky */
+    .calendar-grid thead th { position: sticky; top: 0; background:white; z-index: 3; }
+    .calendar-grid th.bg-light { position: sticky; left:0; background:white; z-index:2; }
+
+    /* zebra */
+    .calendar-grid tbody td:nth-child(odd) { background:#fbfdff; }
 </style>
 
 <div class="container mt-4 fade-in">
-    <div class="py-3 px-4 mb-4 rounded shadow text-black" style="background-color:rgb(255, 255, 255);">
-        <h2 class="mb-3 text-center fw-bold" style="font-size: 1.8rem;">
-            Rezervari Spalatorie – camin {{ nume_camin|default:"Cămin necunoscut" }}
+
+    <div class="py-3 px-4 mb-4 rounded shadow bg-white">
+        <h2 class="text-center fw-bold" style="font-size:1.8rem;">
+            Rezervari Spalatorie – {{ nume_camin }}
             ({{ start_saptamana|date:"d M" }} – {{ end_saptamana|date:"d M" }})
         </h2>
 
-        <div class="mb-4">
-            <div class="d-flex justify-content-center flex-wrap">
-                <div class="legend-item" data-bs-toggle="tooltip" title="Prima rezervare – protejată, nu poate fi preluată">
-                    <span class="badge bg-danger">■</span><span class="legend-text">Prima rezervare</span>
-                </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="A doua rezervare – preluabilă">
-                    <span class="badge bg-secondary">■</span><span class="legend-text">A doua rezervare</span>
-                </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="A treia rezervare – preluabilă">
-                    <span class="badge bg-primary">■</span><span class="legend-text">A treia rezervare</span>
-                </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="A patra rezervare – preluabilă">
-                    <span class="badge bg-brown">■</span><span class="legend-text">A patra rezervare</span>
-                </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="Rezervare trecută (expirată)">
-                    <span class="badge bg-warning">■</span><span class="legend-text">Rezervare trecută</span>
-                </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="Interval liber – poți face o rezervare">
-                    <span class="badge bg-success">■</span><span class="legend-text">Slot disponibil</span>
-                </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="Rezervările mele active">
-                    <span class="badge bg-own">■</span><span class="legend-text">Rezervările mele</span>
-                </div>
-            </div>
-        </div>
-
         <div class="d-flex justify-content-between">
-            <a href="?saptamana={{ saptamana_precedenta }}" class="btn btn-light px-4 py-2 fw-semibold">← Săptămâna trecută</a>
-            <a href="?saptamana={{ saptamana_urmatoare }}" class="btn btn-light px-4 py-2 fw-semibold">Săptămâna viitoare →</a>
+            <a href="?saptamana={{ saptamana_precedenta }}" class="btn btn-light">← Săptămâna trecută</a>
+            <a href="?saptamana={{ saptamana_urmatoare }}" class="btn btn-light">Săptămâna viitoare →</a>
         </div>
     </div>
 
     {% if not are_telefon %}
-    <div class="alert alert-danger d-flex justify-content-between align-items-center mt-3 px-4 py-3 shadow-sm"
-        style="border-radius: 10px; font-size: 1rem; font-weight: 500;">
-        <div class="d-flex align-items-center gap-2">
-            <i class="fas fa-exclamation-triangle fa-lg me-2"></i>
-            <span>
-                Te rugăm să adaugi numărul tău de telefon pentru a putea primi notificări WhatsApp despre rezervări
-                și pentru a evita pierderea programărilor.
-            </span>
-        </div>
-        <a href="{% url 'dashboard_student' %}" class="btn btn-light btn-sm fw-semibold">
-            <i class="fas fa-phone"></i> Adaugă număr
-        </a>
+    <div class="alert alert-danger shadow-sm d-flex justify-content-between align-items-center">
+        <span>Adaugă număr de telefon pentru notificări WhatsApp!</span>
+        <a href="{% url 'dashboard_student' %}" class="btn btn-light btn-sm">Adaugă număr</a>
     </div>
     {% endif %}
 
@@ -147,170 +80,152 @@
             </thead>
 
             <tbody>
-                {% for masina in masini %}
-                    <tr>
-                        <th class="bg-light">{{ masina.nume }}</th>
 
-                        {% for zi in zile_saptamana %}
-                            <td>
-                                {% for interval in intervale_ore %}
-                                    {% with ora_start=interval.0 ora_sfarsit=interval.1 %}
-                                    {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora_start %}
+            {% for masina in masini %}
+                <tr>
+                    <th class="bg-light">{{ masina.nume }}</th>
 
-                                        {# ================== SLOT CU REZERVARE ================== #}
-                                        {% if rezervare %}
-                                            <div class="interval-container">
-                                                <div class="rezervare
-                                                    {% if zi < today %}
-                                                        bg-warning
-                                                    {% else %}
-                                                        {% if zi == today %}
-                                                            {% if ora_sfarsit <= now_hour %}
-                                                                bg-warning
-                                                            {% else %}
-                                                                {% if rezervare.utilizator == request.user %}
-                                                                    bg-own
-                                                                {% else %}
-                                                                    {% if rezervare.nivel_prioritate == 1 %}bg-danger{% endif %}
-                                                                    {% if rezervare.nivel_prioritate == 2 %}bg-secondary{% endif %}
-                                                                    {% if rezervare.nivel_prioritate == 3 %}bg-primary{% endif %}
-                                                                    {% if rezervare.nivel_prioritate == 4 %}bg-brown{% endif %}
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% else %}
-                                                            {% if rezervare.utilizator == request.user %}
-                                                                bg-own
-                                                            {% else %}
-                                                                {% if rezervare.nivel_prioritate == 1 %}bg-danger{% endif %}
-                                                                {% if rezervare.nivel_prioritate == 2 %}bg-secondary{% endif %}
-                                                                {% if rezervare.nivel_prioritate == 3 %}bg-primary{% endif %}
-                                                                {% if rezervare.nivel_prioritate == 4 %}bg-brown{% endif %}
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    {% endif %}"
-                                                    data-nume="{{ rezervare.utilizator.last_name }} {{ rezervare.utilizator.first_name }}"
-                                                    data-email="{{ rezervare.utilizator.email }}"
-                                                    data-camera="{{ rezervare.utilizator.profilstudent.numar_camera|default:'-' }}"
-                                                    data-telefon="{{ rezervare.utilizator.profilstudent.telefon|default:'-' }}"
-                                                    style="cursor:pointer;"
-                                                    data-bs-toggle="tooltip"
-                                                    data-bs-placement="top"
-                                                    title="{% if este_admin_camin %}{{ rezervare.utilizator.get_full_name }}{% else %}{% if zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}{% endif %}">
+                    {% for zi in zile_saptamana %}
+                    <td>
 
-                                                    <div class="d-flex align-items-center w-100">
-                                                        <span class="flex-grow-1">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</span>
+                    {% for interval in intervale_ore %}
+                        {% with ora_start=interval.0 ora_sfarsit=interval.1 %}
+                        {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora_start %}
 
-                                                        {# buton avertisment – doar pentru rezervări trecute #}
-                                                        {% if este_admin_camin %}
-                                                            {% if zi < today or zi == today and ora_sfarsit <= now_hour %}
+                        {# ===================== SLOT CU REZERVARE ===================== #}
+                        {% if rezervare %}
 
-                                                                <button type="button" class="btn-icon text-warning"
-                                                                    data-bs-toggle="modal" data-bs-target="#confirmModal"
-                                                                    data-rezervare-id="{{ rezervare.id }}"
-                                                                    data-nume="{{ rezervare.utilizator.get_full_name }}"
-                                                                    data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
-                                                                    data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
-                                                                    title="Trimite avertisment">
-                                                                    <i class="fas fa-exclamation-triangle"></i>
-                                                                </button>
-                                                            {% endif %}
-                                                        {% endif %}
+                            <div class="interval-container">
+                                <div class="rezervare
+                                    {% if zi < today %}
+                                        bg-warning
+                                    {% elif zi == today and ora_sfarsit <= now_hour %}
+                                        bg-warning
+                                    {% elif rezervare.utilizator == request.user %}
+                                        bg-own
+                                    {% else %}
+                                        {% if rezervare.nivel_prioritate == 1 %}bg-danger{% endif %}
+                                        {% if rezervare.nivel_prioritate == 2 %}bg-secondary{% endif %}
+                                        {% if rezervare.nivel_prioritate == 3 %}bg-primary{% endif %}
+                                        {% if rezervare.nivel_prioritate == 4 %}bg-brown{% endif %}
+                                    {% endif %}"
+                                    data-nume="{{ rezervare.utilizator.last_name }} {{ rezervare.utilizator.first_name }}"
+                                    data-email="{{ rezervare.utilizator.email }}"
+                                    data-camera="{{ rezervare.utilizator.profilstudent.numar_camera|default:'-' }}"
+                                    data-telefon="{{ rezervare.utilizator.profilstudent.telefon|default:'-' }}"
+                                    style="cursor:pointer;">
 
-                                                        {# buton preluare – doar dacă NU a trecut și nu e prioritatea 1 #}
-                                                        {% if rezervare.nivel_prioritate != 1 %}
-                                                           {% if zi > today or zi == today and ora_sfarsit > now_hour %}
+                                    <div class="d-flex w-100">
+                                        <span class="flex-grow-1">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</span>
 
-                                                                {% if este_admin_camin or este_student %}
-                                                                    <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
-                                                                        {% csrf_token %}
-                                                                        <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                                        <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                                        <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
-                                                                        <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                                        <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                                                        <button type="submit" class="btn-icon" title="Preia rezervarea">
-                                                                            <i class="fas fa-exchange-alt"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        {# buton avertisment – rezervări trecute #}
+                                        {% if este_admin_camin and (zi < today or zi == today and ora_sfarsit <= now_hour) %}
+                                            <button type="button" class="btn-icon text-warning"
+                                                data-bs-toggle="modal" data-bs-target="#confirmModal"
+                                                data-rezervare-id="{{ rezervare.id }}"
+                                                data-nume="{{ rezervare.utilizator.get_full_name }}"
+                                                data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
+                                                data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                            </button>
+                                        {% endif %}
 
-                                        {# ================== SLOT FĂRĂ REZERVARE ================== #}
-                                        {% else %}
-                                            {% if este_admin_camin or este_student %}
-                                                {% if zi < today or zi == today and ora_sfarsit <= now_hour %}
-
-                                                    <div class="interval-container">
-                                                        <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                            <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                            <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
-                                                            <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                            <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                                            <button type="submit" class="btn-interval">
-                                                                {{ ora_start }}:00 - {{ ora_sfarsit }}:00
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                {% else %}
-                                                    <div class="interval-container">
-                                                        <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
-                                                    </div>
+                                        {# buton preluare rezervare – doar viitor #}
+                                        {% if rezervare.nivel_prioritate != 1 %}
+                                            {% if zi > today or zi == today and ora_sfarsit > now_hour %}
+                                                {% if este_admin_camin or este_student %}
+                                                    <form method="post" action="{% url 'creeaza_rezervare' %}">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                                                        <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                                                        <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                                                        <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                                                        <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                                                        <button class="btn-icon"><i class="fas fa-exchange-alt"></i></button>
+                                                    </form>
                                                 {% endif %}
-                                            {% else %}
-                                                <div class="interval-container">
-                                                    <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
-                                                </div>
                                             {% endif %}
                                         {% endif %}
 
-                                    {% endwith %}
-                                    {% endwith %}
-                                {% endfor %}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                        {# ===================== SLOT FĂRĂ REZERVARE ===================== #}
+                        {% else %}
+
+                            {% if zi < today %}
+                                <div class="interval-container">
+                                    <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
+                                </div>
+
+                            {% elif zi == today and ora_sfarsit <= now_hour %}
+                                <div class="interval-container">
+                                    <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
+                                </div>
+
+                            {% else %}
+                                <div class="interval-container">
+                                    <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                                        <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                                        <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                                        <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                                        <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                                        <button type="submit" class="btn-interval">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+                                    </form>
+                                </div>
+                            {% endif %}
+
+                        {% endif %}
+                        {% endwith %}
+                        {% endwith %}
+                    {% endfor %}
+
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- Modal avertisment -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+{# ==========================================
+   MODAL AVERTISMENT
+   ========================================== #}
+<div class="modal fade" id="confirmModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form method="post" action="{% url 'adauga_avertisment_din_calendar' %}">
         {% csrf_token %}
         <input type="hidden" name="rezervare_id" id="rezervareIdInput">
         <div class="modal-header">
-          <h5 class="modal-title" id="confirmModalLabel">Confirmare Avertisment</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button>
+          <h5 class="modal-title">Confirmare Avertisment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          Ești sigur(ă) că vrei să trimiți un avertisment pentru
-          <strong id="studentName"></strong>
-          (rezervare: <span id="rezervareInfo"></span>)?
+          Trimiți avertisment pentru <strong id="studentName"></strong>  
+          ( <span id="rezervareInfo"></span> )?
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Renunță</button>
-          <button type="submit" class="btn btn-warning">Trimite Avertisment</button>
+          <button type="submit" class="btn btn-warning">Trimite</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Offcanvas detalii student -->
-<div class="offcanvas offcanvas-end" data-bs-backdrop="false" tabindex="-1" id="detaliiStudent" aria-labelledby="detaliiStudentLabel">
+{# ==========================================
+   OFFCANVAS DETALII STUDENT
+   ========================================== #}
+<div class="offcanvas offcanvas-end" id="detaliiStudent">
   <div class="offcanvas-header">
-    <h5 id="detaliiStudentLabel">Detalii Student</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Închide"></button>
+    <h5>Detalii Student</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
   <div class="offcanvas-body">
     <p><strong>Nume:</strong> <span id="studentNume"></span></p>
@@ -320,50 +235,40 @@
   </div>
 </div>
 
-{% if messages %}
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-  {% for message in messages %}
-    <div class="toast border-0 show" role="alert">
-      <div class="d-flex">
-        <div class="toast-body bg-{{ message.tags }}">{{ message }}</div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
-    </div>
-  {% endfor %}
-</div>
-{% endif %}
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
   // tooltips
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) });
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      new bootstrap.Tooltip(el);
+  });
 
   // modal avertisment
-  var modal = document.getElementById('confirmModal');
+  const modal = document.getElementById('confirmModal');
   if (modal) {
-    modal.addEventListener('show.bs.modal', function (event) {
-      var button = event.relatedTarget;
-      document.getElementById('rezervareIdInput').value = button.getAttribute('data-rezervare-id');
-      document.getElementById('studentName').textContent = button.getAttribute('data-nume') || 'student necunoscut';
-      document.getElementById('rezervareInfo').textContent =
-        (button.getAttribute('data-data') && button.getAttribute('data-interval'))
-          ? (button.getAttribute('data-data') + " " + button.getAttribute('data-interval'))
-          : "necunoscut";
+    modal.addEventListener('show.bs.modal', e => {
+        const btn = e.relatedTarget;
+        document.getElementById('rezervareIdInput').value = btn.dataset.rezervareId;
+        document.getElementById('studentName').textContent = btn.dataset.nume;
+        document.getElementById('rezervareInfo').textContent =
+          btn.dataset.data + " " + btn.dataset.interval;
     });
   }
 
   // offcanvas detalii student
   document.querySelectorAll(".rezervare").forEach(el => {
-    el.addEventListener("click", (e) => {
-      if (e.target.closest("button")) return;
-      document.getElementById("studentNume").textContent = el.dataset.nume || "-";
-      document.getElementById("studentEmail").textContent = el.dataset.email || "-";
-      document.getElementById("studentTelefon").textContent = el.dataset.telefon || "-";
-      document.getElementById("studentCamera").textContent = el.dataset.camera || "-";
-      new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();
+    el.addEventListener("click", e => {
+        if (e.target.closest("button")) return;
+        document.getElementById("studentNume").textContent = el.dataset.nume;
+        document.getElementById("studentEmail").textContent = el.dataset.email;
+        document.getElementById("studentTelefon").textContent = el.dataset.telefon;
+        document.getElementById("studentCamera").textContent = el.dataset.camera;
+        new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();
     });
   });
+
 });
 </script>
+
 {% endblock %}
+
