@@ -46,4 +46,13 @@ def two_digits(value):
         return f"{value:02d}"
     except:
         return value
-
+@register.filter
+def get_item(dictionary, key):
+    """
+    Pentru accesarea dicturilor în template:
+    rezervari_dict|get_item:masina.id|get_item:zi
+    """
+    try:
+        return dictionary.get(key)
+    except:
+        return None
