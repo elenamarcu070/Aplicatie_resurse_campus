@@ -91,7 +91,6 @@
 
 
 </style>
-
 <div class="container mt-4 fade-in">
     <div class="py-3 px-4 mb-4 rounded shadow text-black" style="background-color:rgb(255, 255, 255);">
         <h2 class="mb-3 text-center fw-bold" style="font-size: 1.8rem;">
@@ -113,7 +112,7 @@
                 <div class="legend-item" data-bs-toggle="tooltip" title="A patra rezervare – preluabilă">
                     <span class="badge bg-brown">■</span><span class="legend-text">A patra rezervare</span>
                 </div>
-                <div class="legend-item" data-bs-toggle="tooltip" title="Rezervare trecută (expirată)">
+                <div class="legend-item" data-bs-toggle="tooltip" title="Rezervare trecută">
                     <span class="badge bg-warning">■</span><span class="legend-text">Rezervare trecută</span>
                 </div>
                 <div class="legend-item" data-bs-toggle="tooltip" title="Interval liber – poți face o rezervare">
@@ -137,8 +136,7 @@
         <div class="d-flex align-items-center gap-2">
             <i class="fas fa-exclamation-triangle fa-lg me-2"></i>
             <span>
-                Te rugăm să adaugi numărul tău de telefon pentru a putea primi notificări WhatsApp despre rezervări
-                și pentru a evita pierderea programărilor.
+                Te rugăm să adaugi numărul tău de telefon pentru notificări WhatsApp.
             </span>
         </div>
         <a href="{% url 'dashboard_student' %}" class="btn btn-light btn-sm fw-semibold">
@@ -147,10 +145,8 @@
     </div>
     {% endif %}
 
-
     <div class="table-responsive">
         <table class="table table-bordered text-center align-middle calendar-grid">
-
             <thead>
                 <tr>
                     <th>Mașină</th>
@@ -159,185 +155,88 @@
                     {% endfor %}
                 </tr>
             </thead>
+
             <tbody>
                 {% for masina in masini %}
-                    <tr>
-                        <th class="bg-light">{{ masina.nume }}</th>
-                        {% for zi in zile_saptamana %}
-                            <td>
-                                {% for ora in intervale_ore %}
-                                    {% with ora_sfarsit=ora|add:durata_interval %}
-                                    {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora %}
+                <tr>
+                    <th class="bg-light">{{ masina.nume }}</th>
 
-                                        {# ====== SLOT CU REZERVARE ====== #}
-                                        {% if rezervare %}
-                                            <div class="interval-container">
-                                                <div class="rezervare
-                                                    {% if zi < today %}
-                                                        bg-warning
-                                                    {% else %}
-                                                        {% if zi == today %}
-                                                            {% if ora_sfarsit <= now_hour %}
-                                                                bg-warning
-                                                            {% else %}
-                                                                {% if rezervare.utilizator == request.user %}
-                                                                    bg-own
-                                                                {% else %}
-                                                                    {% if rezervare.nivel_prioritate == 1 %}bg-danger{% endif %}
-                                                                    {% if rezervare.nivel_prioritate == 2 %}bg-secondary{% endif %}
-                                                                    {% if rezervare.nivel_prioritate == 3 %}bg-primary{% endif %}
-                                                                    {% if rezervare.nivel_prioritate == 4 %}bg-brown{% endif %}
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% else %}
-                                                            {% if rezervare.utilizator == request.user %}
-                                                                bg-own
-                                                            {% else %}
-                                                                {% if rezervare.nivel_prioritate == 1 %}bg-danger{% endif %}
-                                                                {% if rezervare.nivel_prioritate == 2 %}bg-secondary{% endif %}
-                                                                {% if rezervare.nivel_prioritate == 3 %}bg-primary{% endif %}
-                                                                {% if rezervare.nivel_prioritate == 4 %}bg-brown{% endif %}
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    {% endif %}"
-                                                    data-nume="{{ rezervare.utilizator.last_name }} {{ rezervare.utilizator.first_name }}"
-                                                    data-email="{{ rezervare.utilizator.email }}"
-                                                    data-camera="{{ rezervare.utilizator.profilstudent.numar_camera }}"
-                                                    data-telefon="{{ rezervare.utilizator.profilstudent.telefon|default:'-' }}"
-                                                    style="cursor:pointer;"
-                                                    data-bs-toggle="tooltip"
-                                                    data-bs-placement="top"
-                                                    title="{% if este_admin_camin or zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}">
-                                                    <div class="d-flex align-items-center w-100">
-                                                        <span class="flex-grow-1">{{ ora }}:00 - {{ ora_sfarsit }}:00</span>
+                    {% for zi in zile_saptamana %}
+                    <td>
 
-                                                        {# buton avertisment – doar pentru rezervări deja trecute #}
-                                                        {% if este_admin_camin %}
-                                                            {% if zi < today %}
-                                                                <button type="button" class="btn-icon text-warning"
-                                                                    data-bs-toggle="modal" data-bs-target="#confirmModal"
-                                                                    data-rezervare-id="{{ rezervare.id }}"
-                                                                    data-nume="{{ rezervare.utilizator.get_full_name }}"
-                                                                    data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
-                                                                    data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
-                                                                    title="Trimite avertisment">
-                                                                    <i class="fas fa-exclamation-triangle"></i>
-                                                                </button>
-                                                            {% else %}
-                                                                {% if zi == today %}
-                                                                    {% if ora_sfarsit <= now_hour %}
-                                                                        <button type="button" class="btn-icon text-warning"
-                                                                            data-bs-toggle="modal" data-bs-target="#confirmModal"
-                                                                            data-rezervare-id="{{ rezervare.id }}"
-                                                                            data-nume="{{ rezervare.utilizator.get_full_name }}"
-                                                                            data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
-                                                                            data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
-                                                                            title="Trimite avertisment">
-                                                                            <i class="fas fa-exclamation-triangle"></i>
-                                                                        </button>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% endif %}
+                        {% for interval in intervale_ore %}
 
-                                                        {# buton preluare – doar dacă intervalul NU a trecut #}
-                                                        {% if rezervare.nivel_prioritate != 1 %}
-                                                            {% if zi > today %}
-                                                                {% if este_admin_camin or este_student %}
-                                                                    <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
-                                                                        {% csrf_token %}
-                                                                        <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                                        <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                                        <input type="hidden" name="ora_start" value="{{ ora }}:00">
-                                                                        <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                                        <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                                                        <button type="submit" class="btn-icon" title="Preia rezervarea">
-                                                                            <i class="fas fa-exchange-alt"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                {% endif %}
-                                                            {% else %}
-                                                                {% if zi == today %}
-                                                                    {% if ora_sfarsit > now_hour %}
-                                                                        {% if este_admin_camin or este_student %}
-                                                                            <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
-                                                                                {% csrf_token %}
-                                                                                <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                                                <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                                                <input type="hidden" name="ora_start" value="{{ ora }}:00">
-                                                                                <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                                                <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                                                                <button type="submit" class="btn-icon" title="Preia rezervarea">
-                                                                                    <i class="fas fa-exchange-alt"></i>
-                                                                                </button>
-                                                                            </form>
-                                                                        {% endif %}
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
+                            {# interval = (ora_start_int, ora_end_int) #}
+                            {% with ora_start=interval.0 ora_sfarsit=interval.1 %}
 
-                                        {# ====== SLOT FĂRĂ REZERVARE ====== #}
-                                        {% else %}
-                                            {% if este_admin_camin or este_student %}
-                                                {% if zi > today %}
-                                                    <div class="interval-container">
-                                                        <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                            <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                            <input type="hidden" name="ora_start" value="{{ ora }}:00">
-                                                            <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                            <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                                            <button type="submit" class="btn-interval">{{ ora }}:00 - {{ ora_sfarsit }}:00</button>
-                                                        </form>
-                                                    </div>
-                                                {% else %}
-                                                    {% if zi == today %}
-                                                        {% if ora > now_hour %}
-                                                            <div class="interval-container">
-                                                                <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
-                                                                    {% csrf_token %}
-                                                                    <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                                                    <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                                                    <input type="hidden" name="ora_start" value="{{ ora }}:00">
-                                                                    <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                                                    <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                                                    <button type="submit" class="btn-interval">{{ ora }}:00 - {{ ora_sfarsit }}:00</button>
-                                                                </form>
-                                                            </div>
-                                                        {% else %}
-                                                            <div class="interval-container">
-                                                                <div class="time-slot text-muted">{{ ora }}:00 - {{ ora_sfarsit }}:00</div>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% else %}
-                                                        <div class="interval-container">
-                                                            <div class="time-slot text-muted">{{ ora }}:00 - {{ ora_sfarsit }}:00</div>
-                                                        </div>
-                                                    {% endif %}
-                                                {% endif %}
+                                {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora_start %}
+
+                                {% if rezervare %}
+                                    {# === SLOT CU REZERVARE === #}
+                                    <div class="interval-container">
+                                        <div class="rezervare
+                                            {% if zi < today %} bg-warning
+                                            {% elif zi == today and ora_sfarsit <= now_hour %} bg-warning
+                                            {% elif rezervare.utilizator == request.user %} bg-own
                                             {% else %}
-                                                <div class="interval-container">
-                                                    <div class="time-slot text-muted">{{ ora }}:00 - {{ ora_sfarsit }}:00</div>
-                                                </div>
+                                                {% if rezervare.nivel_prioritate == 1 %} bg-danger {% endif %}
+                                                {% if rezervare.nivel_prioritate == 2 %} bg-secondary {% endif %}
+                                                {% if rezervare.nivel_prioritate == 3 %} bg-primary {% endif %}
+                                                {% if rezervare.nivel_prioritate == 4 %} bg-brown {% endif %}
                                             {% endif %}
-                                        {% endif %}
+                                        ">
 
-                                    {% endwith %}
-                                    {% endwith %}
-                                {% endfor %}
-                            </td>
+                                            <span class="flex-grow-1">
+                                                {{ ora_start|two_digits }}:00 – 
+                                                {{ ora_sfarsit|two_digits }}:00
+                                            </span>
+
+                                        </div>
+                                    </div>
+
+                                {% else %}
+                                    {# === SLOT FĂRĂ REZERVARE === #}
+
+                                    {% if zi > today or (zi == today and ora_start > now_hour) %}
+                                        <div class="interval-container">
+                                            <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                                                <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                                                <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                                                <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                                                <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                                                <button type="submit" class="btn-interval">
+                                                    {{ ora_start|two_digits }}:00 – {{ ora_sfarsit|two_digits }}:00
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                    {% else %}
+                                        <div class="interval-container">
+                                            <div class="time-slot text-muted">
+                                                {{ ora_start|two_digits }}:00 – {{ ora_sfarsit|two_digits }}:00
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                {% endif %}
+                                {% endwith %}
+                            {% endwith %}
+
                         {% endfor %}
-                    </tr>
+
+                    </td>
+                    {% endfor %}
+                </tr>
                 {% endfor %}
             </tbody>
+
         </table>
     </div>
+
 </div>
+
 
 <!-- Modal avertisment -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
