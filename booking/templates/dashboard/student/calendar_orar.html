@@ -202,7 +202,8 @@
 
                                                         {# buton avertisment – doar pentru rezervări trecute #}
                                                         {% if este_admin_camin %}
-                                                            {% if zi < today or (zi == today and ora_sfarsit <= now_hour) %}
+                                                            {% if zi < today or zi == today and ora_sfarsit <= now_hour %}
+
                                                                 <button type="button" class="btn-icon text-warning"
                                                                     data-bs-toggle="modal" data-bs-target="#confirmModal"
                                                                     data-rezervare-id="{{ rezervare.id }}"
