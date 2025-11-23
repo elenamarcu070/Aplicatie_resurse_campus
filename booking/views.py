@@ -626,7 +626,8 @@ def calendar_rezervari_view(request):
     
     for minute in raw_intervals:
         ora_start = minute // 60
-        ora_end = ora_start + camin.durata_interval
+        ora_end = (ora_start + camin.durata_interval) % 24
+
         intervale_ore.append((ora_start, ora_end))
 
 
