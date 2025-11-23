@@ -240,7 +240,8 @@
                                         {# ================== SLOT FĂRĂ REZERVARE ================== #}
                                         {% else %}
                                             {% if este_admin_camin or este_student %}
-                                                {% if zi > today or (zi == today and ora_start > now_hour) %}
+                                                {% if zi < today or zi == today and ora_sfarsit <= now_hour %}
+
                                                     <div class="interval-container">
                                                         <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
                                                             {% csrf_token %}
