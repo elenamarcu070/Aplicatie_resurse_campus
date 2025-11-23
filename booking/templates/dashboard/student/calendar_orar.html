@@ -48,16 +48,27 @@
 </style>
 
 <div class="container mt-4 fade-in">
-
-    <div class="py-3 px-4 mb-4 rounded shadow bg-white">
-        <h2 class="text-center fw-bold" style="font-size:1.8rem;">
-            Rezervari Spalatorie – {{ nume_camin }}
+    <div class="py-3 px-4 mb-4 rounded shadow text-black" style="background-color:rgb(255, 255, 255);">
+        <h2 class="mb-3 text-center fw-bold" style="font-size: 1.8rem;">
+            Rezervari Spalatorie – camin {{ nume_camin|default:"Cămin necunoscut" }}
             ({{ start_saptamana|date:"d M" }} – {{ end_saptamana|date:"d M" }})
         </h2>
 
+        <div class="mb-4">
+            <div class="d-flex justify-content-center flex-wrap">
+                <div class="legend-item"><span class="badge bg-danger">■</span><span class="legend-text">Prima rezervare</span></div>
+                <div class="legend-item"><span class="badge bg-secondary">■</span><span class="legend-text">A doua rezervare</span></div>
+                <div class="legend-item"><span class="badge bg-primary">■</span><span class="legend-text">A treia rezervare</span></div>
+                <div class="legend-item"><span class="badge bg-brown">■</span><span class="legend-text">A patra rezervare</span></div>
+                <div class="legend-item"><span class="badge bg-warning">■</span><span class="legend-text">Rezervare trecută</span></div>
+                <div class="legend-item"><span class="badge bg-success">■</span><span class="legend-text">Slot disponibil</span></div>
+                <div class="legend-item"><span class="badge bg-own">■</span><span class="legend-text">Rezervările mele</span></div>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-between">
-            <a href="?saptamana={{ saptamana_precedenta }}" class="btn btn-light">← Săptămâna trecută</a>
-            <a href="?saptamana={{ saptamana_urmatoare }}" class="btn btn-light">Săptămâna viitoare →</a>
+            <a href="?saptamana={{ saptamana_precedenta }}" class="btn btn-light px-4 py-2 fw-semibold">← Săptămâna trecută</a>
+            <a href="?saptamana={{ saptamana_urmatoare }}" class="btn btn-light px-4 py-2 fw-semibold">Săptămâna viitoare →</a>
         </div>
     </div>
 
