@@ -548,6 +548,28 @@ def detalii_camin_admin(request, camin_id):
         'is_super_admin': is_super_admin(request.user),
     })
 
+def genereaza_intervale(ora_start, ora_end, durata):
+    """
+    Generează intervale chiar dacă ora_end trece peste miezul nopții.
+    Exemplu:
+      ora_start = 7:00
+      ora_end   = 01:00 (a doua zi)
+    """
+    start_minute = ora_start.hour * 60 + ora_start.minute
+    end_minute = ora_end.hour * 60 + ora_end.minute
+
+    # Dacă orele depășesc ziua (ex: 22 → 01)
+    if end_minute <= start_minute:
+        end_minute += 24 * 60  # trece în ziua următoare
+
+    intervale = []
+    current = start_minute
+
+    while current < end_minute:
+        intervale.append(current)
+        current += durata * 60
+
+    return intervale
 
 
 # =========================
@@ -599,21 +621,8 @@ def calendar_rezervari_view(request):
 
     ora_start_min = program.aggregate(Min("ora_start"))["ora_start__min"] or time(8, 0)
     ora_end_max  = program.aggregate(Max("ora_end"))["ora_end__max"]   or time(22, 0)
+    intervale_ore = genereaza_intervale(ora_start_min, ora_end_max, camin.durata_interval)
 
-    durata_interval = getattr(camin, "durata_interval", 2)
-    # ✔️ Generăm intervalele corect, inclusiv peste miezul nopții (ex: 22 → 01)
-    intervale_ore = []
-    h = ora_start_min.hour
-    while True:
-        intervale_ore.append(h)
-        # adaugăm durata intervalului
-        h = h + camin.durata_interval
-        # dacă trece peste 24 → reluăm de la 0
-        if h >= 24:
-            h -= 24
-        # oprire: dacă am revenit la ora de start (altfel ar fi buclă infinită)
-        if h == ora_start_min.hour:
-            break
 
 
 
