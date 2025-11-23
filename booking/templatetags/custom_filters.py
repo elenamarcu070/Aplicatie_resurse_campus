@@ -27,3 +27,23 @@ def admin_telefon(email):
         return admin.telefon if admin and admin.telefon else "-"
     except Exception:
         return "-"
+
+
+# booking/templatetags/custom_filters.py
+
+from django import template
+
+register = template.Library()
+
+@register.filter
+def two_digits(value):
+    """
+    Transformă 60 → "01", 75 → "01:15", etc.
+    Dar pentru ore (0–23) va returna mereu două cifre.
+    """
+    try:
+        value = int(value) % 24
+        return f"{value:02d}"
+    except:
+        return value
+
