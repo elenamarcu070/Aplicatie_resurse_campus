@@ -821,7 +821,7 @@ def creeaza_rezervare(request):
                     anulata=False
                 )
 
-                if len(rezervari_sapt) < len(rezervari_alt_user) or rez.nivel_prioritate > nr_rezervari + 1:
+                if rez.nivel_prioritate > nr_rezervari + 1:
                     rez.anulata = True
                     rez.save()
 
@@ -850,7 +850,7 @@ def creeaza_rezervare(request):
 
                     break
                 else:
-                    messages.error(request, "Nu poți prelua această rezervare (prioritate mai mare sau egală).")
+                    messages.error(request, "Nu poți prelua această rezervare (prioritate egală sau mai mică).")
                     return redirect(f"{reverse('calendar_rezervari')}?saptamana={saptamana}")
 
             # 🆕 Creăm rezervarea nouă
