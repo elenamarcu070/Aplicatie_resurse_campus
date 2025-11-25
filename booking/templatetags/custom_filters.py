@@ -56,6 +56,24 @@ def get_item(dictionary, key):
         return dictionary.get(key)
     except:
         return None
-@register.filter
+
+
+
+from django import template
+register = template.Library()
+
+@register.simple_tag
 def is_future_interval(ora_start, ora_sfarsit, now_hour):
-    return (ora_sfarsit > now_hour) or (ora_sfarsit < ora_start)
+    # transformă în int ca să poată compara
+    try:
+        ora_s = int(str(ora_start).split(':')[0])
+        ora_f = int(str(ora_sfarsit).split(':')[0])
+        ora_now = int(str(now_hour).split(':')[0])
+    except:
+        return False
+
+    # dacă intervalul trece peste miezul nopții
+    if ora_f < ora_s:
+        return True
+    return ora_f > ora_now
+

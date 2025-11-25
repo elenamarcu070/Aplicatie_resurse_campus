@@ -180,7 +180,7 @@
                             </form>
                           {% endif %}
                         {% else %}
-                          {% if zi == today and ora_start|is_future_interval:ora_sfarsit:now_hour %}
+                          {% if zi == today and is_future_interval ora_start ora_sfarsit now_hour %}
                             {% if este_admin_camin or este_student %}
                               <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
                                 {% csrf_token %}
