@@ -98,6 +98,8 @@
             {% for interval in intervale_ore %}
               {% with ora_start=interval.0 ora_sfarsit=interval.1 %}
               {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora_start %}
+              {% is_future_interval ora_start ora_sfarsit now_hour as future_ok %}
+
 
               {% if rezervare %}
                 <div class="interval-container">
@@ -106,7 +108,7 @@
                       bg-warning
                     {% else %}
                       {% if zi == today %}
-                        {% if ora_sfarsit <= now_hour %}
+                        {% if not future_ok %}
                           bg-warning
                         {% else %}
                           {% if rezervare.utilizator == request.user %}
@@ -152,7 +154,8 @@
                             <i class="fas fa-exclamation-triangle"></i>
                           </button>
                         {% else %}
-                          {% if zi == today and ora_sfarsit <= now_hour %}
+                          {% if zi == today and not future_ok %}
+
                             <button type="button" class="btn-icon text-warning"
                               data-bs-toggle="modal" data-bs-target="#confirmModal"
                               data-rezervare-id="{{ rezervare.id }}"
@@ -180,7 +183,8 @@
                             </form>
                           {% endif %}
                         {% else %}
-                          {% if zi == today and is_future_interval ora_start ora_sfarsit now_hour %}
+                          {% if zi == today and future_ok %}
+
                             {% if este_admin_camin or este_student %}
                               <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
                                 {% csrf_token %}
@@ -215,7 +219,7 @@
                     </div>
                   {% else %}
                     {% if zi == today %}
-                      {% if ora_sfarsit > now_hour %}
+                      {% if future_ok %}
                         <div class="interval-container">
                           <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
                             {% csrf_token %}
