@@ -13,10 +13,6 @@ def dict_get(dict_obj, key):
     return dict_obj.get(key)
 
 
-@register.filter
-def get_item(dictionary, key):
-    return dictionary.get(key)
-
 from booking.models import AdminCamin
 
 
@@ -46,34 +42,64 @@ def two_digits(value):
         return f"{value:02d}"
     except:
         return value
-@register.filter
-def get_item(dictionary, key):
-    """
-    Pentru accesarea dicturilor în template:
-    rezervari_dict|get_item:masina.id|get_item:zi
-    """
-    try:
-        return dictionary.get(key)
-    except:
-        return None
 
 
 
+# booking/templatetags/custom_filters.py
 from django import template
+
 register = template.Library()
+
+@register.filter(name='get_item')
+def get_item(mapping, key):
+    """
+    Safe get pentru dict-uri/nested dict-uri în template.
+    Dacă nu găsește cheia, încearcă și varianta stringificată.
+    Returnează None dacă nu există, ca să nu crape lanțul de filtre.
+    """
+    if mapping is None:
+        return None
+    try:
+        # dict-like
+        if hasattr(mapping, 'get'):
+            if key in mapping:
+                return mapping.get(key)
+            # încearcă și str(key) (ex: chei date / int vs str)
+            skey = str(key)
+            return mapping.get(skey, None)
+        # list/tuple index
+        if isinstance(key, int) and hasattr(mapping, '__getitem__'):
+            return mapping[key]
+    except Exception:
+        pass
+    return None
+
 
 @register.simple_tag
 def is_future_interval(ora_start, ora_sfarsit, now_hour):
-    # transformă în int ca să poată compara
+    """
+    Consideră viitor:
+      - orice interval din azi cu ora_sfarsit > now_hour
+      - intervalele care trec peste miezul nopții (ex 22:00–01:00)
+    """
+    # extrage orele ca int (suportă "H", "H:M", obiecte time)
+    def to_hour_int(v):
+        s = str(v)
+        # dacă e "HH:MM:SS" sau "HH:MM"
+        if ':' in s:
+            return int(s.split(':', 1)[0])
+        return int(s)
     try:
-        ora_s = int(str(ora_start).split(':')[0])
-        ora_f = int(str(ora_sfarsit).split(':')[0])
-        ora_now = int(str(now_hour).split(':')[0])
-    except:
+        h_start = to_hour_int(ora_start)
+        h_end   = to_hour_int(ora_sfarsit)
+        h_now   = to_hour_int(now_hour)
+    except Exception:
         return False
 
-    # dacă intervalul trece peste miezul nopții
-    if ora_f < ora_s:
+    # dacă trece în ziua următoare (ex 22→1), e încă viitor pe azi
+    if h_end < h_start:
         return True
-    return ora_f > ora_now
+    # altfel, simplu: sfârșitul intervalului e după ora curentă
+    return h_end > h_now
+
 
