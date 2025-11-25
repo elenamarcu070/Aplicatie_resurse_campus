@@ -56,3 +56,6 @@ def get_item(dictionary, key):
         return dictionary.get(key)
     except:
         return None
+@register.filter
+def is_future_interval(ora_start, ora_sfarsit, now_hour):
+    return (ora_sfarsit > now_hour) or (ora_sfarsit < ora_start)
