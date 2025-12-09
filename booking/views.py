@@ -921,34 +921,41 @@ def programari_student_view(request):
 
 @login_required
 @require_POST
-def anuleaza_rezervare(request, rezervare_id):
+
+def anuleaza_rezervare(request, rezervare_id): 
     user = request.user
     try:
         rezervare = Rezervare.objects.get(id=rezervare_id, utilizator=user)
     except Rezervare.DoesNotExist:
-        # Răspuns corect pentru fetch()
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": False, "error": "Rezervarea nu există sau nu îți aparține."}, status=404)
         messages.error(request, "Rezervarea nu există sau nu îți aparține.")
         return redirect('calendar_rezervari')
 
+    # ❌ 1. Blocăm rezervările din zile trecute
     if rezervare.data_rezervare < date.today():
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": False, "error": "Nu poți anula o rezervare trecută."}, status=400)
         messages.error(request, "Nu poți anula o rezervare trecută.")
         return redirect('calendar_rezervari')
 
+    # ❌ 2. Blocăm rezervările de AZI care s-au terminat deja
+    if rezervare.data_rezervare == date.today() and rezervare.ora_end <= datetime.now().time():
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": "Nu poți anula o rezervare care s-a încheiat deja."}, status=400)
+        messages.error(request, "Nu poți anula o rezervare care s-a încheiat deja.")
+        return redirect('calendar_rezervari')
+
+    # ✅ Dacă trece de ambele verificări → poate fi anulată
     rezervare.anulata = True
     rezervare.save()
     Rezervare.actualizeaza_prioritati(user, rezervare.data_rezervare)
 
-    # Dacă e AJAX, întoarcem JSON; altfel păstrăm fluxul vechi
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         return JsonResponse({"success": True})
 
     messages.success(request, "Rezervarea a fost anulată.")
     return redirect('calendar_rezervari')
-    
 
  
 
