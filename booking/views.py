@@ -885,6 +885,7 @@ def creeaza_rezervare(request):
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
 
+from django.db.models import Q
 
 
 
