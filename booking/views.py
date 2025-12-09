@@ -903,16 +903,30 @@ def programari_student_view(request):
         })
 
     azi = date.today()
-    toate_rezervarile = Rezervare.objects.filter(utilizator=user, anulata=False)
+    acum = datetime.now().time()
 
-    rezervari_urmatoare = toate_rezervarile.filter(data_rezervare__gte=azi).order_by('data_rezervare', 'ora_start')
-    rezervari_incheiate = toate_rezervarile.filter(data_rezervare__lt=azi).order_by('-data_rezervare')
+    toate = Rezervare.objects.filter(utilizator=user, anulata=False)
+
+    # 🔥 1) Rezervările viitoare
+    rezervari_urmatoare = toate.filter(
+        Q(data_rezervare__gt=azi) |
+        Q(data_rezervare=azi, ora_end__gt=acum)
+    ).order_by('data_rezervare', 'ora_start')
+
+    # 🔥 2) Rezervările încheiate
+    rezervari_incheiate = toate.filter(
+        Q(data_rezervare__lt=azi) |
+        Q(data_rezervare=azi, ora_end__lte=acum)
+    ).order_by('-data_rezervare')
 
     context = {
         "rezervari_urmatoare": rezervari_urmatoare,
         "rezervari_incheiate": rezervari_incheiate,
+        "today": azi,
+        "now_hour": acum,
     }
     return render(request, "dashboard/student/programari_student.html", context)
+
 
 
 # =========================
