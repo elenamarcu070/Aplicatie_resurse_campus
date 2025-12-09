@@ -26,13 +26,15 @@
                   <div class="fw-bold">{{ r.masina.nume }} - {{ r.data_rezervare|date:"j F Y" }}</div>
                   {{ r.ora_start|time:"H:i" }} - {{ r.ora_end|time:"H:i" }}
                 </div>
-                <button
-                  class="btn btn-sm btn-danger anuleaza-rezervare"
-                  data-rezervare-id="{{ r.id }}"
-                  data-url="{% url 'anuleaza_rezervare' r.id %}"
-                  type="button">
-                  Anulează
-                </button>
+                {% if r.data_rezervare > today or (r.data_rezervare == today and r.ora_end > now_hour) %}
+                  <button
+                    class="btn btn-sm btn-danger anuleaza-rezervare"
+                    data-rezervare-id="{{ r.id }}"
+                    data-url="{% url 'anuleaza_rezervare' r.id %}"
+                    type="button">
+                    Anulează
+                  </button>
+                {% endif %}
               </div>
             {% endfor %}
           </div>
