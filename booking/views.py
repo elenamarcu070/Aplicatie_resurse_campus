@@ -976,11 +976,15 @@ def anuleaza_rezervare(request, rezervare_id):
         messages.error(request, "Nu poți anula o rezervare trecută.")
         return redirect('calendar_rezervari')
 
-    # ❌ 2. Blocăm rezervările de AZI care s-au terminat deja
-    if rezervare.data_rezervare == date.today() and rezervare.ora_end <= datetime.now().time():
+    acum = datetime.now().time()
+    
+    if rezervare.data_rezervare == date.today() and rezervare.ora_start <= acum:
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": False, "error": "Nu poți anula o rezervare care s-a încheiat deja."}, status=400)
-        messages.error(request, "Nu poți anula o rezervare care s-a încheiat deja.")
+            return JsonResponse({
+                "success": False,
+                "error": "Rezervarea a început deja și nu mai poate fi anulată."
+                }, status=400)
+        messages.error(request, "Rezervarea a început deja și nu mai poate fi anulată.")
         return redirect('calendar_rezervari')
 
     # ✅ Dacă trece de ambele verificări → poate fi anulată
