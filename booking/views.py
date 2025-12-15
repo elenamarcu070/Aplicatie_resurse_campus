@@ -887,18 +887,14 @@ def creeaza_rezervare(request):
 
 from django.db.models import Q
 
-
-
-
-# =========================
-# Programările utilizatorului (student/admin)
-# =========================
 @login_required
 def programari_student_view(request):
     user = request.user
 
-    if not (AdminCamin.objects.filter(email=user.email).exists() or 
-            ProfilStudent.objects.filter(utilizator=user).exists()):
+    if not (
+        AdminCamin.objects.filter(email=user.email).exists() or
+        ProfilStudent.objects.filter(utilizator=user).exists()
+    ):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților sau administratorilor.'
         })
@@ -908,17 +904,41 @@ def programari_student_view(request):
 
     toate = Rezervare.objects.filter(utilizator=user, anulata=False)
 
-    # 🔥 1) Rezervările viitoare
-    rezervari_urmatoare = toate.filter(
-        Q(data_rezervare__gt=azi) |
-        Q(data_rezervare=azi, ora_end__gt=acum)
-    ).order_by('data_rezervare', 'ora_start')
+    rezervari_urmatoare = []
+    rezervari_incheiate = []
 
-    # 🔥 2) Rezervările încheiate
-    rezervari_incheiate = toate.filter(
-        Q(data_rezervare__lt=azi) |
-        Q(data_rezervare=azi, ora_end__lte=acum)
-    ).order_by('-data_rezervare')
+    for r in toate:
+        # 🔹 ZI VIITOARE
+        if r.data_rezervare > azi:
+            rezervari_urmatoare.append(r)
+            continue
+
+        # 🔹 ZI TRECUTĂ
+        if r.data_rezervare < azi:
+            rezervari_incheiate.append(r)
+            continue
+
+        # 🔹 AZI
+        if r.ora_start < r.ora_end:
+            # interval normal (ex 07–10, 13–16)
+            if r.ora_end > acum:
+                rezervari_urmatoare.append(r)
+            else:
+                rezervari_incheiate.append(r)
+        else:
+            # interval peste miezul nopții (ex 22–01)
+            rezervari_urmatoare.append(r)
+
+    rezervari_urmatoare = sorted(
+        rezervari_urmatoare,
+        key=lambda r: (r.data_rezervare, r.ora_start)
+    )
+
+    rezervari_incheiate = sorted(
+        rezervari_incheiate,
+        key=lambda r: (r.data_rezervare, r.ora_start),
+        reverse=True
+    )
 
     context = {
         "rezervari_urmatoare": rezervari_urmatoare,
@@ -926,7 +946,9 @@ def programari_student_view(request):
         "today": azi,
         "now_hour": acum,
     }
+
     return render(request, "dashboard/student/programari_student.html", context)
+
 
 
 
