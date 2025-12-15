@@ -34,7 +34,7 @@
                     type="button">
                     Anulează
                   </button>
-                {% elif r.data_rezervare == today and r.ora_end > now_hour %}
+                {% elif r.data_rezervare == today and r.ora_start > now_hour %}
                   <button
                     class="btn btn-sm btn-danger anuleaza-rezervare"
                     data-rezervare-id="{{ r.id }}"
