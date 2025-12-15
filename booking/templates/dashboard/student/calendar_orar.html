@@ -179,7 +179,7 @@
                               <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                               <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                               <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                              <button type="submit" class="btn-icon" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
+                              <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
                             </form>
                           {% endif %}
                         {% else %}
@@ -193,7 +193,7 @@
                                 <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                                 <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                                 <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                <button type="submit" class="btn-icon" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
+                                <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
                               </form>
                             {% endif %}
                           {% endif %}
@@ -214,7 +214,7 @@
                         <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                         <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                         <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                        <button type="submit" class="btn-interval">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+                        <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="noua">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
                       </form>
                     </div>
                   {% else %}
@@ -228,7 +228,8 @@
                             <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                             <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                             <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                            <button type="submit" class="btn-interval">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+                            <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="noua">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+                      </form>
                           </form>
                         </div>
                       {% else %}
@@ -254,6 +255,31 @@
     </table>
   </div>
 </div>
+
+
+<div class="modal fade" id="confirmRezervareModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmare rezervare</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="confirmRezervareText">
+        <!-- text dinamic -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Renunță
+        </button>
+        <button type="button" class="btn btn-primary" id="confirmRezervareBtn">
+          Confirmă
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -331,4 +357,43 @@ document.addEventListener('DOMContentLoaded',function(){
   });
 });
 </script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  let formToSubmit = null;
+
+  document.querySelectorAll('.btn-confirm-rezervare').forEach(btn => {
+    btn.addEventListener('click', function () {
+      formToSubmit = this.closest('form');
+
+      const tip = this.dataset.tip;
+      const text = document.getElementById('confirmRezervareText');
+
+      if (tip === 'preluare') {
+        text.innerHTML = `
+          ⚠️ <strong>Atenție!</strong><br>
+          Această acțiune va <b>prelua rezervarea altui student</b>.<br>
+          Sigur vrei să continui?
+        `;
+      } else {
+        text.innerHTML = `
+          🧺 Sigur vrei să faci această rezervare?
+        `;
+      }
+
+      new bootstrap.Modal(
+        document.getElementById('confirmRezervareModal')
+      ).show();
+    });
+  });
+
+  document.getElementById('confirmRezervareBtn').addEventListener('click', function () {
+    if (formToSubmit) {
+      formToSubmit.submit();
+    }
+  });
+});
+</script>
+
 {% endblock %}
