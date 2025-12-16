@@ -169,7 +169,8 @@
                         {% endif %}
                       {% endif %}
 
-                      {% if rezervare.nivel_prioritate != 1 %}
+                      {% if rezervare.nivel_prioritate != 1 and rezervare.utilizator != request.user %}
+
                         {% if zi > today %}
                           {% if este_admin_camin or este_student %}
                             <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
@@ -179,7 +180,7 @@
                               <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                               <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                               <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                              <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
+                              <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
                             </form>
                           {% endif %}
                         {% else %}
@@ -193,7 +194,7 @@
                                 <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                                 <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                                 <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
+                                <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
                               </form>
                             {% endif %}
                           {% endif %}
@@ -214,7 +215,7 @@
                         <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                         <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                         <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                        <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="noua">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+                        <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="rezervare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00"> {{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
                       </form>
                     </div>
                   {% else %}
@@ -228,7 +229,7 @@
                             <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
                             <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
                             <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                            <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="noua">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+                            <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="rezervare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00"> {{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
                       </form>
                           </form>
                         </div>
@@ -264,20 +265,22 @@
         <h5 class="modal-title">Confirmare rezervare</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body" id="confirmRezervareText">
-        <!-- text dinamic -->
+
+      <div class="modal-body">
+        <p id="confirmRezervareText"></p>
+        <p class="fw-bold text-center mt-2" id="confirmRezervareData"></p>
       </div>
+
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Renunță
-        </button>
-        <button type="button" class="btn btn-primary" id="confirmRezervareBtn">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Renunță</button>
+        <button class="btn btn-primary" id="confirmRezervareBtn">
           Confirmă
         </button>
       </div>
     </div>
   </div>
 </div>
+
 
 
 
@@ -358,7 +361,6 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 </script>
 
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   let formToSubmit = null;
@@ -368,19 +370,22 @@ document.addEventListener('DOMContentLoaded', function () {
       formToSubmit = this.closest('form');
 
       const tip = this.dataset.tip;
+      const zi  = this.dataset.zi;
+      const ora = this.dataset.ora;
+
       const text = document.getElementById('confirmRezervareText');
+      const data = document.getElementById('confirmRezervareData');
 
       if (tip === 'preluare') {
         text.innerHTML = `
           ⚠️ <strong>Atenție!</strong><br>
-          Această acțiune va <b>prelua rezervarea altui student</b>.<br>
-          Sigur vrei să continui?
+          Vei prelua rezervarea altui student.
         `;
       } else {
-        text.innerHTML = `
-          🧺 Sigur vrei să faci această rezervare?
-        `;
+        text.innerHTML = `🧺 Sigur vrei să faci această rezervare?`;
       }
+
+      data.textContent = `${zi} • ${ora}`;
 
       new bootstrap.Modal(
         document.getElementById('confirmRezervareModal')
@@ -395,5 +400,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 </script>
+
 
 {% endblock %}
