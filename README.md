@@ -32,6 +32,10 @@ Student → Django Backend → PostgreSQL Database → Notification API (Twilio)
 <img width="1910" height="920" alt="image" src="https://github.com/user-attachments/assets/998e3664-1cc9-4514-8df2-71b7d5ba8ee3" />
 <img width="1907" height="907" alt="image" src="https://github.com/user-attachments/assets/39cc55de-919f-4371-a53d-251e2c2e7310" />
 
+## Deployment
+The application is deployed and currently used in university dormitories.
+Hosted on Railway with PostgreSQL database.
+Domain: washtuiasi.ro
 
 ## Installation
 
@@ -42,7 +46,7 @@ python manage.py migrate
 python manage.py runserver
 
 
-## Deployment
+ Deployment
 The application is deployed and currently used in university dormitories.
 Hosted on Railway with PostgreSQL database.
 Domain: washtuiasi.ro
