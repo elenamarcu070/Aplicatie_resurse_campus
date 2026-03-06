@@ -41,6 +41,7 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
 
+
 ## Deployment
 The application is deployed and currently used in university dormitories.
 Hosted on Railway with PostgreSQL database.
