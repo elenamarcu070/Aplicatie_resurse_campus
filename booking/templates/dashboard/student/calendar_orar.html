@@ -4,33 +4,269 @@
 
 {% block content %}
 <style>
-.interval-container{height:34px;margin-bottom:4px;min-width:150px;width:100%}
-.table td{padding:5px;vertical-align:middle;width:calc(100%/8);white-space:nowrap}
-.table th:first-child{width:12%;min-width:100px}
-.table-responsive{overflow-x:auto;padding-right:20px;margin-right:-10px}
-.calendar-grid thead th{position:sticky;top:0;background:#fff;z-index:3;box-shadow:0 2px 0 #e9edf2}
-.calendar-grid th.bg-light,.calendar-grid tbody th.bg-light{position:sticky;left:0;background:#fff!important;z-index:2;box-shadow:2px 0 0 #e9edf2}
-.calendar-grid tbody td:nth-child(n+2):nth-child(odd){background:#fbfdff}
-.calendar-grid thead th,.calendar-grid tbody td{border-left:1px solid #4b4c4c!important;box-shadow:inset 1px 0 0 #454647}
-.calendar-grid tbody tr+tr td,.calendar-grid tbody tr+tr th.bg-light{border-top:3px solid #454647!important}
-.time-slot{font-size:.9em;padding:5px 8px;height:100%;width:100%;display:flex;align-items:center;justify-content:center;white-space:nowrap}
-.btn-interval{width:100%;height:100%;min-width:150px;display:flex;align-items:center;justify-content:center;border:1px solid #28a745;color:#28a745;background:transparent;border-radius:4px;transition:.2s;white-space:nowrap}
-.btn-interval:hover{background:#28a745;color:#fff}
-.rezervare{height:100%;width:100%;padding:5px 8px;border-radius:4px;display:flex;align-items:center;transition:.3s;white-space:nowrap}
-.bg-danger{background:#dc3545!important;color:#fff!important;border:1px solid #bd2130}
-.bg-secondary{background:#6c757d!important;color:#fff!important;border:1px solid #545b62}
-.bg-primary{background:#0d6efd!important;color:#fff!important;border:1px solid #0257d5}
-.bg-brown{background:#D2B48C!important;color:#fff!important;border:1px solid #bc9f7b}
-.bg-warning{background:#ffc107!important;color:#000!important;border:1px solid #d39e00}
-.bg-own{background:#b3e5fc!important;border:1px solid #0288d1!important;color:#01579b!important}
-.btn-icon{background:none;border:none;color:rgba(255,255,255,.85);padding:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin-left:8px;cursor:pointer;transition:.2s}
-.btn-icon:hover{color:#fff;transform:scale(1.1)}
-.btn-icon i{font-size:.8rem}
-.badge{width:20px;height:20px;padding:0;display:inline-flex;align-items:center;justify-content:center}
-.legend-item{display:flex;align-items:center;margin:.5rem}
-.legend-text{margin-left:.5rem;font-size:.875rem;color:#666}
-.toast{opacity:1!important;background:#fff!important}
-.toast .toast-body{color:#000!important;font-weight:500}
+  .interval-container {
+    height: 34px;
+    margin-bottom: 4px;
+    min-width: 150px;
+    width: 100%
+  }
+
+  .table td {
+    padding: 5px;
+    vertical-align: middle;
+    width: calc(100%/8);
+    white-space: nowrap
+  }
+
+  .table th:first-child {
+    width: 12%;
+    min-width: 100px
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    padding-right: 20px;
+    margin-right: -10px
+  }
+
+  .calendar-grid thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 3;
+    box-shadow: 0 2px 0 #e9edf2
+  }
+
+  .calendar-grid th.bg-light,
+  .calendar-grid tbody th.bg-light {
+    position: sticky;
+    left: 0;
+    background: #fff !important;
+    z-index: 2;
+    box-shadow: 2px 0 0 #e9edf2
+  }
+
+  .calendar-grid tbody td:nth-child(n+2):nth-child(odd) {
+    background: #fbfdff
+  }
+
+  .calendar-grid thead th,
+  .calendar-grid tbody td {
+    border-left: 1px solid #4b4c4c !important;
+    box-shadow: inset 1px 0 0 #454647
+  }
+
+  .calendar-grid tbody tr+tr td,
+  .calendar-grid tbody tr+tr th.bg-light {
+    border-top: 3px solid #454647 !important
+  }
+
+  .time-slot {
+    font-size: .9em;
+    padding: 5px 8px;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap
+  }
+
+  .btn-interval {
+    width: 100%;
+    height: 100%;
+    min-width: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #28a745;
+    color: #28a745;
+    background: transparent;
+    border-radius: 4px;
+    transition: .2s;
+    white-space: nowrap
+  }
+
+  .btn-interval:hover {
+    background: #28a745;
+    color: #fff
+  }
+
+  .rezervare {
+    height: 100%;
+    width: 100%;
+    padding: 5px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: .3s;
+    white-space: nowrap
+  }
+
+  .bg-danger {
+    background: #dc3545 !important;
+    color: #fff !important;
+    border: 1px solid #bd2130
+  }
+
+  .bg-secondary {
+    background: #6c757d !important;
+    color: #fff !important;
+    border: 1px solid #545b62
+  }
+
+  .bg-primary {
+    background: #0d6efd !important;
+    color: #fff !important;
+    border: 1px solid #0257d5
+  }
+
+  .bg-brown {
+    background: #D2B48C !important;
+    color: #fff !important;
+    border: 1px solid #bc9f7b
+  }
+
+  .bg-warning {
+    background: #ffc107 !important;
+    color: #000 !important;
+    border: 1px solid #d39e00
+  }
+
+  .bg-own {
+    background: #b3e5fc !important;
+    border: 1px solid #0288d1 !important;
+    color: #01579b !important
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, .85);
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: .2s
+  }
+
+  .btn-icon:hover {
+    color: #fff;
+    transform: scale(1.1)
+  }
+
+  .btn-icon i {
+    font-size: .8rem
+  }
+
+  .badge {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin: .5rem
+  }
+
+  .legend-text {
+    margin-left: .5rem;
+    font-size: .875rem;
+    color: #666
+  }
+
+  .toast {
+    opacity: 1 !important;
+    background: #fff !important
+  }
+
+  .toast .toast-body {
+    color: #000 !important;
+    font-weight: 500
+  }
+
+  .mobile-sheet {
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+  }
+
+  .avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #4dabf7);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+
+  .info-card {
+    background: #f8f9fa;
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .info-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+
+  .info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .btn-action {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    text-decoration: none;
+    transition: 0.2s;
+  }
+
+  .btn-call {
+    background: #e3f2fd;
+  }
+
+  .btn-call:hover {
+    background: #0d6efd;
+    color: white;
+  }
+
+  .btn-whatsapp {
+    background: #e8f5e9;
+  }
+
+  .btn-whatsapp:hover {
+    background: #25D366;
+    color: white;
+  }
+
+  .btn-sms {
+    background: #f1f3f5;
+  }
+
+  .btn-sms:hover {
+    background: #6c757d;
+    color: white;
+  }
+
+  .rezervare:hover {
+    transform: scale(1.03);
+  }
 </style>
 
 <div class="container mt-4 fade-in">
@@ -65,8 +301,10 @@
     </div>
 
     <div class="d-flex justify-content-between">
-      <a href="?saptamana={{ saptamana_precedenta }}" class="btn btn-light px-4 py-2 fw-semibold">← Săptămâna trecută</a>
-      <a href="?saptamana={{ saptamana_urmatoare }}" class="btn btn-light px-4 py-2 fw-semibold">Săptămâna viitoare →</a>
+      <a href="?saptamana={{ saptamana_precedenta }}" class="btn btn-light px-4 py-2 fw-semibold">← Săptămâna
+        trecută</a>
+      <a href="?saptamana={{ saptamana_urmatoare }}" class="btn btn-light px-4 py-2 fw-semibold">Săptămâna viitoare
+        →</a>
     </div>
   </div>
 
@@ -83,27 +321,26 @@
         <tr>
           <th>Mașină</th>
           {% for zi in zile_saptamana %}
-            <th>{{ zi|date:"D, d M" }}</th>
+          <th>{{ zi|date:"D, d M" }}</th>
           {% endfor %}
         </tr>
       </thead>
 
       <tbody>
-      {% for masina in masini %}
+        {% for masina in masini %}
         <tr>
           <th class="bg-light">{{ masina.nume }}</th>
 
           {% for zi in zile_saptamana %}
           <td>
             {% for interval in intervale_ore %}
-              {% with ora_start=interval.0 ora_sfarsit=interval.1 %}
-              {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora_start %}
-              {% is_future_interval ora_start ora_sfarsit now_hour as future_ok %}
+            {% with ora_start=interval.0 ora_sfarsit=interval.1 %}
+            {% with rezervare=rezervari_dict|get_item:masina.id|get_item:zi|get_item:ora_start %}
+            {% is_future_interval ora_start ora_sfarsit now_hour as future_ok %}
 
-
-              {% if rezervare %}
-                <div class="interval-container">
-                  <div class="rezervare
+            {% if rezervare %}
+            <div class="interval-container">
+              <div class="rezervare
                     {% if zi < today %}
                       bg-warning
                     {% else %}
@@ -131,132 +368,141 @@
                         {% endif %}
                       {% endif %}
                     {% endif %}"
-                    data-nume="{{ rezervare.utilizator.last_name }} {{ rezervare.utilizator.first_name }}"
-                    data-email="{{ rezervare.utilizator.email }}"
-                    data-camera="{{ rezervare.utilizator.profilstudent.numar_camera }}"
-                    data-telefon="{{ rezervare.utilizator.profilstudent.telefon|default:'-' }}"
-                    style="cursor:pointer;"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    title="{% if este_admin_camin or zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}">
-                    <div class="d-flex align-items-center w-100">
-                      <span class="flex-grow-1">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</span>
+                data-nume="{{ rezervare.utilizator.last_name|slice:':1' }}.{{ rezervare.utilizator.first_name|slice:':1' }}."
+                data-email="{{ rezervare.utilizator.email }}"
+                data-camera="{{ rezervare.utilizator.profilstudent.numar_camera }}"
+                data-telefon="{{ rezervare.utilizator.profilstudent.telefon|default:'' }}" style="cursor:pointer;"
+                data-bs-toggle="tooltip" data-bs-placement="top"
+                title="{% if este_admin_camin or zi < today %}{{ rezervare.utilizator.get_full_name }}{% endif %}">
+                <div class="d-flex align-items-center w-100">
+                  <span class="flex-grow-1">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</span>
 
-                      {% if este_admin_camin %}
-                        {% if zi < today %}
-                          <button type="button" class="btn-icon text-warning"
-                            data-bs-toggle="modal" data-bs-target="#confirmModal"
-                            data-rezervare-id="{{ rezervare.id }}"
-                            data-nume="{{ rezervare.utilizator.get_full_name }}"
-                            data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
-                            data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
-                            title="Trimite avertisment">
-                            <i class="fas fa-exclamation-triangle"></i>
-                          </button>
-                        {% else %}
-                          {% if zi == today and not future_ok %}
-
-                            <button type="button" class="btn-icon text-warning"
-                              data-bs-toggle="modal" data-bs-target="#confirmModal"
-                              data-rezervare-id="{{ rezervare.id }}"
-                              data-nume="{{ rezervare.utilizator.get_full_name }}"
-                              data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
-                              data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
-                              title="Trimite avertisment">
-                              <i class="fas fa-exclamation-triangle"></i>
-                            </button>
-                          {% endif %}
-                        {% endif %}
-                      {% endif %}
-
-                      {% if rezervare.nivel_prioritate != 1 and rezervare.utilizator != request.user %}
-
-                        {% if zi > today %}
-                          {% if este_admin_camin or este_student %}
-                            <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
-                              {% csrf_token %}
-                              <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                              <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                              <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
-                              <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                              <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                              <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
-                            </form>
-                          {% endif %}
-                        {% else %}
-                          {% if zi == today and future_ok %}
-
-                            {% if este_admin_camin or este_student %}
-                              <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
-                                {% csrf_token %}
-                                <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                                <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                                <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
-                                <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                                <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                                <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00" title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
-                              </form>
-                            {% endif %}
-                          {% endif %}
-                        {% endif %}
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
-
-              {% else %}
-                {% if este_admin_camin or este_student %}
-                  {% if zi > today %}
-                    <div class="interval-container">
-                      <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
-                        {% csrf_token %}
-                        <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                        <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                        <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
-                        <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                        <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                        <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="rezervare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00"> {{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
-                      </form>
-                    </div>
+                  {% if este_admin_camin %}
+                  {% if zi < today %}
+                  <button type="button" class="btn-icon text-warning" data-bs-toggle="modal"
+                    data-bs-target="#confirmModal" data-rezervare-id="{{ rezervare.id }}"
+                    data-nume="{{ rezervare.utilizator.get_full_name }}"
+                    data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
+                    data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
+                    title="Trimite avertisment">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </button>
                   {% else %}
-                    {% if zi == today %}
-                      {% if future_ok %}
-                        <div class="interval-container">
-                          <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
-                            {% csrf_token %}
-                            <input type="hidden" name="masina_id" value="{{ masina.id }}">
-                            <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
-                            <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
-                            <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
-                            <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
-                            <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="rezervare" data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00"> {{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
-                      </form>
-                          </form>
-                        </div>
-                      {% else %}
-                        <div class="interval-container"><div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div></div>
-                      {% endif %}
-                    {% else %}
-                      <div class="interval-container"><div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div></div>
-                    {% endif %}
-                  {% endif %}
-                {% else %}
-                  <div class="interval-container"><div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div></div>
-                {% endif %}
-              {% endif %}
+                  {% if zi == today and not future_ok %}
 
-              {% endwith %}
-              {% endwith %}
+                  <button type="button" class="btn-icon text-warning" data-bs-toggle="modal"
+                    data-bs-target="#confirmModal" data-rezervare-id="{{ rezervare.id }}"
+                    data-nume="{{ rezervare.utilizator.get_full_name }}"
+                    data-data="{{ rezervare.data_rezervare|date:'d M Y' }}"
+                    data-interval="{{ rezervare.ora_start|time:'H:i' }} - {{ rezervare.ora_end|time:'H:i' }}"
+                    title="Trimite avertisment">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </button>
+                  {% endif %}
+                  {% endif %}
+                  {% endif %}
+
+                  {% if rezervare.nivel_prioritate != 1 and rezervare.utilizator != request.user %}
+
+                  {% if zi > today %}
+                  {% if este_admin_camin or este_student %}
+                  <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                    <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                    <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                    <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                    <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                    <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare"
+                      data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00"
+                      title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
+                  </form>
+                  {% endif %}
+                  {% else %}
+                  {% if zi == today and future_ok %}
+
+                  {% if este_admin_camin or este_student %}
+                  <form method="post" action="{% url 'creeaza_rezervare' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                    <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                    <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                    <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                    <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                    <button type="button" class="btn-icon btn-confirm-rezervare" data-tip="preluare"
+                      data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00"
+                      title="Preia rezervarea"><i class="fas fa-exchange-alt"></i></button>
+                  </form>
+                  {% endif %}
+                  {% endif %}
+                  {% endif %}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {% else %}
+            {% if este_admin_camin or este_student %}
+            {% if zi > today %}
+            <div class="interval-container">
+              <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
+                {% csrf_token %}
+                <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="rezervare"
+                  data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00">
+                  {{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+              </form>
+            </div>
+            {% else %}
+            {% if zi == today %}
+            {% if future_ok %}
+            <div class="interval-container">
+              <form method="post" action="{% url 'creeaza_rezervare' %}" class="h-100">
+                {% csrf_token %}
+                <input type="hidden" name="masina_id" value="{{ masina.id }}">
+                <input type="hidden" name="data" value="{{ zi|date:'Y-m-d' }}">
+                <input type="hidden" name="ora_start" value="{{ ora_start }}:00">
+                <input type="hidden" name="ora_end" value="{{ ora_sfarsit }}:00">
+                <input type="hidden" name="saptamana" value="{{ saptamana_index }}">
+                <button type="button" class="btn-interval btn-confirm-rezervare" data-tip="rezervare"
+                  data-zi="{{ zi|date:'d M Y' }}" data-ora="{{ ora_start }}:00 - {{ ora_sfarsit }}:00">
+                  {{ ora_start }}:00 - {{ ora_sfarsit }}:00</button>
+              </form>
+              </form>
+            </div>
+            {% else %}
+            <div class="interval-container">
+              <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="interval-container">
+              <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% else %}
+            <div class="interval-container">
+              <div class="time-slot text-muted">{{ ora_start }}:00 - {{ ora_sfarsit }}:00</div>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            {% endwith %}
+            {% endwith %}
             {% endfor %}
           </td>
           {% endfor %}
         </tr>
-      {% endfor %}
+        {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
-
 
 <div class="modal fade" id="confirmRezervareModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -281,9 +527,6 @@
   </div>
 </div>
 
-
-
-
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -307,99 +550,124 @@
   </div>
 </div>
 
-<div class="offcanvas offcanvas-end" data-bs-backdrop="false" tabindex="-1" id="detaliiStudent" aria-labelledby="detaliiStudentLabel">
-  <div class="offcanvas-header">
-    <h5 id="detaliiStudentLabel">Detalii Student</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Închide"></button>
+<div class="offcanvas offcanvas-end mobile-sheet" data-bs-backdrop="false" tabindex="-1" id="detaliiStudent">
+
+  <div class="offcanvas-header border-0">
+    <div class="d-flex align-items-center gap-3 w-100">
+
+      <div id="avatarStudent" class="avatar-circle">A</div>
+
+      <div>
+        <div id="studentNume" class="fw-bold"></div>
+        <small id="studentEmail" class="text-muted"></small>
+      </div>
+
+      <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas"></button>
+    </div>
   </div>
+
   <div class="offcanvas-body">
-    <p><strong>Nume:</strong> <span id="studentNume"></span></p>
-    <p><strong>Email:</strong> <span id="studentEmail"></span></p>
-    <p><strong>Telefon:</strong> <span id="studentTelefon"></span></p>
-    <p><strong>Cameră:</strong> <span id="studentCamera"></span></p>
+
+    <div class="info-card">
+      <div class="info-label">Cameră</div>
+      <div id="studentCamera" class="info-value"></div>
+    </div>
+
+    <div class="info-card mt-3">
+      <div class="info-label">Contact</div>
+
+      <div class="d-flex gap-2 mt-2">
+        <a id="btnCall" class="btn-action btn-call">📞</a>
+        <a id="btnWhatsapp" class="btn-action btn-whatsapp" target="_blank">💬</a>
+        <a id="btnSms" class="btn-action btn-sms">✉️</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
 {% if messages %}
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
   {% for message in messages %}
-    <div class="toast border-0 show" role="alert">
-      <div class="d-flex">
-        <div class="toast-body bg-{{ message.tags }}">{{ message }}</div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
+  <div class="toast border-0 show" role="alert">
+    <div class="d-flex">
+      <div class="toast-body bg-{{ message.tags }}">{{ message }}</div>
+      <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
+  </div>
   {% endfor %}
 </div>
 {% endif %}
 
 <script>
-document.addEventListener('DOMContentLoaded',function(){
-  [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).map(function(el){return new bootstrap.Tooltip(el)});
-  var modal=document.getElementById('confirmModal');
-  if(modal){
-    modal.addEventListener('show.bs.modal',function(e){
-      var b=e.relatedTarget;
-      document.getElementById('rezervareIdInput').value=b.getAttribute('data-rezervare-id');
-      document.getElementById('studentName').textContent=b.getAttribute('data-nume')||'student necunoscut';
-      var d=b.getAttribute('data-data')||'';
-      var i=b.getAttribute('data-interval')||'';
-      document.getElementById('rezervareInfo').textContent=(d&&i)?(d+" "+i):d+i;
+  document.addEventListener('DOMContentLoaded', function() {
+    [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).map(function(el) {
+      return new bootstrap.Tooltip(el)
     });
-  }
-  document.querySelectorAll('.rezervare').forEach(function(el){
-    el.addEventListener('click',function(e){
-      if(!e.target.closest("button")){
-        document.getElementById("studentNume").textContent=el.dataset.nume||'-';
-        document.getElementById("studentEmail").textContent=el.dataset.email||'-';
-        document.getElementById("studentTelefon").textContent=el.dataset.telefon||'-';
-        document.getElementById("studentCamera").textContent=el.dataset.camera||'-';
-        new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();
-      }
+    var modal = document.getElementById('confirmModal');
+    if (modal) {
+      modal.addEventListener('show.bs.modal', function(e) {
+        var b = e.relatedTarget;
+        document.getElementById('rezervareIdInput').value = b.getAttribute('data-rezervare-id');
+        document.getElementById('studentName').textContent = b.getAttribute('data-nume') ||
+        'student necunoscut';
+        var d = b.getAttribute('data-data') || '';
+        var i = b.getAttribute('data-interval') || '';
+        document.getElementById('rezervareInfo').textContent = (d && i) ? (d + " " + i) : d + i;
+      });
+    }
+    document.querySelectorAll('.rezervare').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        if (!e.target.closest("button")) {
+          const telefon = el.dataset.telefon || '';
+          document.getElementById("studentNume").textContent = el.dataset.nume || '-';
+          document.getElementById("studentEmail").textContent = el.dataset.email || '-';
+          document.getElementById("studentCamera").textContent = el.dataset.camera || '-';
+          // avatar
+          document.getElementById("avatarStudent").textContent = el.dataset.nume || '';
+          // butoane
+          document.getElementById('btnCall').href = `tel:${telefon}`;
+          document.getElementById('btnWhatsapp').href = `https://wa.me/${telefon.replace('+','')}`;
+          document.getElementById('btnSms').href = `sms:${telefon}`;
+
+           new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();
+        }
+      });
     });
   });
-});
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  let formToSubmit = null;
-
-  document.querySelectorAll('.btn-confirm-rezervare').forEach(btn => {
-    btn.addEventListener('click', function () {
-      formToSubmit = this.closest('form');
-
-      const tip = this.dataset.tip;
-      const zi  = this.dataset.zi;
-      const ora = this.dataset.ora;
-
-      const text = document.getElementById('confirmRezervareText');
-      const data = document.getElementById('confirmRezervareData');
-
-      if (tip === 'preluare') {
-        text.innerHTML = `
+  document.addEventListener('DOMContentLoaded', function() {
+    let formToSubmit = null;
+    document.querySelectorAll('.btn-confirm-rezervare').forEach(btn => {
+      btn.addEventListener('click', function() {
+        formToSubmit = this.closest('form');
+        const tip = this.dataset.tip;
+        const zi = this.dataset.zi;
+        const ora = this.dataset.ora;
+        const text = document.getElementById('confirmRezervareText');
+        const data = document.getElementById('confirmRezervareData');
+        if (tip === 'preluare') {
+          text.innerHTML = `
           ⚠️ <strong>Atenție!</strong><br>
           Vei prelua rezervarea altui student.
         `;
-      } else {
-        text.innerHTML = `🧺 Sigur vrei să faci această rezervare?`;
+        } else {
+          text.innerHTML = `🧺 Sigur vrei să faci această rezervare?`;
+        }
+        data.textContent = `${zi} • ${ora}`;
+        new bootstrap.Modal(
+          document.getElementById('confirmRezervareModal')
+        ).show();
+      });
+    });
+    document.getElementById('confirmRezervareBtn').addEventListener('click', function() {
+      if (formToSubmit) {
+        formToSubmit.submit();
       }
-
-      data.textContent = `${zi} • ${ora}`;
-
-      new bootstrap.Modal(
-        document.getElementById('confirmRezervareModal')
-      ).show();
     });
   });
-
-  document.getElementById('confirmRezervareBtn').addEventListener('click', function () {
-    if (formToSubmit) {
-      formToSubmit.submit();
-    }
-  });
-});
 </script>
-
 
 {% endblock %}
