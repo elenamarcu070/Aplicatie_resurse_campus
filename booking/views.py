@@ -128,6 +128,10 @@ def callback(request):
 
     # 🔴 3. Dacă nu e găsit în baza de date → NU îl creăm, doar blocăm accesul
     logout(request)
+    try:
+        user.delete()
+    except:
+        pass
     return render(request, 'not_allowed.html', {
         'message': (
             f'Adresa <b>{email}</b> nu este înregistrată în sistem.<br>'
