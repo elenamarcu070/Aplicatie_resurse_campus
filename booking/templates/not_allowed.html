@@ -5,39 +5,48 @@
     <h1 class="text-danger"><i class="fas fa-ban"></i> Acces interzis</h1>
 
     {% if message %}
-        <div class="alert alert-warning mt-3" style="font-size: 1.05rem;">
-            {{ message|safe }}
-        </div>
+    <div class="alert alert-warning mt-3" style="font-size: 1.05rem;">
+        {{ message|safe }}
+    </div>
     {% else %}
-        <p class="mt-3">
-            Ne pare rău, dar adresa ta de email <b>{{ request.user.email }}</b> nu este autorizată în sistem.
-        </p>
+    <p class="mt-3">
+        Ne pare rău, dar adresa ta de email <b>{{ request.user.email }}</b> nu este autorizată în sistem.
+    </p>
 
-        <p class="mt-3">
-            Te rugăm să contactezi șeful de cămin:
-        </p>
+    <p class="mt-3">
+        Te rugăm să contactezi șeful de cămin:
+    </p>
 
-        <div class="mt-3 text-start" style="display:inline-block;">
+    <div class="mt-4 d-flex flex-column align-items-center gap-3">
 
-            <p>
-                <b>Cămin T3-T4 - Manu Laurentiu-Robert</b><br>
-                📞 <a href="tel:+40730085464">+40 730 085 464</a> |
-                💬 <a href="https://wa.me/40730085464" target="_blank">WhatsApp</a>
-            </p>
-
-            <p>
-                <b>Cămin T5-T6 - Varga Paul Laurentiu</b><br>
-                📞 <a href="tel:+40787328384">+40 787 328 384</a> |
-                💬 <a href="https://wa.me/40787328384" target="_blank">WhatsApp</a>
-            </p>
-
-            <p>
-                <b>Cămin T18 - Raba Alexandru</b><br>
-                📞 <a href="tel:+40758112351">+40 758 112 351</a> |
-                💬 <a href="https://wa.me/40758112351" target="_blank">WhatsApp</a>
-            </p>
-
+        <div class="contact-card">
+            <div class="contact-title">🏢 Cămin T3-T4</div>
+            <div class="contact-name">Manu Laurentiu-Robert</div>
+            <div class="contact-actions">
+                <a href="tel:+40730085464" class="btn-contact btn-call">📞 Sună</a>
+                <a href="https://wa.me/40730085464" target="_blank" class="btn-contact btn-whatsapp">💬 WhatsApp</a>
+            </div>
         </div>
+
+        <div class="contact-card">
+            <div class="contact-title">🏢 Cămin T5-T6</div>
+            <div class="contact-name">Varga Paul Laurentiu</div>
+            <div class="contact-actions">
+                <a href="tel:+40787328384" class="btn-contact btn-call">📞 Sună</a>
+                <a href="https://wa.me/40787328384" target="_blank" class="btn-contact btn-whatsapp">💬 WhatsApp</a>
+            </div>
+        </div>
+
+        <div class="contact-card">
+            <div class="contact-title">🏢 Cămin T18</div>
+            <div class="contact-name">Raba Alexandru</div>
+            <div class="contact-actions">
+                <a href="tel:+40758112351" class="btn-contact btn-call">📞 Sună</a>
+                <a href="https://wa.me/40758112351" target="_blank" class="btn-contact btn-whatsapp">💬 WhatsApp</a>
+            </div>
+        </div>
+
+    </div>
     {% endif %}
 
     <a href="{% url 'home' %}" class="btn btn-outline-primary mt-3">
