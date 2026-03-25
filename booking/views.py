@@ -132,13 +132,7 @@ def callback(request):
         user.delete()
     except:
         pass
-    return render(request, 'not_allowed.html', {
-        'message': (
-            f'Adresa <b>{email}</b> nu este înregistrată în sistem.<br>'
-            'Te rugăm să contactezi administratorul  pentru a fi adăugat în baza de date:<br>'
-            '<b>Marcu Elena – +40 756 752 311</b>'
-        )
-    })
+    return render(request, 'not_allowed.html')
 
 
 
