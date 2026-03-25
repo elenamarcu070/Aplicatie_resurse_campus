@@ -276,12 +276,23 @@
 .table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  width: 100%;
+  padding-right: 20px;
+  margin-right: -10px;
+  position: relative; /* pentru gradient */
 }
 
 /* SNAP PE ZILE */
 .calendar-grid {
+  min-width: 900px;
   scroll-snap-type: x mandatory;
+}
+.calendar-grid th:first-child,
+.calendar-grid td:first-child {
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 2;
 }
 
 .calendar-grid th,
@@ -292,6 +303,16 @@
 /* CLICK EFFECT */
 .rezervare:active {
   transform: scale(0.95);
+}
+.table-responsive::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 25px;
+  background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+  pointer-events: none;
 }
 </style>
 
