@@ -27,6 +27,7 @@
     overflow-x: auto;
     padding-right: 20px;
     margin-right: -10px
+    -webkit-overflow-scrolling: touch;
   }
 
   .calendar-grid thead th {
@@ -267,9 +268,17 @@
   .rezervare:hover {
     transform: scale(1.03);
   }
+  .btn-email {
+  background: #fff3cd;
+}
+
+.btn-email:hover {
+  background: #ffc107;
+  color: white;
+}
 </style>
 
-<div class="container mt-4 fade-in">
+<div class="container-fluid mt-4 fade-in px-2">
   <div class="py-3 px-4 mb-4 rounded shadow text-black" style="background:#fff;">
     <h2 class="mb-3 text-center fw-bold" style="font-size:1.8rem;">
       Rezervari Spalatorie – camin {{ nume_camin|default:"Cămin necunoscut" }}
@@ -559,7 +568,9 @@
 
       <div>
         <div id="studentNume" class="fw-bold"></div>
-        <small id="studentEmail" class="text-muted"></small>
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <a id="btnEmail" class="btn-action btn-email">✉️</a>
+        </div>
       </div>
 
       <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas"></button>
@@ -619,9 +630,10 @@
     document.querySelectorAll('.rezervare').forEach(function(el) {
       el.addEventListener('click', function(e) {
         if (!e.target.closest("button")) {
+          const email = el.dataset.email || '';
           const telefon = el.dataset.telefon || '';
           document.getElementById("studentNume").textContent = el.dataset.nume || '-';
-          document.getElementById("studentEmail").textContent = el.dataset.email || '-';
+          document.getElementById('btnEmail').href = `mailto:${email}`;
           document.getElementById("studentCamera").textContent = el.dataset.camera || '-';
           // avatar
           document.getElementById("avatarStudent").textContent = el.dataset.nume || '';
@@ -630,7 +642,9 @@
           document.getElementById('btnWhatsapp').href = `https://wa.me/${telefon.replace('+','')}`;
           document.getElementById('btnSms').href = `sms:${telefon}`;
 
-           new bootstrap.Offcanvas(document.getElementById("detaliiStudent")).show();
+          let offcanvasEl = document.getElementById("detaliiStudent");
+          let offcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+          offcanvas.show();
         }
       });
     });
