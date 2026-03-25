@@ -23,12 +23,6 @@
     min-width: 100px
   }
 
-  .table-responsive {
-    overflow-x: auto;
-    padding-right: 20px;
-    margin-right: -10px
-    -webkit-overflow-scrolling: touch;
-  }
 
   .calendar-grid thead th {
     position: sticky;
@@ -61,6 +55,7 @@
   .calendar-grid tbody tr+tr th.bg-light {
     border-top: 3px solid #454647 !important
   }
+
 
   .time-slot {
     font-size: .9em;
@@ -275,6 +270,28 @@
 .btn-email:hover {
   background: #ffc107;
   color: white;
+}
+
+/* === MOBILE SCROLL === */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* SNAP PE ZILE */
+.calendar-grid {
+  scroll-snap-type: x mandatory;
+}
+
+.calendar-grid th,
+.calendar-grid td {
+  scroll-snap-align: start;
+}
+
+/* CLICK EFFECT */
+.rezervare:active {
+  transform: scale(0.95);
 }
 </style>
 
@@ -682,6 +699,38 @@
       }
     });
   });
+</script>
+
+<script>
+const container = document.querySelector('.table-responsive');
+
+let startX = 0;
+let scrollLeft = 0;
+
+if (container) {
+  container.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].pageX;
+    scrollLeft = container.scrollLeft;
+  });
+
+  container.addEventListener('touchmove', (e) => {
+    const x = e.touches[0].pageX;
+    const walk = (startX - x) * 1.5;
+    container.scrollLeft = scrollLeft + walk;
+  });
+}
+</script>
+
+<script>
+window.addEventListener("load", () => {
+  const firstDay = document.querySelector(".calendar-grid th:nth-child(2)");
+  if (firstDay) {
+    firstDay.scrollIntoView({
+      behavior: "smooth",
+      inline: "center"
+    });
+  }
+});
 </script>
 
 {% endblock %}
