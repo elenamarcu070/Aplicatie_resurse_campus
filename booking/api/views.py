@@ -185,3 +185,48 @@ def statistici_top_masini(request):
         data[mid] = data.get(mid, 0) + 1
 
     return JsonResponse(data, status=200)
+
+from django.db.models import Count
+from datetime import date, timedelta
+from booking.models import Rezervare, Camin, Masina
+
+
+def statistici_avansate(request):
+    camin_id = request.GET.get('camin_id')
+    masina_id = request.GET.get('masina_id')
+    zi = request.GET.get('zi')
+
+    azi = date.today()
+    start_sapt = azi - timedelta(days=azi.weekday())
+    end_sapt = start_sapt + timedelta(days=6)
+
+    rezervari = Rezervare.objects.filter(
+        data_rezervare__range=(start_sapt, end_sapt),
+        anulata=False
+    )
+
+    # 🔹 filtrare cămin
+    if camin_id:
+        rezervari = rezervari.filter(masina__camin_id=camin_id)
+
+    # 🔹 filtrare mașină
+    if masina_id:
+        rezervari = rezervari.filter(masina_id=masina_id)
+
+    # 🔹 filtrare zi
+    if zi:
+        rezervari = rezervari.filter(data_rezervare=zi)
+
+    total = rezervari.count()
+
+    # 🔥 statistici pe priorități
+    prioritati = rezervari.values('nivel_prioritate').annotate(count=Count('id'))
+
+    # 🔥 statistici pe mașini
+    masini = rezervari.values('masina__nume').annotate(count=Count('id'))
+
+    return JsonResponse({
+        "total_rezervari": total,
+        "prioritati": list(prioritati),
+        "pe_masini": list(masini)
+    }, status=200)

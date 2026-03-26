@@ -47,6 +47,17 @@
     </div>
 
 </div>
+<div class="card p-3 mt-4">
+    <h5>📊 Statistici avansate</h5>
+
+    <input type="number" id="camin_id" class="form-control mb-2" placeholder="ID camin">
+    <input type="number" id="masina_id" class="form-control mb-2" placeholder="ID masina (optional)">
+    <input type="date" id="zi" class="form-control mb-2">
+
+    <button class="btn btn-dark" onclick="incarcaStatistici()">Vezi statistici</button>
+
+    <div id="rezultat_stat" class="mt-3"></div>
+</div>
 
 <script>
 
@@ -111,6 +122,36 @@ async function editMasina(id) {
     });
 
     incarcaMasini();
+}
+
+async function incarcaStatistici() {
+
+    let camin = document.getElementById('camin_id').value;
+    let masina = document.getElementById('masina_id').value;
+    let zi = document.getElementById('zi').value;
+
+    let url = `/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}&zi=${zi}`;
+
+    let res = await fetch(url);
+    let data = await res.json();
+
+    let html = `
+        <h6>Total rezervari: ${data.total_rezervari}</h6>
+        <br>
+        <b>Prioritati:</b><br>
+    `;
+
+    data.prioritati.forEach(p => {
+        html += `Prioritate ${p.nivel_prioritate}: ${p.count}<br>`;
+    });
+
+    html += `<br><b>Pe masini:</b><br>`;
+
+    data.pe_masini.forEach(m => {
+        html += `${m.masina__nume}: ${m.count}<br>`;
+    });
+
+    document.getElementById('rezultat_stat').innerHTML = html;
 }
 
 incarcaMasini();

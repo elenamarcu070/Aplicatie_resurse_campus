@@ -9,4 +9,5 @@ urlpatterns = [
     path('rezervari/<int:id>/', views.rezervare_detail),
 
     path('statistici/top-masini/', views.statistici_top_masini),
+    path('statistici/avansate/', views.statistici_avansate),
 ]
