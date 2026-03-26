@@ -198,7 +198,7 @@ async function selectZi() {
 
 // 🔹 afisare generica
 function afiseaza(div, data) {
-    let html = `<b>Total:</b> ${data.total}<br><br><b>Prioritati:</b><br>`;
+    let html = `<b>Total rezervari:</b> ${data.total}<br><br><b>Rezervari pe prioritati:</b><br>`;
 
     data.prioritati.forEach(p => {
         html += `P${p.nivel_prioritate}: ${p.count}<br>`;
