@@ -2,16 +2,35 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-from booking.models import Masina, Rezervare
+from booking.models import Masina, Rezervare, Camin
+
+
+# =========================
+# UTIL
+# =========================
+
+def get_camin_test():
+    try:
+        return Camin.objects.get(nume="API_TEST")
+    except Camin.DoesNotExist:
+        return None
 
 
 # =========================
 # MASINI - COLLECTION
 # =========================
 
+@csrf_exempt
 def masini_list(request):
+    camin_test = get_camin_test()
+
+    if not camin_test:
+        return JsonResponse({"error": "Camin API_TEST nu exista"}, status=400)
+
     if request.method == 'GET':
-        masini = list(Masina.objects.values())
+        masini = list(
+            Masina.objects.filter(camin=camin_test).values()
+        )
         return JsonResponse(masini, safe=False, status=200)
 
     if request.method == 'POST':
@@ -19,18 +38,18 @@ def masini_list(request):
 
         masina = Masina.objects.create(
             nume=data.get('nume'),
-            camin_id=data.get('camin_id'),
-            activa=data.get('activa', True)
+            camin=camin_test,
+            activa=True
         )
 
         return JsonResponse({
-            "message": "Masina creata",
+            "message": "Masina creata (TEST)",
             "id": masina.id
         }, status=201)
 
     if request.method == 'DELETE':
-        Masina.objects.all().delete()
-        return JsonResponse({"message": "Toate masinile sterse"}, status=200)
+        Masina.objects.filter(camin=camin_test).delete()
+        return JsonResponse({"message": "Masini TEST sterse"}, status=200)
 
 
 # =========================
@@ -39,10 +58,16 @@ def masini_list(request):
 
 @csrf_exempt
 def masina_detail(request, id):
+    camin_test = get_camin_test()
+
     try:
         masina = Masina.objects.get(id=id)
     except Masina.DoesNotExist:
         return JsonResponse({"error": "Masina nu exista"}, status=404)
+
+    # 🔥 protecție
+    if masina.camin != camin_test:
+        return JsonResponse({"error": "Acces doar pe date TEST"}, status=403)
 
     if request.method == 'GET':
         return JsonResponse({
@@ -53,6 +78,7 @@ def masina_detail(request, id):
 
     if request.method == 'PUT':
         data = json.loads(request.body)
+
         masina.nume = data.get('nume', masina.nume)
         masina.activa = data.get('activa', masina.activa)
         masina.save()
@@ -70,8 +96,15 @@ def masina_detail(request, id):
 
 @csrf_exempt
 def rezervari_list(request):
+    camin_test = get_camin_test()
+
+    if not camin_test:
+        return JsonResponse({"error": "Camin API_TEST nu exista"}, status=400)
+
     if request.method == 'GET':
-        rezervari = list(Rezervare.objects.values())
+        rezervari = list(
+            Rezervare.objects.filter(masina__camin=camin_test).values()
+        )
         return JsonResponse(rezervari, safe=False, status=200)
 
     if request.method == 'POST':
@@ -87,13 +120,13 @@ def rezervari_list(request):
         )
 
         return JsonResponse({
-            "message": "Rezervare creata",
+            "message": "Rezervare creata (TEST)",
             "id": rezervare.id
         }, status=201)
 
     if request.method == 'DELETE':
-        Rezervare.objects.all().delete()
-        return JsonResponse({"message": "Toate rezervarile sterse"}, status=200)
+        Rezervare.objects.filter(masina__camin=camin_test).delete()
+        return JsonResponse({"message": "Rezervari TEST sterse"}, status=200)
 
 
 # =========================
@@ -102,10 +135,16 @@ def rezervari_list(request):
 
 @csrf_exempt
 def rezervare_detail(request, id):
+    camin_test = get_camin_test()
+
     try:
         rezervare = Rezervare.objects.get(id=id)
     except Rezervare.DoesNotExist:
         return JsonResponse({"error": "Rezervare nu exista"}, status=404)
+
+    # 🔥 protecție
+    if rezervare.masina.camin != camin_test:
+        return JsonResponse({"error": "Acces doar pe date TEST"}, status=403)
 
     if request.method == 'GET':
         return JsonResponse({
@@ -131,13 +170,17 @@ def rezervare_detail(request, id):
 
 
 # =========================
-# BONUS (🔥 puncte extra)
+# BONUS
 # =========================
 
 def statistici_top_masini(request):
+    camin_test = get_camin_test()
+
     data = {}
 
-    for r in Rezervare.objects.all():
+    rezervari = Rezervare.objects.filter(masina__camin=camin_test)
+
+    for r in rezervari:
         mid = r.masina_id
         data[mid] = data.get(mid, 0) + 1
 

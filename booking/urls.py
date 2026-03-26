@@ -51,6 +51,8 @@ urlpatterns = [
 
 
     path('api/', include('booking.api.urls')),
+
+    path('api-dashboard/', views.api_dashboard, name='api_dashboard'),
  
 
 ]

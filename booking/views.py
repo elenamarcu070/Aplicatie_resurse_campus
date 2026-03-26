@@ -1444,3 +1444,7 @@ def selecteaza_camin(request):
         if camin_id:
             request.session["camin_selectat"] = camin_id
     return redirect(request.META.get("HTTP_REFERER", "dashboard_admin_camin"))
+
+
+def api_dashboard(request):
+    return render(request, 'api/dashboard.html')
