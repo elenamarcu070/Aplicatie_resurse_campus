@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from django.conf import settings
 from django.contrib.auth.decorators import login_required  
+from django.urls import include
 
 
 
@@ -49,6 +50,7 @@ urlpatterns = [
     path('selecteaza-camin/', views.selecteaza_camin, name='selecteaza_camin'),
 
 
+    path('api/', include('booking.api.urls')),
  
 
 ]
