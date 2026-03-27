@@ -51,7 +51,17 @@ def masini_list(request):
         Masina.objects.filter(camin=camin_test).delete()
         return JsonResponse({"message": "Masini TEST sterse"}, status=200)
 
+def get_toate_masinile(request):
+    camin_id = request.GET.get('camin_id')
 
+    masini = Masina.objects.all()
+
+    if camin_id:
+        masini = masini.filter(camin_id=camin_id)
+
+    data = list(masini.values('id', 'nume', 'camin_id'))
+
+    return JsonResponse(data, safe=False)
 # =========================
 # MASINI - ITEM
 # =========================
