@@ -183,10 +183,19 @@
       color: #e0e0e0 !important;
       border-color: #444 !important;
     }
-
     .dark-mode a,
     .dark-mode .btn-link {
-      color: #90caf9 !important;
+    color: #90caf9 !important;
+    }
+
+    .modal-content {
+    border-radius: 20px;
+    animation: scaleIn 0.2s ease;
+    }
+
+    @keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
     }
   </style>
 </head>
@@ -257,7 +266,7 @@
       {% endif %} {% if user.is_authenticated %}
       <div class="d-flex align-items-center ms-3">
         <span class="me-3 fw-bold text-dark">{{ user.email }}</span>
-        <a href="{% url 'custom_logout' %}" class="btn btn-danger" onclick="return confirmLogout()">
+        <a href="#" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#logoutModal">
           <i class="fas fa-sign-out-alt"></i> Logout
         </a>
       </div>
@@ -301,12 +310,32 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
-  <script>
-    function confirmLogout() {
-      return confirm("Ești sigur(ă) că vrei să te deconectezi?");
-    }
-  </script>
+  <div class="modal fade" id="logoutModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 shadow">
 
+        <div class="modal-body text-center p-4">
+
+          <div style="font-size:2.5rem;">⚠️</div>
+
+          <h5 class="mt-3 fw-bold">Sigur vrei să te deconectezi?</h5>
+          <p class="text-muted mb-4">Vei fi scos din aplicație.</p>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-light w-50" data-bs-dismiss="modal">
+              Renunță
+            </button>
+
+            <a href="{% url 'custom_logout' %}" class="btn btn-danger w-50">
+              Logout
+            </a>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
