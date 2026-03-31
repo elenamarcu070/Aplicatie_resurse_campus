@@ -53,9 +53,17 @@ from booking.models import (
 )
 from booking.utils import get_camin_curent
 
+from datetime import date, timedelta
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from booking.models import ProfilStudent, Rezervare
+
+from datetime import date, timedelta
+from booking.models import Rezervare, ProfilStudent, Avertisment
+
 
 def login_redirect_google(request):
-    return redirect(reverse('socialaccount_login', args=['google']))
+    return redirect('/accounts/google/login/')
 # =========================
 # Decoratori pentru roluri
 # =========================
@@ -150,13 +158,7 @@ def custom_logout(request):
 # =========================
 # Dashboard-uri după rol
 # =========================
-from datetime import date, timedelta
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from booking.models import ProfilStudent, Rezervare
 
-from datetime import date, timedelta
-from booking.models import Rezervare, ProfilStudent, Avertisment
 
 @login_required 
 @only_students
