@@ -63,7 +63,7 @@ from booking.models import Rezervare, ProfilStudent, Avertisment
 
 
 def login_redirect_google(request):
-    return redirect('/accounts/google/login/')
+    return redirect('/accounts/google/login/?process=login')
 # =========================
 # Decoratori pentru roluri
 # =========================
