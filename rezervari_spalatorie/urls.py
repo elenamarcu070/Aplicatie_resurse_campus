@@ -13,6 +13,8 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('booking.urls')),  # home, callback etc
+
+    path('accounts/login/', booking_views.login_redirect_google),
     path("accounts/signup/", RedirectView.as_view(pattern_name="account_login", permanent=False)),  # blocăm signup
     path('accounts/', include('allauth.urls')),
     path('logout/', booking_views.custom_logout, name='custom_logout'),

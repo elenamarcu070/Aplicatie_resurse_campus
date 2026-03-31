@@ -54,7 +54,8 @@ from booking.models import (
 from booking.utils import get_camin_curent
 
 
-
+def login_redirect_google(request):
+    return redirect(reverse('socialaccount_login', args=['google']))
 # =========================
 # Decoratori pentru roluri
 # =========================
