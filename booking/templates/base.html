@@ -244,15 +244,7 @@
           <select name="camin_id" id="camin_id" class="form-select form-select-sm" onchange="this.form.submit()"
             style="width: 160px">
             {% for c in camine_disponibile %}
-            <option value="{{ c.id }}" {%
-                if
-                camin_selectat
-                and
-                c.id=""
-                ="camin_selectat.id"
-                %}selected{%
-                endif
-                %}>
+            <option value="{{ c.id }}" {% if camin_selectat and c.id == camin_selectat.id %}selected{% endif %}>
               {{ c.nume }}
             </option>
             {% endfor %}

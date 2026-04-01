@@ -812,8 +812,18 @@ def creeaza_rezervare(request):
                 ora_start__lt=ora_end,
                 ora_end__gt=ora_start,
                 anulata=False
-            )
+                )
 
+            if rezervari_existente.exists():
+                # dacă nu e preluare validă → STOP
+                    poate_prelua = False
+                    for rez in rezervari_existente:
+                        if rez.nivel_prioritate > nr_rezervari + 1:
+                           poate_prelua = True
+                           
+                    if not poate_prelua:
+                        messages.error(request, "Intervalul este deja ocupat.")
+                        return redirect(f"{reverse('calendar_rezervari')}?saptamana={saptamana}")
             # 🔁 Logica de preluare rezervare existentă
             for rez in rezervari_existente:
                 rezervari_alt_user = Rezervare.objects.filter(
