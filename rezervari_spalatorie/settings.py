@@ -85,7 +85,6 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "booking.context_processors.rol_utilizator",
-                "booking.context_processors.camin_selectat_context",
 
             ],
         },
