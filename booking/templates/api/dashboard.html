@@ -3,110 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <title>API Dashboard</title>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <style>
-        body {
-            background: #f4f6f9;
-            padding: 30px;
-        }
-
-        .card {
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .danger-zone {
-            color: red;
-            font-weight: bold;
-        }
+        body { background: #f4f6f9; padding: 30px; }
+        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
-
 <div class="container">
 
-    <h1 class="mb-4">🔥 API Dashboard (TEST MODE)</h1>
+    <h1 class="mb-4">API Dashboard (TEST MODE)</h1>
 
     <div class="alert alert-warning">
-        ⚠️ Acest dashboard folosește doar datele din <b>API_TEST</b> și NU afectează aplicația reală.
+        Acest dashboard foloseste doar datele din <b>API_TEST</b> si NU afecteaza aplicatia reala.
     </div>
 
-    <!-- ADD -->
+    <!-- ADAUGA -->
     <div class="card p-3 mb-4">
-        <h5>Adaugă Mașină</h5>
+        <h5>Adauga Masina</h5>
         <input type="text" id="nume" class="form-control mb-2" placeholder="Nume masina">
-        <button class="btn btn-primary" onclick="adaugaMasina()">Adaugă</button>
+        <button class="btn btn-primary" onclick="adaugaMasina()">Adauga</button>
     </div>
 
-    <!-- LIST -->
-    <div class="card p-3">
-        <h5>Lista Mașini</h5>
+    <!-- LISTA -->
+    <div class="card p-3 mb-4">
+        <h5>Lista Masini (API_TEST)</h5>
         <div id="lista"></div>
     </div>
 
-</div>
+    <!-- STATISTICI -->
+    <div class="card p-3 mt-2">
+        <h4>Statistici saptamana curenta</h4>
 
+        <label class="mt-2">Camin</label>
+        <select id="camin" class="form-control mb-2" onchange="selectCamin()">
+            <option value="">-- Selecteaza camin --</option>
+        </select>
+        <div id="stat_camin"></div>
 
-<div class="card p-3 mt-4">
-    <h4>📊 Statistici inteligente</h4>
+        <label class="mt-3">Masina</label>
+        <select id="masina" class="form-control mb-2" onchange="selectMasina()">
+            <option value="">-- Selecteaza masina --</option>
+        </select>
+        <div id="stat_masina"></div>
 
-    <!-- CAMIN -->
-    <label>Cămin</label>
-    <select id="camin" class="form-control mb-2" onchange="selectCamin()"></select>
-
-    <div id="stat_camin"></div>
-
-    <!-- MASINA -->
-    <label class="mt-3">Mașină</label>
-    <select id="masina" class="form-control mb-2" onchange="selectMasina()"></select>
-
-    <div id="stat_masina"></div>
-
-    <!-- ZI -->
-    <label class="mt-3">Zi</label>
-    <input type="date" id="zi" class="form-control mb-2" onchange="selectZi()">
-
-    <div id="stat_zi"></div>
+        <label class="mt-3">Zi</label>
+        <input type="date" id="zi" class="form-control mb-2" onchange="selectZi()">
+        <div id="stat_zi"></div>
+    </div>
 
 </div>
 
 <script>
 
+// =========================
+// MASINI
+// =========================
+
 async function incarcaMasini() {
-    let res = await fetch('/api/masini/');
-    let data = await res.json();
+    const res = await fetch('/api/masini/');
+    const data = await res.json();
 
     let html = '';
-
     data.forEach(m => {
         html += `
             <div class="card p-2 mb-2">
-                <b>${m.nume}</b> (ID: ${m.id})
-                <br>
-                Activa: ${m.activa}
-
-                <br><br>
-
-                <button class="btn btn-sm btn-danger" onclick="stergeMasina(${m.id})">Șterge</button>
-                <button class="btn btn-sm btn-warning" onclick="editMasina(${m.id})">Edit</button>
+                <b>${m.nume}</b> (ID: ${m.id}) — Activa: ${m.activa}
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-danger" onclick="stergeMasina(${m.id})">Sterge</button>
+                    <button class="btn btn-sm btn-warning" onclick="editMasina(${m.id})">Edit</button>
+                </div>
             </div>
         `;
     });
 
-    document.getElementById('lista').innerHTML = html;
+    document.getElementById('lista').innerHTML = html || '<p class="text-muted">Nicio masina gasita.</p>';
 }
 
 async function adaugaMasina() {
-    let nume = document.getElementById('nume').value;
-
-    if (!nume) return alert("Scrie un nume");
+    const nume = document.getElementById('nume').value.trim();
+    if (!nume) return alert('Scrie un nume pentru masina.');
 
     await fetch('/api/masini/', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nume: nume })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nume })
     });
 
     document.getElementById('nume').value = '';
@@ -114,105 +95,131 @@ async function adaugaMasina() {
 }
 
 async function stergeMasina(id) {
-    if (!confirm("Sigur vrei să ștergi?")) return;
+    if (!confirm('Sigur vrei sa stergi aceasta masina?')) return;
 
-    await fetch(`/api/masini/${id}/`, {
-        method: 'DELETE'
-    });
-
+    await fetch(`/api/masini/${id}/`, { method: 'DELETE' });
     incarcaMasini();
 }
 
 async function editMasina(id) {
-    let nume = prompt("Nume nou:");
-
-    if (!nume) return;
+    const nume = prompt('Nume nou:');
+    if (!nume || !nume.trim()) return;
 
     await fetch(`/api/masini/${id}/`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nume: nume })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nume: nume.trim() })
     });
 
     incarcaMasini();
 }
 
+// =========================
+// STATISTICI
+// =========================
 
-// 🔹 load camine
 async function loadCamine() {
-    let res = await fetch('/api/camine/');
-    let data = await res.json();
+    const res = await fetch('/api/camine/');
+    const data = await res.json();
 
-    let html = '<option value="">Selecteaza camin</option>';
-
+    const select = document.getElementById('camin');
     data.forEach(c => {
-        html += `<option value="${c.id}">${c.nume}</option>`;
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nume;
+        select.appendChild(opt);
     });
-
-    document.getElementById('camin').innerHTML = html;
 }
 
-// 🔹 select camin
 async function selectCamin() {
-    let camin = document.getElementById('camin').value;
+    const camin = document.getElementById('camin').value;
 
-    let res = await fetch(`/api/statistici/avansate/?camin_id=${camin}`);
-    let data = await res.json();
+    // reset masina si zi la schimbarea caminului
+    document.getElementById('masina').innerHTML = '<option value="">-- Selecteaza masina --</option>';
+    document.getElementById('stat_masina').innerHTML = '';
+    document.getElementById('zi').value = '';
+    document.getElementById('stat_zi').innerHTML = '';
 
-    afiseaza("stat_camin", data);
+    if (!camin) {
+        document.getElementById('stat_camin').innerHTML = '';
+        return;
+    }
 
-    // 🔥 load masini pentru camin
-    let res2 = await fetch(`/api/masini-camin/?camin_id=${camin}`);
-    let masini = await res2.json();
+    const [statRes, masiniRes] = await Promise.all([
+        fetch(`/api/statistici/avansate/?camin_id=${camin}`),
+        fetch(`/api/masini-camin/?camin_id=${camin}`)
+    ]);
 
-    let html = '<option value="">Selecteaza masina</option>';
+    const statData = await statRes.json();
+    const masini = await masiniRes.json();
+
+    afiseaza('stat_camin', statData);
+
+    const select = document.getElementById('masina');
     masini.forEach(m => {
-        html += `<option value="${m.id}">${m.nume}</option>`;
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.nume;
+        select.appendChild(opt);
     });
-
-    document.getElementById('masina').innerHTML = html;
 }
 
-// 🔹 select masina
 async function selectMasina() {
-    let camin = document.getElementById('camin').value;
-    let masina = document.getElementById('masina').value;
+    const camin = document.getElementById('camin').value;
+    const masina = document.getElementById('masina').value;
 
-    let res = await fetch(`/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}`);
-    let data = await res.json();
+    document.getElementById('zi').value = '';
+    document.getElementById('stat_zi').innerHTML = '';
 
-    afiseaza("stat_masina", data);
+    if (!masina) {
+        document.getElementById('stat_masina').innerHTML = '';
+        return;
+    }
+
+    const res = await fetch(`/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}`);
+    const data = await res.json();
+    afiseaza('stat_masina', data);
 }
 
-// 🔹 select zi
 async function selectZi() {
-    let camin = document.getElementById('camin').value;
-    let masina = document.getElementById('masina').value;
-    let zi = document.getElementById('zi').value;
+    const camin = document.getElementById('camin').value;
+    const masina = document.getElementById('masina').value;
+    const zi = document.getElementById('zi').value;
 
-    let res = await fetch(`/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}&zi=${zi}`);
-    let data = await res.json();
+    if (!zi) {
+        document.getElementById('stat_zi').innerHTML = '';
+        return;
+    }
 
-    afiseaza("stat_zi", data);
+    const res = await fetch(`/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}&zi=${zi}`);
+    const data = await res.json();
+    afiseaza('stat_zi', data);
 }
 
-// 🔹 afisare generica
-function afiseaza(div, data) {
-    let html = `<b>Total rezervari:</b> ${data.total}<br><br><b>Rezervari pe prioritati:</b><br>`;
+function afiseaza(divId, data) {
+    let html = `<div class="alert alert-info mt-2">
+        <b>Total rezervari:</b> ${data.total}<br><br>
+        <b>Pe prioritati:</b><br>`;
 
-    data.prioritati.forEach(p => {
-        html += `P${p.nivel_prioritate}: ${p.count}<br>`;
-    });
+    if (data.prioritati.length === 0) {
+        html += '<i>Nicio rezervare gasita.</i>';
+    } else {
+        data.prioritati.forEach(p => {
+            html += `Prioritate ${p.nivel_prioritate}: <b>${p.count}</b><br>`;
+        });
+    }
 
-    document.getElementById(div).innerHTML = html;
+    html += '</div>';
+    document.getElementById(divId).innerHTML = html;
 }
 
-// init
+// =========================
+// INIT
+// =========================
+
 loadCamine();
-
 incarcaMasini();
 
 </script>
-
 </body>
 </html>
