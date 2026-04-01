@@ -1,7 +1,6 @@
 # booking/context_processors.py
 
-from booking.models import AdminCamin, ProfilStudent
-
+from booking.models import AdminCamin, ProfilStudent ,Camin
 def rol_utilizator(request):
     user = request.user
     context = {}
@@ -9,41 +8,42 @@ def rol_utilizator(request):
     if user.is_authenticated:
         context['user'] = user
 
-        from booking.models import AdminCamin, ProfilStudent, Camin
-
-        # Verifică dacă e admin de cămin
         admin_camin = AdminCamin.objects.filter(email=user.email).first()
+        student = ProfilStudent.objects.filter(utilizator=user).first()
 
-    if admin_camin:
-        context['rol'] = 'admin_camin'
-        context['is_admin_camin'] = True
+        if admin_camin:
+            context['rol'] = 'admin_camin'
+            context['is_admin_camin'] = True
 
-        # 👑 SUPER ADMIN
-        if admin_camin.is_super_admin:
-            context['is_super_admin'] = True
+            if admin_camin.is_super_admin:
+                context['is_super_admin'] = True
 
-            camine = Camin.objects.all()
-            context['camine_disponibile'] = camine
+                camine = Camin.objects.all()
+                context['camine_disponibile'] = camine
 
-            camin_id = request.session.get("camin_selectat")
+                camin_id = request.session.get("camin_selectat")
 
-            # 🔥 dacă NU există în sesiune → setăm primul
-            if camin_id:
-                camin_selectat = camine.filter(id=camin_id).first()
+                if camin_id:
+                    camin_selectat = camine.filter(id=camin_id).first()
+                else:
+                    camin_selectat = camine.first()
+                    if camin_selectat:
+                        request.session["camin_selectat"] = camin_selectat.id
+
+                context['camin_selectat'] = camin_selectat
+                context['nume_camin'] = camin_selectat.nume if camin_selectat else "Super Admin"
+
             else:
-                camin_selectat = camine.first()
-                if camin_selectat:
-                    request.session["camin_selectat"] = camin_selectat.id
+                context['is_super_admin'] = False
+                context['camin_selectat'] = admin_camin.camin
+                context['nume_camin'] = admin_camin.camin.nume if admin_camin.camin else "Fără cămin"
+                context['camine_disponibile'] = [admin_camin.camin] if admin_camin.camin else []
 
-            context['camin_selectat'] = camin_selectat
-            context['nume_camin'] = camin_selectat.nume if camin_selectat else "Super Admin"
-
-
-        else:
+        elif student:
+            context['rol'] = 'student'
+            context['is_admin_camin'] = False
             context['is_super_admin'] = False
-            context['camin_selectat'] = admin_camin.camin
-            context['nume_camin'] = admin_camin.camin.nume if admin_camin.camin else "Fără cămin"
-            context['camine_disponibile'] = [admin_camin.camin] if admin_camin.camin else []
+            context['nume_camin'] = student.camin.nume if student.camin else "Nedefinit"
 
     return context
 
