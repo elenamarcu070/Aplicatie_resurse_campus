@@ -44,8 +44,9 @@ def masini_list(request):
 def masina_detail(request, id):
     camin_test = get_camin_test()
 
-    if not camin_test:  # adauga aceasta verificare
+    if not camin_test:
         return JsonResponse({"error": "Camin API_TEST nu exista"}, status=400)
+
     try:
         masina = Masina.objects.get(id=id)
     except Masina.DoesNotExist:
@@ -67,7 +68,6 @@ def masina_detail(request, id):
     if request.method == 'DELETE':
         masina.delete()
         return JsonResponse({"message": "Masina stearsa"}, status=200)
-
 
 
 def statistici_avansate(request):
