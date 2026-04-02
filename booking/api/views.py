@@ -3,13 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count
 from datetime import date, timedelta
 import json
-
 from booking.models import Masina, Rezervare, Camin
 
-
-# =========================
-# UTIL
-# =========================
 
 def get_camin_test():
     try:
@@ -17,10 +12,6 @@ def get_camin_test():
     except Camin.DoesNotExist:
         return None
 
-
-# =========================
-# MASINI - COLLECTION
-# =========================
 
 @csrf_exempt
 def masini_list(request):
@@ -49,13 +40,13 @@ def masini_list(request):
         return JsonResponse({"message": "Masini TEST sterse"}, status=200)
 
 
-# =========================
-# MASINI - ITEM
-# =========================
-
 @csrf_exempt
 def masina_detail(request, id):
     camin_test = get_camin_test()
+
+    if not camin_test:  # adauga aceasta verificare
+        return JsonResponse({"error": "Camin API_TEST nu exista"}, status=400)
+
 
     try:
         masina = Masina.objects.get(id=id)
@@ -80,9 +71,6 @@ def masina_detail(request, id):
         return JsonResponse({"message": "Masina stearsa"}, status=200)
 
 
-# =========================
-# STATISTICI
-# =========================
 
 def statistici_avansate(request):
     camin_id = request.GET.get('camin_id')
