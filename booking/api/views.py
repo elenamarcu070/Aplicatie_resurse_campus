@@ -131,11 +131,3 @@ def get_masini(request):
     data = list(masini.values('id', 'nume'))
     return JsonResponse(data, safe=False)
 
-
-def get_toate_masinile(request):
-    camin_id = request.GET.get('camin_id')
-    masini = Masina.objects.all()
-    if camin_id:
-        masini = masini.filter(camin_id=camin_id)
-    data = list(masini.values('id', 'nume', 'camin_id'))
-    return JsonResponse(data, safe=False)
