@@ -18,39 +18,34 @@
         Acest dashboard foloseste doar datele din <b>API_TEST</b> si NU afecteaza aplicatia reala.
     </div>
 
-    <!-- ADAUGA O MASINA (POST) -->
     <div class="card p-3 mb-4">
-        <h5>Adauga Masina (POST)</h5>
+        <h5>Adauga Masina </h5>
         <input type="text" id="nume" class="form-control mb-2" placeholder="Nume masina">
         <button class="btn btn-primary" onclick="adaugaMasina()">Adauga</button>
     </div>
 
-    <!-- LISTA MASINI -->
     <div class="card p-3 mb-4">
         <h5>Lista Masini (API_TEST)</h5>
         <div id="lista"></div>
     </div>
 
-    <!-- OPERATII PE COLECTIE -->
     <div class="card p-3 mb-4">
-        <h5>Operatii pe toata lista</h5>
 
-        <!-- DELETE TOT -->
         <button class="btn btn-danger mb-3" onclick="stergeToate()">
-            Sterge toate masinile TEST (DELETE)
+            Sterge toate masinile TEST
         </button>
 
         <hr>
 
         <!-- PUT - INLOCUIESTE LISTA -->
-        <h6>Inlocuieste toata lista (PUT)</h6>
+        <h6>Inlocuieste toata lista</h6>
         <p class="text-muted" style="font-size: 13px;">
             Scrie cate un nume per rand. Lista existenta va fi stearsa si inlocuita cu cea noua.
         </p>
         <textarea id="lista_noua" class="form-control mb-2" rows="4"
-            placeholder="Dacia&#10;Logan&#10;Sandero"></textarea>
+            placeholder="Masina 1&#10;Masina 2&#10;Masina 3"></textarea>
         <button class="btn btn-warning" onclick="inlocuiesteLista()">
-            Inlocuieste lista (PUT)
+            Inlocuieste lista
         </button>
     </div>
 
