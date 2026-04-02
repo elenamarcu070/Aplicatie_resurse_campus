@@ -46,8 +46,6 @@ def masina_detail(request, id):
 
     if not camin_test:  # adauga aceasta verificare
         return JsonResponse({"error": "Camin API_TEST nu exista"}, status=400)
-
-
     try:
         masina = Masina.objects.get(id=id)
     except Masina.DoesNotExist:
