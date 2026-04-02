@@ -18,17 +18,40 @@
         Acest dashboard foloseste doar datele din <b>API_TEST</b> si NU afecteaza aplicatia reala.
     </div>
 
-    <!-- ADAUGA -->
+    <!-- ADAUGA O MASINA (POST) -->
     <div class="card p-3 mb-4">
-        <h5>Adauga Masina</h5>
+        <h5>Adauga Masina (POST)</h5>
         <input type="text" id="nume" class="form-control mb-2" placeholder="Nume masina">
         <button class="btn btn-primary" onclick="adaugaMasina()">Adauga</button>
     </div>
 
-    <!-- LISTA -->
+    <!-- LISTA MASINI -->
     <div class="card p-3 mb-4">
         <h5>Lista Masini (API_TEST)</h5>
         <div id="lista"></div>
+    </div>
+
+    <!-- OPERATII PE COLECTIE -->
+    <div class="card p-3 mb-4">
+        <h5>Operatii pe toata lista</h5>
+
+        <!-- DELETE TOT -->
+        <button class="btn btn-danger mb-3" onclick="stergeToate()">
+            Sterge toate masinile TEST (DELETE)
+        </button>
+
+        <hr>
+
+        <!-- PUT - INLOCUIESTE LISTA -->
+        <h6>Inlocuieste toata lista (PUT)</h6>
+        <p class="text-muted" style="font-size: 13px;">
+            Scrie cate un nume per rand. Lista existenta va fi stearsa si inlocuita cu cea noua.
+        </p>
+        <textarea id="lista_noua" class="form-control mb-2" rows="4"
+            placeholder="Dacia&#10;Logan&#10;Sandero"></textarea>
+        <button class="btn btn-warning" onclick="inlocuiesteLista()">
+            Inlocuieste lista (PUT)
+        </button>
     </div>
 
     <!-- STATISTICI -->
@@ -57,7 +80,7 @@
 <script>
 
 // =========================
-// MASINI
+// MASINI - ITEM
 // =========================
 
 async function incarcaMasini() {
@@ -115,6 +138,45 @@ async function editMasina(id) {
 }
 
 // =========================
+// MASINI - COLLECTION
+// =========================
+
+async function stergeToate() {
+    if (!confirm('Sigur vrei sa stergi TOATE masinile din API_TEST?')) return;
+
+    const res = await fetch('/api/masini/', {
+        method: 'DELETE'
+    });
+
+    const data = await res.json();
+    alert(data.message);
+    incarcaMasini();
+}
+
+async function inlocuiesteLista() {
+    const text = document.getElementById('lista_noua').value.trim();
+    if (!text) return alert('Scrie cel putin un nume de masina.');
+
+    const lista = text
+        .split('\n')
+        .map(nume => nume.trim())
+        .filter(nume => nume !== '')
+        .map(nume => ({ nume }));
+
+    const res = await fetch('/api/masini/', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lista)
+    });
+
+    const data = await res.json();
+    alert(data.message + ' — ' + data.masini.length + ' masini adaugate');
+
+    document.getElementById('lista_noua').value = '';
+    incarcaMasini();
+}
+
+// =========================
 // STATISTICI
 // =========================
 
@@ -134,7 +196,6 @@ async function loadCamine() {
 async function selectCamin() {
     const camin = document.getElementById('camin').value;
 
-    // reset masina si zi la schimbarea caminului
     document.getElementById('masina').innerHTML = '<option value="">-- Selecteaza masina --</option>';
     document.getElementById('stat_masina').innerHTML = '';
     document.getElementById('zi').value = '';

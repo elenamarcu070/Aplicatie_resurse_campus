@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count
 from datetime import date, timedelta
 import json
+
 from booking.models import Masina, Rezervare, Camin
 
 
@@ -35,9 +36,31 @@ def masini_list(request):
         )
         return JsonResponse({"message": "Masina creata (TEST)", "id": masina.id}, status=201)
 
+    if request.method == 'PUT':
+        data = json.loads(request.body)
+
+        if not isinstance(data, list):
+            return JsonResponse({"error": "Se asteapta o lista de masini"}, status=400)
+
+        Masina.objects.filter(camin=camin_test).delete()
+
+        masini_create = []
+        for item in data:
+            masina = Masina.objects.create(
+                nume=item.get('nume'),
+                camin=camin_test,
+                activa=True
+            )
+            masini_create.append({"id": masina.id, "nume": masina.nume})
+
+        return JsonResponse({
+            "message": "Lista inlocuita",
+            "masini": masini_create
+        }, status=200)
+
     if request.method == 'DELETE':
         Masina.objects.filter(camin=camin_test).delete()
-        return JsonResponse({"message": "Masini TEST sterse"}, status=200)
+        return JsonResponse({"message": "Toate masinile TEST au fost sterse"}, status=200)
 
 
 @csrf_exempt
@@ -97,10 +120,6 @@ def statistici_avansate(request):
     return JsonResponse({"total": total, "prioritati": list(prioritati)})
 
 
-# =========================
-# CAMINE / MASINI DROPDOWN
-# =========================
-
 def get_camine(request):
     data = list(Camin.objects.values('id', 'nume'))
     return JsonResponse(data, safe=False)
@@ -110,4 +129,13 @@ def get_masini(request):
     camin_id = request.GET.get('camin_id')
     masini = Masina.objects.filter(camin_id=camin_id)
     data = list(masini.values('id', 'nume'))
+    return JsonResponse(data, safe=False)
+
+
+def get_toate_masinile(request):
+    camin_id = request.GET.get('camin_id')
+    masini = Masina.objects.all()
+    if camin_id:
+        masini = masini.filter(camin_id=camin_id)
+    data = list(masini.values('id', 'nume', 'camin_id'))
     return JsonResponse(data, safe=False)
