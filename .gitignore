@@ -1,5 +1,8 @@
 # Ignoră fișiere sensibile și generate automat
 .env
+env/
+venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -9,3 +12,4 @@ db.sqlite3
 /media/
 .postman/
 postman/
+.claude/

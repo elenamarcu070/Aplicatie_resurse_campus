@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "TAD - Spalatorie API",
+    "description": "Colectie Postman pentru tema REST (Modul 2 & 3). Ruleaza: python manage.py runserver",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://127.0.0.1:8000" }
+  ],
+  "item": [
+    {
+      "name": "API Root",
+      "request": { "method": "GET", "url": "{{base}}/api/" }
+    },
+    {
+      "name": "Collection - GET masini",
+      "request": { "method": "GET", "url": "{{base}}/api/masini/" }
+    },
+    {
+      "name": "Collection - POST masina",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"nume\": \"Masina Test 1\"}" },
+        "url": "{{base}}/api/masini/"
+      }
+    },
+    {
+      "name": "Collection - PUT inlocuieste lista",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"nume\": \"M1\"},{\"nume\": \"M2\"}]"
+        },
+        "url": "{{base}}/api/masini/"
+      }
+    },
+    {
+      "name": "Collection - DELETE toate",
+      "request": { "method": "DELETE", "url": "{{base}}/api/masini/" }
+    },
+    {
+      "name": "Item - GET masina",
+      "request": { "method": "GET", "url": "{{base}}/api/masini/1/" }
+    },
+    {
+      "name": "Item - PUT update/create",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"nume\": \"Masina Actualizata\"}" },
+        "url": "{{base}}/api/masini/1/"
+      }
+    },
+    {
+      "name": "Item - POST cu ID fix",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"nume\": \"Masina ID 99\"}" },
+        "url": "{{base}}/api/masini/99/"
+      }
+    },
+    {
+      "name": "Item - DELETE masina",
+      "request": { "method": "DELETE", "url": "{{base}}/api/masini/1/" }
+    },
+    {
+      "name": "Statistici - GET",
+      "request": {
+        "method": "GET",
+        "url": "{{base}}/api/statistici/avansate/?camin_id=1"
+      }
+    }
+  ]
+}

@@ -1,71 +1,273 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <title>API Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body { background: #efddef; padding: 30px; }
-        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body {
+            margin: 0;
+            padding: 30px 0;
+            background-image: url('{% static "images/fundal_autentificare.png" %}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .api-badge {
+            font-size: 10px;
+            background-color: #f0e6ff;
+            color: #7c4dbd;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-weight: 500;
+            float: right;
+        }
+
+        .masina-card {
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+
+        .rate-box {
+            background: linear-gradient(135deg, #f0e6ff, #e8f4fd);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .rate-number {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #7c4dbd;
+        }
+
+        .holiday-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .holiday-item:last-child { border-bottom: none; }
+
+        .stat-box {
+            background: #f0e6ff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .alert-warning {
+            background-color: rgba(255, 243, 205, 0.9);
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        select.form-select, input.form-control, textarea.form-control {
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        select.form-select:focus, input.form-control:focus, textarea.form-control:focus {
+            border-color: #7c4dbd;
+            box-shadow: 0 0 0 0.2rem rgba(124,77,189,0.15);
+        }
+
+        .btn-primary {
+            background-color: #7c4dbd;
+            border-color: #7c4dbd;
+        }
+        .btn-primary:hover {
+            background-color: #6a3da8;
+            border-color: #6a3da8;
+        }
+
+        .api-log {
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .api-log .ok { color: #4ec9b0; }
+        .api-log .err { color: #f48771; }
+        .tad-check { font-size: 13px; margin-bottom: 4px; }
+        .tad-check i { width: 18px; color: #28a745; }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="container" style="max-width: 900px;">
 
-    <h1 class="mb-4">API Dashboard (TEST MODE)</h1>
+    <!-- HEADER -->
+    <div class="page-header d-flex align-items-center justify-content-between">
+        <div>
+            <h3 class="mb-1 fw-bold" style="color:#333;">API Dashboard</h3>
+            <small class="text-muted">Demonstratie REST API + API-uri publice</small>
+        </div>
+        <span class="badge" style="background:#7c4dbd; font-size:13px; padding:6px 14px; border-radius:20px;">TEST MODE</span>
+    </div>
 
-    <div class="alert alert-warning">
+    <div class="alert alert-warning mb-4">
         Acest dashboard foloseste doar datele din <b>API_TEST</b> si NU afecteaza aplicatia reala.
+        Datele sunt persistate in baza de date (SQLite local sau PostgreSQL pe cloud).
     </div>
 
-    <div class="card p-3 mb-4">
-        <h5>Adauga Masina </h5>
-        <input type="text" id="nume" class="form-control mb-2" placeholder="Nume masina">
-        <button class="btn btn-primary" onclick="adaugaMasina()">Adauga</button>
+    <!-- TAD CHECKLIST -->
+    <div class="card p-4 mb-4">
+        <div class="card-title">Cerinte TAD acoperite</div>
+        <div class="tad-check"><i class="fas fa-check-circle"></i> Modul 1: API-uri publice (ipapi &rarr; nager, currency-api, qrserver)</div>
+        <div class="tad-check"><i class="fas fa-check-circle"></i> Modul 2: REST pe <code>/api/masini/</code> — GET, POST, PUT, DELETE (colectie + item)</div>
+        <div class="tad-check"><i class="fas fa-check-circle"></i> Modul 3: operatiuni in baza de date (Django ORM)</div>
+        <div class="tad-check"><i class="fas fa-check-circle"></i> Coduri HTTP: 200, 201, 400, 404, 405, 409</div>
+        <div class="tad-check"><i class="fas fa-check-circle"></i> Documentatie API: <a href="/api/" target="_blank">GET /api/</a></div>
     </div>
 
-    <div class="card p-3 mb-4">
-        <h5>Lista Masini (API_TEST)</h5>
+    <!-- JURNAL API -->
+    <div class="card p-4 mb-4">
+        <div class="card-title">Jurnal raspunsuri API (ultimele cereri)</div>
+        <div id="api_log" class="api-log text-muted">Nicio cerere inca.</div>
+    </div>
+
+    <!-- API-URI PUBLICE -->
+    <div class="row mb-4">
+        <!-- SARBATORI -->
+        <div class="col-md-6 mb-3">
+            <div class="card p-4 h-100">
+                <div class="card-title">
+                    Sarbatori legale
+                    <span class="api-badge">ipapi.co → date.nager.at</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <label class="mb-0 text-muted" style="white-space:nowrap; font-size:13px;">Tara:</label>
+                    <select id="tara_select" class="form-select form-select-sm" onchange="fetchSarbatoriPentruTara(this.value)">
+                        <option value="RO">🇷🇴 Romania</option>
+                        <option value="DE">🇩🇪 Germania</option>
+                        <option value="FR">🇫🇷 Franta</option>
+                        <option value="IT">🇮🇹 Italia</option>
+                        <option value="ES">🇪🇸 Spania</option>
+                        <option value="GB">🇬🇧 Marea Britanie</option>
+                        <option value="HU">🇭🇺 Ungaria</option>
+                        <option value="BG">🇧🇬 Bulgaria</option>
+                        <option value="MD">🇲🇩 Moldova</option>
+                        <option value="US">🇺🇸 SUA</option>
+                    </select>
+                </div>
+                <div id="sarbatori"><span class="text-muted">Se incarca...</span></div>
+            </div>
+        </div>
+
+        <!-- CURS VALUTAR -->
+        <div class="col-md-6 mb-3">
+            <div class="card p-4 h-100">
+                <div class="card-title">
+                    <span id="curs_titlu">Curs valutar</span>
+                    <span class="api-badge">currency-api</span>
+                </div>
+                <div id="curs"><span class="text-muted">Se incarca...</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADAUGA MASINA -->
+    <div class="card p-4 mb-4">
+        <div class="card-title">Adauga Masina (POST colectie)</div>
+        <div class="d-flex gap-2 mb-3">
+            <input type="text" id="nume" class="form-control" placeholder="Numele masinii">
+            <button class="btn btn-primary px-4" onclick="adaugaMasina()" style="white-space:nowrap;">
+                <i class="fas fa-plus me-1"></i>POST
+            </button>
+        </div>
+        <p class="text-muted mb-2" style="font-size:12px;">POST item cu ID fix (daca ID-ul nu exista):</p>
+        <div class="d-flex gap-2">
+            <input type="number" id="id_nou" class="form-control" placeholder="ID" style="max-width:90px;">
+            <input type="text" id="nume_id" class="form-control" placeholder="Nume masina">
+            <button class="btn btn-outline-primary" onclick="adaugaMasinaCuId()" style="white-space:nowrap;">POST /masini/id/</button>
+        </div>
+    </div>
+
+    <!-- LISTA MASINI -->
+    <div class="card p-4 mb-4">
+        <div class="card-title">
+            Lista Masini (API_TEST)
+            <span class="api-badge">qrserver.com</span>
+        </div>
         <div id="lista"></div>
     </div>
 
-    <div class="card p-3 mb-4">
+    <!-- ACTIUNI COLECTIE -->
+    <div class="card p-4 mb-4">
+        <div class="card-title">Operatiuni pe colectie</div>
 
         <button class="btn btn-danger mb-3" onclick="stergeToate()">
-            Sterge toate masinile TEST
+            <i class="fas fa-trash me-1"></i>Sterge toate masinile TEST
         </button>
 
         <hr>
 
-        <!-- PUT - INLOCUIESTE LISTA -->
-        <h6>Inlocuieste toata lista</h6>
-        <p class="text-muted" style="font-size: 13px;">
+        <p class="fw-semibold mb-1" style="font-size:14px;">Inlocuieste toata lista (PUT)</p>
+        <p class="text-muted" style="font-size:12px;">
             Scrie cate un nume per rand. Lista existenta va fi stearsa si inlocuita cu cea noua.
         </p>
         <textarea id="lista_noua" class="form-control mb-2" rows="4"
             placeholder="Masina 1&#10;Masina 2&#10;Masina 3"></textarea>
         <button class="btn btn-warning" onclick="inlocuiesteLista()">
-            Inlocuieste lista
+            <i class="fas fa-sync me-1"></i>Inlocuieste lista
         </button>
     </div>
 
     <!-- STATISTICI -->
-    <div class="card p-3 mt-2">
-        <h4>Statistici saptamana curenta</h4>
+    <div class="card p-4 mb-4">
+        <div class="card-title">Statistici saptamana curenta</div>
 
-        <label class="mt-2">Camin</label>
-        <select id="camin" class="form-control mb-2" onchange="selectCamin()">
+        <label class="text-muted mb-1" style="font-size:13px;">Camin</label>
+        <select id="camin" class="form-select mb-2" onchange="selectCamin()">
             <option value="">-- Selecteaza camin --</option>
         </select>
         <div id="stat_camin"></div>
 
-        <label class="mt-3">Masina</label>
-        <select id="masina" class="form-control mb-2" onchange="selectMasina()">
+        <label class="text-muted mt-2 mb-1" style="font-size:13px;">Masina</label>
+        <select id="masina" class="form-select mb-2" onchange="selectMasina()">
             <option value="">-- Selecteaza masina --</option>
         </select>
         <div id="stat_masina"></div>
 
-        <label class="mt-3">Zi</label>
+        <label class="text-muted mt-2 mb-1" style="font-size:13px;">Zi</label>
         <input type="date" id="zi" class="form-control mb-2" onchange="selectZi()">
         <div id="stat_zi"></div>
     </div>
@@ -74,22 +276,72 @@
 
 <script>
 
+const apiLogLines = [];
+
+function logApi(method, url, status, summary) {
+    const cls = status >= 200 && status < 300 ? 'ok' : 'err';
+    const line = `<div class="${cls}">[${status}] ${method} ${url} — ${summary}</div>`;
+    apiLogLines.unshift(line);
+    if (apiLogLines.length > 12) apiLogLines.pop();
+    document.getElementById('api_log').innerHTML = apiLogLines.join('');
+}
+
+async function apiCall(method, url, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    let data;
+    try { data = await res.json(); } catch (e) { data = {}; }
+    const summary = data.message || data.error || (Array.isArray(data) ? data.length + ' item(i)' : 'OK');
+    logApi(method, url, res.status, summary);
+    if (!res.ok && data.error) alert(data.error);
+    return { res, data };
+}
+
 // =========================
 // MASINI - ITEM
 // =========================
 
 async function incarcaMasini() {
-    const res = await fetch('/api/masini/');
-    const data = await res.json();
+    const { res, data } = await apiCall('GET', '/api/masini/');
+    if (!Array.isArray(data)) {
+        document.getElementById('lista').innerHTML = '<p class="text-danger">Eroare la incarcarea listei.</p>';
+        return;
+    }
 
     let html = '';
     data.forEach(m => {
+        const qrData = encodeURIComponent(`Masina: ${m.nume} | ID: ${m.id} | washtuiasi.ro`);
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
+        const statusBadge = m.activa
+            ? `<span class="badge bg-success" style="font-size:11px;">Activa</span>`
+            : `<span class="badge bg-secondary" style="font-size:11px;">Inactiva</span>`;
+
         html += `
-            <div class="card p-2 mb-2">
-                <b>${m.nume}</b> (ID: ${m.id}) — Activa: ${m.activa}
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-danger" onclick="stergeMasina(${m.id})">Sterge</button>
-                    <button class="btn btn-sm btn-warning" onclick="editMasina(${m.id})">Edit</button>
+            <div class="masina-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <b>${m.nume}</b>
+                            ${statusBadge}
+                            <span class="text-muted" style="font-size:12px;">ID: ${m.id}</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-danger" onclick="stergeMasina(${m.id})">
+                                <i class="fas fa-trash me-1"></i>Sterge
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="editMasina(${m.id})">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleQR(${m.id})">
+                                <i class="fas fa-qrcode me-1"></i>QR Code
+                            </button>
+                        </div>
+                    </div>
+                    <div id="qr_${m.id}" style="display:none; text-align:center; margin-left:12px;">
+                        <img src="${qrUrl}" alt="QR ${m.nume}" width="110" height="110" style="border-radius:8px;">
+                        <br><small class="text-muted" style="font-size:10px;">qrserver.com</small>
+                    </div>
                 </div>
             </div>
         `;
@@ -101,34 +353,31 @@ async function incarcaMasini() {
 async function adaugaMasina() {
     const nume = document.getElementById('nume').value.trim();
     if (!nume) return alert('Scrie un nume pentru masina.');
-
-    await fetch('/api/masini/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nume })
-    });
-
+    await apiCall('POST', '/api/masini/', { nume });
     document.getElementById('nume').value = '';
+    incarcaMasini();
+}
+
+async function adaugaMasinaCuId() {
+    const id = document.getElementById('id_nou').value;
+    const nume = document.getElementById('nume_id').value.trim();
+    if (!id || !nume) return alert('Completeaza ID si nume.');
+    await apiCall('POST', `/api/masini/${id}/`, { nume });
+    document.getElementById('id_nou').value = '';
+    document.getElementById('nume_id').value = '';
     incarcaMasini();
 }
 
 async function stergeMasina(id) {
     if (!confirm('Sigur vrei sa stergi aceasta masina?')) return;
-
-    await fetch(`/api/masini/${id}/`, { method: 'DELETE' });
+    await apiCall('DELETE', `/api/masini/${id}/`);
     incarcaMasini();
 }
 
 async function editMasina(id) {
     const nume = prompt('Nume nou:');
     if (!nume || !nume.trim()) return;
-
-    await fetch(`/api/masini/${id}/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nume: nume.trim() })
-    });
-
+    await apiCall('PUT', `/api/masini/${id}/`, { nume: nume.trim() });
     incarcaMasini();
 }
 
@@ -138,35 +387,17 @@ async function editMasina(id) {
 
 async function stergeToate() {
     if (!confirm('Sigur vrei sa stergi TOATE masinile din API_TEST?')) return;
-
-    const res = await fetch('/api/masini/', {
-        method: 'DELETE'
-    });
-
-    const data = await res.json();
-    alert(data.message);
+    const { data } = await apiCall('DELETE', '/api/masini/');
+    if (data.message) alert(data.message);
     incarcaMasini();
 }
 
 async function inlocuiesteLista() {
     const text = document.getElementById('lista_noua').value.trim();
     if (!text) return alert('Scrie cel putin un nume de masina.');
-
-    const lista = text
-        .split('\n')
-        .map(nume => nume.trim())
-        .filter(nume => nume !== '')
-        .map(nume => ({ nume }));
-
-    const res = await fetch('/api/masini/', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(lista)
-    });
-
-    const data = await res.json();
-    alert(data.message + ' — ' + data.masini.length + ' masini adaugate');
-
+    const lista = text.split('\n').map(n => n.trim()).filter(n => n !== '').map(n => ({ nume: n }));
+    const { data } = await apiCall('PUT', '/api/masini/', lista);
+    if (data.masini) alert(data.message + ' — ' + data.masini.length + ' masini adaugate');
     document.getElementById('lista_noua').value = '';
     incarcaMasini();
 }
@@ -176,9 +407,7 @@ async function inlocuiesteLista() {
 // =========================
 
 async function loadCamine() {
-    const res = await fetch('/api/camine/');
-    const data = await res.json();
-
+    const { data } = await apiCall('GET', '/api/camine/');
     const select = document.getElementById('camin');
     data.forEach(c => {
         const opt = document.createElement('option');
@@ -190,27 +419,17 @@ async function loadCamine() {
 
 async function selectCamin() {
     const camin = document.getElementById('camin').value;
-
     document.getElementById('masina').innerHTML = '<option value="">-- Selecteaza masina --</option>';
     document.getElementById('stat_masina').innerHTML = '';
     document.getElementById('zi').value = '';
     document.getElementById('stat_zi').innerHTML = '';
-
-    if (!camin) {
-        document.getElementById('stat_camin').innerHTML = '';
-        return;
-    }
-
-    const [statRes, masiniRes] = await Promise.all([
-        fetch(`/api/statistici/avansate/?camin_id=${camin}`),
-        fetch(`/api/masini-camin/?camin_id=${camin}`)
+    if (!camin) { document.getElementById('stat_camin').innerHTML = ''; return; }
+    const [statOut, masiniOut] = await Promise.all([
+        apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}`),
+        apiCall('GET', `/api/masini-camin/?camin_id=${camin}`)
     ]);
-
-    const statData = await statRes.json();
-    const masini = await masiniRes.json();
-
-    afiseaza('stat_camin', statData);
-
+    afiseaza('stat_camin', statOut.data);
+    const masini = masiniOut.data;
     const select = document.getElementById('masina');
     masini.forEach(m => {
         const opt = document.createElement('option');
@@ -223,17 +442,10 @@ async function selectCamin() {
 async function selectMasina() {
     const camin = document.getElementById('camin').value;
     const masina = document.getElementById('masina').value;
-
     document.getElementById('zi').value = '';
     document.getElementById('stat_zi').innerHTML = '';
-
-    if (!masina) {
-        document.getElementById('stat_masina').innerHTML = '';
-        return;
-    }
-
-    const res = await fetch(`/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}`);
-    const data = await res.json();
+    if (!masina) { document.getElementById('stat_masina').innerHTML = ''; return; }
+    const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}`);
     afiseaza('stat_masina', data);
 }
 
@@ -241,38 +453,112 @@ async function selectZi() {
     const camin = document.getElementById('camin').value;
     const masina = document.getElementById('masina').value;
     const zi = document.getElementById('zi').value;
-
-    if (!zi) {
-        document.getElementById('stat_zi').innerHTML = '';
-        return;
-    }
-
-    const res = await fetch(`/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}&zi=${zi}`);
-    const data = await res.json();
+    if (!zi) { document.getElementById('stat_zi').innerHTML = ''; return; }
+    const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}&zi=${zi}`);
     afiseaza('stat_zi', data);
 }
 
 function afiseaza(divId, data) {
-    let html = `<div class="alert alert-info mt-2">
-        <b>Total rezervari:</b> ${data.total}<br><br>
-        <b>Pe prioritati:</b><br>`;
-
-    if (data.prioritati.length === 0) {
-        html += '<i>Nicio rezervare gasita.</i>';
+    if (!data || data.error) {
+        document.getElementById(divId).innerHTML = '<p class="text-danger small">' + (data?.error || 'Eroare') + '</p>';
+        return;
+    }
+    let html = `<div class="stat-box"><b>Total rezervari: ${data.total}</b><br>`;
+    if (!data.prioritati || data.prioritati.length === 0) {
+        html += '<span class="text-muted">Nicio rezervare gasita.</span>';
     } else {
         data.prioritati.forEach(p => {
             html += `Prioritate ${p.nivel_prioritate}: <b>${p.count}</b><br>`;
         });
     }
-
     html += '</div>';
     document.getElementById(divId).innerHTML = html;
+}
+
+// =========================
+// API-URI PUBLICE
+// =========================
+
+async function loadSarbatori() {
+    try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        const ipData = await ipRes.json();
+        const countryCode = ipData.country_code || 'RO';
+        const select = document.getElementById('tara_select');
+        if ([...select.options].some(o => o.value === countryCode)) {
+            select.value = countryCode;
+        }
+        await fetchSarbatoriPentruTara(countryCode);
+    } catch(e) {
+        await fetchSarbatoriPentruTara('RO');
+    }
+}
+
+async function fetchSarbatoriPentruTara(countryCode) {
+    document.getElementById('sarbatori').innerHTML = '<span class="text-muted">Se incarca...</span>';
+    try {
+        const res = await fetch(`https://date.nager.at/api/v3/NextPublicHolidays/${countryCode}`);
+        const data = await res.json();
+        let html = '';
+        data.slice(0, 4).forEach(s => {
+            const d = new Date(s.date);
+            const formatat = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+            html += `<div class="holiday-item"><b>${formatat}</b> — ${s.localName}</div>`;
+        });
+        document.getElementById('sarbatori').innerHTML = html;
+    } catch(e) {
+        document.getElementById('sarbatori').innerHTML = '<span class="text-muted">Date indisponibile momentan.</span>';
+    }
+    await updateCursValutar(countryCode);
+}
+
+const MONEDE = {
+    RO: 'EUR', DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR',
+    GB: 'GBP', HU: 'HUF', BG: 'BGN', MD: 'MDL', US: 'USD'
+};
+
+const NUME_MONEDE = {
+    EUR: 'Euro', GBP: 'Lira sterlina', HUF: 'Forint maghiar',
+    BGN: 'Lev bulgar', MDL: 'Leu moldovenesc', USD: 'Dolar american'
+};
+
+async function updateCursValutar(countryCode) {
+    const moneda = MONEDE[countryCode] || 'EUR';
+    document.getElementById('curs_titlu').textContent = `Curs valutar ${moneda} / RON`;
+    document.getElementById('curs').innerHTML = '<span class="text-muted">Se incarca...</span>';
+    try {
+        const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${moneda.toLowerCase()}.min.json`);
+        const data = await res.json();
+        const ron = data[moneda.toLowerCase()].ron;
+        const costMoneda = (5 / ron).toFixed(4);
+        const numeMoneda = NUME_MONEDE[moneda] || moneda;
+
+        document.getElementById('curs').innerHTML = `
+            <div class="rate-box">
+                <div class="text-muted mb-1" style="font-size:12px;">${numeMoneda}</div>
+                <div class="rate-number">1 ${moneda} = ${ron.toFixed(4)} RON</div>
+            </div>
+            <div class="text-muted" style="font-size:13px; text-align:center;">
+                O spalare (5 RON) &asymp; <b>${costMoneda} ${moneda}</b>
+            </div>
+            <small class="text-muted d-block text-center mt-1">Actualizat: ${data.date}</small>
+        `;
+    } catch(e) {
+        document.getElementById('curs').innerHTML = '<span class="text-muted">Date indisponibile momentan.</span>';
+    }
+}
+
+function toggleQR(id) {
+    const el = document.getElementById('qr_' + id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 // =========================
 // INIT
 // =========================
 
+apiCall('GET', '/api/');
+loadSarbatori();
 loadCamine();
 incarcaMasini();
 
