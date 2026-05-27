@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import calendar
 
 from django.db.models import Count
 from django.http import JsonResponse
@@ -41,7 +42,7 @@ def api_root(request):
                     "methods": ["GET"],
                 },
                 "statistici": {
-                    "url": "/api/statistici/avansate/?camin_id=&masina_id=&zi=",
+                    "url": "/api/statistici/avansate/?camin_id=&period=saptamana|luna&referinta=YYYY-MM-DD&masina_id=&zi=",
                     "methods": ["GET"],
                 },
             },
@@ -196,18 +197,44 @@ PRIORITATE_LABELS = {
 }
 
 
+def _parse_referinta(value):
+    if not value:
+        return date.today()
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _period_bounds(period, referinta):
+    if period == "saptamana":
+        start = referinta - timedelta(days=referinta.weekday())
+        end = start + timedelta(days=6)
+    else:
+        start = referinta.replace(day=1)
+        last_day = calendar.monthrange(referinta.year, referinta.month)[1]
+        end = referinta.replace(day=last_day)
+    return start, end
+
+
 @require_http_methods(["GET"])
 def statistici_avansate(request):
     camin_id = request.GET.get("camin_id")
     masina_id = request.GET.get("masina_id")
     zi = request.GET.get("zi")
+    period = request.GET.get("period", "saptamana")
 
-    azi = date.today()
-    start_sapt = azi - timedelta(days=azi.weekday())
-    end_sapt = start_sapt + timedelta(days=6)
+    if period not in ("saptamana", "luna"):
+        return JsonResponse({"error": "period trebuie sa fie 'saptamana' sau 'luna'"}, status=400)
+
+    referinta = _parse_referinta(request.GET.get("referinta"))
+    if referinta is None:
+        return JsonResponse({"error": "referinta invalida (format YYYY-MM-DD)"}, status=400)
+
+    start, end = _period_bounds(period, referinta)
 
     rezervari = Rezervare.objects.filter(
-        data_rezervare__range=(start_sapt, end_sapt),
+        data_rezervare__range=(start, end),
         anulata=False,
     )
 
@@ -233,25 +260,36 @@ def statistici_avansate(request):
         row["data_rezervare"]: row["count"]
         for row in rezervari.values("data_rezervare").annotate(count=Count("id"))
     }
+
     per_zi = []
-    for i in range(7):
-        d = start_sapt + timedelta(days=i)
+    d = start
+    while d <= end:
+        if period == "saptamana":
+            label = ZI_SAPTAMANA[d.weekday()]
+        else:
+            label = str(d.day)
         per_zi.append(
             {
                 "data": d.isoformat(),
-                "zi": ZI_SAPTAMANA[d.weekday()],
+                "zi": label,
                 "count": counts_by_date.get(d, 0),
             }
         )
+        d += timedelta(days=1)
 
     return JsonResponse(
         {
             "total": total,
             "prioritati": prioritati,
             "per_zi": per_zi,
+            "period": period,
+            "perioada": {
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+            },
             "saptamana": {
-                "start": start_sapt.isoformat(),
-                "end": end_sapt.isoformat(),
+                "start": start.isoformat(),
+                "end": end.isoformat(),
             },
         },
         status=200,

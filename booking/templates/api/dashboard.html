@@ -209,6 +209,21 @@
             text-align: center;
             margin-top: 6px;
         }
+
+        .period-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .period-label {
+            flex: 1;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -221,14 +236,28 @@
         <div>
             <a href="/" class="btn-back d-inline-block mb-2"><i class="fas fa-arrow-left me-1"></i>Inapoi la aplicatie</a>
             <h3 class="mb-0 fw-bold" style="color:#333;">Panou spalatorie</h3>
-            <small class="text-muted" id="saptamana_label"></small>
         </div>
     </div>
 
-    <!-- STATISTICI (prioritar) -->
+    <!-- STATISTICI -->
     <p class="section-label px-1">Statistici rezervari</p>
     <div class="card p-4 mb-4">
-        <div class="card-title mb-3">Saptamana curenta</div>
+        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+            <select id="period_tip" class="form-select form-select-sm" style="width:auto; min-width:130px;" onchange="changePeriod()">
+                <option value="saptamana">Saptamana</option>
+                <option value="luna">Luna</option>
+            </select>
+            <div class="period-nav">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="shiftPeriod(-1)" title="Inapoi">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="period_label" class="period-label">—</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="shiftPeriod(1)" title="Inainte">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="goToday()">Azi</button>
+        </div>
 
         <label class="text-muted mb-1" style="font-size:13px;">Camin</label>
         <select id="camin" class="form-select mb-3" onchange="selectCamin()">
@@ -239,10 +268,10 @@
         <div id="charts_row" class="row mt-3 g-3">
             <div class="col-md-7">
                 <p class="text-muted mb-2" style="font-size:13px;">
-                    <i class="fas fa-chart-bar me-1"></i>Rezervari pe zile (saptamana curenta)
+                    <i class="fas fa-chart-bar me-1"></i><span id="chart_zile_titlu">Rezervari pe zile</span>
                 </p>
                 <div class="chart-wrap"><canvas id="chart_zile"></canvas></div>
-                <p class="chart-caption">Cat de aglomerata e fiecare zi</p>
+                <p class="chart-caption" id="chart_zile_caption">Evolutia rezervarilor in perioada selectata</p>
             </div>
             <div class="col-md-5">
                 <p class="text-muted mb-2" style="font-size:13px;">
@@ -378,17 +407,92 @@ function toast(msg, type = 'success') {
     setTimeout(() => el.remove(), 3500);
 }
 
-function setSaptamanaLabel() {
-    const azi = new Date();
-    const zi = azi.getDay();
-    const diff = zi === 0 ? -6 : 1 - zi;
-    const start = new Date(azi);
-    start.setDate(azi.getDate() + diff);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+let statPeriod = 'saptamana';
+let statReferinta = new Date();
+
+function toIsoDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function formatPeriodLabel(data) {
+    if (!data?.perioada) return '—';
+    const start = new Date(data.perioada.start + 'T12:00:00');
+    const end = new Date(data.perioada.end + 'T12:00:00');
+    if (data.period === 'luna') {
+        return start.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
+    }
     const fmt = d => d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
-    document.getElementById('saptamana_label').textContent =
-        `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+    return `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+}
+
+function updatePeriodUI(data) {
+    document.getElementById('period_label').textContent = formatPeriodLabel(data);
+    const isMonth = (data?.period || statPeriod) === 'luna';
+    document.getElementById('chart_zile_titlu').textContent =
+        isMonth ? 'Rezervari pe zile (luna)' : 'Rezervari pe zile (saptamana)';
+    document.getElementById('chart_zile_caption').textContent =
+        isMonth ? 'Cate rezervari sunt in fiecare zi a lunii' : 'Luni – Duminica';
+}
+
+function buildStatUrl() {
+    const camin = document.getElementById('camin').value;
+    if (!camin) return null;
+    const params = new URLSearchParams({
+        camin_id: camin,
+        period: statPeriod,
+        referinta: toIsoDate(statReferinta),
+    });
+    const masina = document.getElementById('masina').value;
+    const zi = document.getElementById('zi').value;
+    if (masina) params.set('masina_id', masina);
+    if (zi) params.set('zi', zi);
+    return `/api/statistici/avansate/?${params}`;
+}
+
+async function refreshStats() {
+    const url = buildStatUrl();
+    if (!url) return;
+    const { data, ok } = await apiCall('GET', url);
+    if (!ok) return;
+
+    updatePeriodUI(data);
+    const masina = document.getElementById('masina').value;
+    const zi = document.getElementById('zi').value;
+    if (zi) renderStat('stat_zi', data);
+    else if (masina) renderStat('stat_masina', data);
+    else renderStat('stat_camin', data);
+    updateCharts(data);
+}
+
+function changePeriod() {
+    statPeriod = document.getElementById('period_tip').value;
+    statReferinta = new Date();
+    document.getElementById('zi').value = '';
+    document.getElementById('stat_zi').innerHTML = '';
+    refreshStats();
+}
+
+function shiftPeriod(delta) {
+    const d = new Date(statReferinta);
+    if (statPeriod === 'saptamana') {
+        d.setDate(d.getDate() + delta * 7);
+    } else {
+        d.setMonth(d.getMonth() + delta);
+    }
+    statReferinta = d;
+    document.getElementById('zi').value = '';
+    document.getElementById('stat_zi').innerHTML = '';
+    refreshStats();
+}
+
+function goToday() {
+    statReferinta = new Date();
+    document.getElementById('zi').value = '';
+    document.getElementById('stat_zi').innerHTML = '';
+    refreshStats();
 }
 
 async function apiCall(method, url, body) {
@@ -543,6 +647,10 @@ function updateCharts(data) {
     }
     row.classList.add('visible');
 
+    const isMonth = data.period === 'luna';
+    const chartWrap = document.querySelector('#charts_row .col-md-7 .chart-wrap');
+    if (chartWrap) chartWrap.style.height = isMonth ? '280px' : '220px';
+
     if (chartZile) chartZile.destroy();
     chartZile = new Chart(document.getElementById('chart_zile'), {
         type: 'bar',
@@ -552,7 +660,7 @@ function updateCharts(data) {
                 label: 'Rezervari',
                 data: data.per_zi.map(d => d.count),
                 backgroundColor: 'rgba(124, 77, 189, 0.8)',
-                borderRadius: 8,
+                borderRadius: isMonth ? 4 : 8,
             }],
         },
         options: {
@@ -560,6 +668,13 @@ function updateCharts(data) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: isMonth ? 16 : 7,
+                    },
+                },
                 y: {
                     beginAtZero: true,
                     ticks: { stepSize: 1, precision: 0 },
@@ -676,6 +791,7 @@ async function selectCamin() {
 
     if (!camin) {
         document.getElementById('stat_camin').innerHTML = '';
+        document.getElementById('period_label').textContent = 'Selecteaza un camin';
         filtre.style.display = 'none';
         document.getElementById('charts_row').classList.remove('visible');
         destroyCharts();
@@ -683,12 +799,8 @@ async function selectCamin() {
     }
 
     filtre.style.display = 'block';
-    const [statOut, masiniOut] = await Promise.all([
-        apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}`),
-        apiCall('GET', `/api/masini-camin/?camin_id=${camin}`)
-    ]);
-    renderStat('stat_camin', statOut.data);
-    updateCharts(statOut.data);
+    const masiniOut = await apiCall('GET', `/api/masini-camin/?camin_id=${camin}`);
+    await refreshStats();
 
     if (masiniOut.ok && Array.isArray(masiniOut.data)) {
         const select = document.getElementById('masina');
@@ -709,36 +821,19 @@ async function selectMasina() {
 
     if (!masina) {
         document.getElementById('stat_masina').innerHTML = '';
-        const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}`);
-        renderStat('stat_camin', data);
-        updateCharts(data);
+        await refreshStats();
         return;
     }
 
-    const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}`);
-    renderStat('stat_masina', data);
-    updateCharts(data);
+    await refreshStats();
 }
 
 async function selectZi() {
-    const camin = document.getElementById('camin').value;
-    const masina = document.getElementById('masina').value;
     const zi = document.getElementById('zi').value;
     if (!zi) {
         document.getElementById('stat_zi').innerHTML = '';
-        let url = `/api/statistici/avansate/?camin_id=${camin}`;
-        if (masina) url += `&masina_id=${masina}`;
-        const { data } = await apiCall('GET', url);
-        if (masina) renderStat('stat_masina', data);
-        else renderStat('stat_camin', data);
-        updateCharts(data);
-        return;
     }
-    let url = `/api/statistici/avansate/?camin_id=${camin}&zi=${zi}`;
-    if (masina) url += `&masina_id=${masina}`;
-    const { data } = await apiCall('GET', url);
-    renderStat('stat_zi', data);
-    updateCharts(data);
+    await refreshStats();
 }
 
 // ——— API-uri publice ———
@@ -825,7 +920,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('DOMContentLoaded', () => {
     editModal = new bootstrap.Modal(document.getElementById('editModal'));
-    setSaptamanaLabel();
+    document.getElementById('period_label').textContent = 'Selecteaza un camin';
     loadSarbatori();
     loadCamine();
     incarcaMasini();
