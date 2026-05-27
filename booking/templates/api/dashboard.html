@@ -266,38 +266,6 @@
         </div>
     </div>
 
-    <!-- INFORMATII UTILE -->
-    <p class="section-label px-1">Informatii utile</p>
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="card p-4 h-100">
-                <div class="card-title"><i class="fas fa-calendar-alt me-2 text-muted"></i>Sarbatori legale</div>
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <label class="mb-0 text-muted" style="white-space:nowrap; font-size:13px;">Tara</label>
-                    <select id="tara_select" class="form-select form-select-sm" onchange="fetchSarbatoriPentruTara(this.value)">
-                        <option value="RO">🇷🇴 Romania</option>
-                        <option value="DE">🇩🇪 Germania</option>
-                        <option value="FR">🇫🇷 Franta</option>
-                        <option value="IT">🇮🇹 Italia</option>
-                        <option value="ES">🇪🇸 Spania</option>
-                        <option value="GB">🇬🇧 Marea Britanie</option>
-                        <option value="HU">🇭🇺 Ungaria</option>
-                        <option value="BG">🇧🇬 Bulgaria</option>
-                        <option value="MD">🇲🇩 Moldova</option>
-                        <option value="US">🇺🇸 SUA</option>
-                    </select>
-                </div>
-                <div id="sarbatori"><span class="text-muted">Se incarca...</span></div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card p-4 h-100">
-                <div class="card-title"><i class="fas fa-coins me-2 text-muted"></i><span id="curs_titlu">Curs valutar</span></div>
-                <div id="curs"><span class="text-muted">Se incarca...</span></div>
-            </div>
-        </div>
-    </div>
-
     <!-- MASINI TEST -->
     <p class="section-label px-1">Gestionare masini (mediu test)</p>
     <div class="card p-4 mb-4">
@@ -330,6 +298,38 @@
                 <i class="fas fa-sync me-1"></i>Inlocuieste lista
             </button>
         </details>
+    </div>
+
+    <!-- INFORMATII UTILE -->
+    <p class="section-label px-1">Informatii utile</p>
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card p-4 h-100">
+                <div class="card-title"><i class="fas fa-calendar-alt me-2 text-muted"></i>Sarbatori legale</div>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <label class="mb-0 text-muted" style="white-space:nowrap; font-size:13px;">Tara</label>
+                    <select id="tara_select" class="form-select form-select-sm" onchange="fetchSarbatoriPentruTara(this.value)">
+                        <option value="RO">🇷🇴 Romania</option>
+                        <option value="DE">🇩🇪 Germania</option>
+                        <option value="FR">🇫🇷 Franta</option>
+                        <option value="IT">🇮🇹 Italia</option>
+                        <option value="ES">🇪🇸 Spania</option>
+                        <option value="GB">🇬🇧 Marea Britanie</option>
+                        <option value="HU">🇭🇺 Ungaria</option>
+                        <option value="BG">🇧🇬 Bulgaria</option>
+                        <option value="MD">🇲🇩 Moldova</option>
+                        <option value="US">🇺🇸 SUA</option>
+                    </select>
+                </div>
+                <div id="sarbatori"><span class="text-muted">Se incarca...</span></div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card p-4 h-100">
+                <div class="card-title"><i class="fas fa-coins me-2 text-muted"></i><span id="curs_titlu">Curs valutar</span></div>
+                <div id="curs"><span class="text-muted">Se incarca...</span></div>
+            </div>
+        </div>
     </div>
 
 </div>
