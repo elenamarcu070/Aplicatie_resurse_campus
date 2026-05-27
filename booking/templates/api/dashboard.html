@@ -3,13 +3,15 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Panou spalatorie</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body {
             margin: 0;
-            padding: 30px 0;
+            padding: 24px 0 48px;
             background-image: url('{% static "images/fundal_autentificare.png" %}');
             background-size: cover;
             background-position: center;
@@ -22,8 +24,8 @@
             background-color: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 1.5rem 2rem;
-            margin-bottom: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .card {
@@ -40,14 +42,13 @@
             margin-bottom: 1rem;
         }
 
-        .api-badge {
-            font-size: 10px;
-            background-color: #f0e6ff;
+        .section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
             color: #7c4dbd;
-            border-radius: 20px;
-            padding: 2px 8px;
-            font-weight: 500;
-            float: right;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
         }
 
         .masina-card {
@@ -56,7 +57,9 @@
             padding: 12px 14px;
             margin-bottom: 10px;
             background: #fafafa;
+            transition: box-shadow 0.2s;
         }
+        .masina-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 
         .rate-box {
             background: linear-gradient(135deg, #f0e6ff, #e8f4fd);
@@ -77,22 +80,54 @@
             border-bottom: 1px solid #f0f0f0;
             font-size: 14px;
         }
-
         .holiday-item:last-child { border-bottom: none; }
 
-        .stat-box {
-            background: #f0e6ff;
-            border-radius: 10px;
-            padding: 10px 14px;
-            margin-top: 8px;
-            font-size: 14px;
+        .stat-summary {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .stat-pill {
+            flex: 1;
+            min-width: 100px;
+            background: linear-gradient(135deg, #f0e6ff, #faf5ff);
+            border-radius: 12px;
+            padding: 12px 14px;
+            text-align: center;
+        }
+        .stat-pill .num {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #7c4dbd;
+            line-height: 1.2;
+        }
+        .stat-pill .lbl {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
-        .alert-warning {
-            background-color: rgba(255, 243, 205, 0.9);
-            border: none;
-            border-radius: 12px;
-            font-size: 14px;
+        .priority-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .priority-bar {
+            flex: 1;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .priority-bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #7c4dbd, #9b6dd4);
+            border-radius: 4px;
         }
 
         select.form-select, input.form-control, textarea.form-control {
@@ -100,7 +135,6 @@
             border: 1px solid #ddd;
             font-size: 14px;
         }
-
         select.form-select:focus, input.form-control:focus, textarea.form-control:focus {
             border-color: #7c4dbd;
             box-shadow: 0 0 0 0.2rem rgba(124,77,189,0.15);
@@ -114,25 +148,132 @@
             background-color: #6a3da8;
             border-color: #6a3da8;
         }
+
+        .btn-back {
+            color: #7c4dbd;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-back:hover { color: #6a3da8; }
+
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast-msg {
+            background: #333;
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+            max-width: 320px;
+        }
+        .toast-msg.success { background: #2d6a4f; }
+        .toast-msg.error { background: #9d0208; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .loading-placeholder {
+            text-align: center;
+            padding: 24px;
+            color: #888;
+        }
+
+        details.bulk-ops summary {
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            user-select: none;
+        }
+        details.bulk-ops[open] summary { margin-bottom: 12px; color: #7c4dbd; }
+
+        #charts_row { display: none; }
+        #charts_row.visible { display: flex; }
+        .chart-wrap {
+            position: relative;
+            height: 220px;
+        }
+        .chart-caption {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
+
+<div id="toast-container"></div>
+
 <div class="container" style="max-width: 900px;">
 
-    <!-- HEADER -->
-    <div class="page-header">
-        <h3 class="mb-1 fw-bold" style="color:#333;">Panou spalatorie</h3>
-        <small class="text-muted">Informatii utile, gestionare masini test si statistici rezervari</small>
+    <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <a href="/" class="btn-back d-inline-block mb-2"><i class="fas fa-arrow-left me-1"></i>Inapoi la aplicatie</a>
+            <h3 class="mb-0 fw-bold" style="color:#333;">Panou spalatorie</h3>
+            <small class="text-muted" id="saptamana_label"></small>
+        </div>
     </div>
 
-    <!-- API-URI PUBLICE -->
+    <!-- STATISTICI (prioritar) -->
+    <p class="section-label px-1">Statistici rezervari</p>
+    <div class="card p-4 mb-4">
+        <div class="card-title mb-3">Saptamana curenta</div>
+
+        <label class="text-muted mb-1" style="font-size:13px;">Camin</label>
+        <select id="camin" class="form-select mb-3" onchange="selectCamin()">
+            <option value="">— Selecteaza camin —</option>
+        </select>
+        <div id="stat_camin"></div>
+
+        <div id="charts_row" class="row mt-3 g-3">
+            <div class="col-md-7">
+                <p class="text-muted mb-2" style="font-size:13px;">
+                    <i class="fas fa-chart-bar me-1"></i>Rezervari pe zile (saptamana curenta)
+                </p>
+                <div class="chart-wrap"><canvas id="chart_zile"></canvas></div>
+                <p class="chart-caption">Cat de aglomerata e fiecare zi</p>
+            </div>
+            <div class="col-md-5">
+                <p class="text-muted mb-2" style="font-size:13px;">
+                    <i class="fas fa-chart-pie me-1"></i>Prioritate rezervari
+                </p>
+                <div class="chart-wrap"><canvas id="chart_prioritati"></canvas></div>
+                <p class="chart-caption">1=maxima (prima spalare din sapt.) … 4=scazuta</p>
+            </div>
+        </div>
+
+        <div id="filtre_extra" style="display:none;">
+            <label class="text-muted mt-2 mb-1" style="font-size:13px;">Masina</label>
+            <select id="masina" class="form-select mb-3" onchange="selectMasina()">
+                <option value="">— Toate masinile —</option>
+            </select>
+            <div id="stat_masina"></div>
+
+            <label class="text-muted mt-2 mb-1" style="font-size:13px;">Zi specifica (optional)</label>
+            <input type="date" id="zi" class="form-control mb-2" onchange="selectZi()">
+            <div id="stat_zi"></div>
+        </div>
+    </div>
+
+    <!-- INFORMATII UTILE -->
+    <p class="section-label px-1">Informatii utile</p>
     <div class="row mb-4">
-        <!-- SARBATORI -->
         <div class="col-md-6 mb-3">
             <div class="card p-4 h-100">
-                <div class="card-title">Sarbatori legale</div>
+                <div class="card-title"><i class="fas fa-calendar-alt me-2 text-muted"></i>Sarbatori legale</div>
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <label class="mb-0 text-muted" style="white-space:nowrap; font-size:13px;">Tara:</label>
+                    <label class="mb-0 text-muted" style="white-space:nowrap; font-size:13px;">Tara</label>
                     <select id="tara_select" class="form-select form-select-sm" onchange="fetchSarbatoriPentruTara(this.value)">
                         <option value="RO">🇷🇴 Romania</option>
                         <option value="DE">🇩🇪 Germania</option>
@@ -149,78 +290,106 @@
                 <div id="sarbatori"><span class="text-muted">Se incarca...</span></div>
             </div>
         </div>
-
-        <!-- CURS VALUTAR -->
         <div class="col-md-6 mb-3">
             <div class="card p-4 h-100">
-                <div class="card-title"><span id="curs_titlu">Curs valutar</span></div>
+                <div class="card-title"><i class="fas fa-coins me-2 text-muted"></i><span id="curs_titlu">Curs valutar</span></div>
                 <div id="curs"><span class="text-muted">Se incarca...</span></div>
             </div>
         </div>
     </div>
 
-    <!-- ADAUGA MASINA -->
+    <!-- MASINI TEST -->
+    <p class="section-label px-1">Gestionare masini (mediu test)</p>
     <div class="card p-4 mb-4">
-        <div class="card-title">Adauga masina</div>
-        <div class="d-flex gap-2">
-            <input type="text" id="nume" class="form-control" placeholder="Numele masinii">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div class="card-title mb-0">Lista masini</div>
+            <span class="badge bg-light text-dark border" id="count_masini">0 masini</span>
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+            <input type="text" id="nume" class="form-control" placeholder="Nume masina noua"
+                   onkeydown="if(event.key==='Enter') adaugaMasina()">
             <button class="btn btn-primary px-4" onclick="adaugaMasina()" style="white-space:nowrap;">
                 <i class="fas fa-plus me-1"></i>Adauga
             </button>
         </div>
-    </div>
 
-    <!-- LISTA MASINI -->
-    <div class="card p-4 mb-4">
-        <div class="card-title">Lista masini</div>
-        <div id="lista"></div>
-    </div>
+        <div id="lista">
+            <div class="loading-placeholder"><i class="fas fa-spinner fa-spin me-2"></i>Se incarca...</div>
+        </div>
 
-    <!-- GESTIONARE LISTA -->
-    <div class="card p-4 mb-4">
-        <div class="card-title">Gestionare lista</div>
-
-        <button class="btn btn-danger mb-3" onclick="stergeToate()">
-            <i class="fas fa-trash me-1"></i>Sterge toate masinile
-        </button>
-
-        <hr>
-
-        <p class="fw-semibold mb-1" style="font-size:14px;">Inlocuieste toata lista</p>
-        <p class="text-muted" style="font-size:12px;">
-            Scrie cate un nume per rand. Lista existenta va fi inlocuita cu cea noua.
-        </p>
-        <textarea id="lista_noua" class="form-control mb-2" rows="4"
-            placeholder="Masina 1&#10;Masina 2&#10;Masina 3"></textarea>
-        <button class="btn btn-warning" onclick="inlocuiesteLista()">
-            <i class="fas fa-sync me-1"></i>Inlocuieste lista
-        </button>
-    </div>
-
-    <!-- STATISTICI -->
-    <div class="card p-4 mb-4">
-        <div class="card-title">Statistici saptamana curenta</div>
-
-        <label class="text-muted mb-1" style="font-size:13px;">Camin</label>
-        <select id="camin" class="form-select mb-2" onchange="selectCamin()">
-            <option value="">-- Selecteaza camin --</option>
-        </select>
-        <div id="stat_camin"></div>
-
-        <label class="text-muted mt-2 mb-1" style="font-size:13px;">Masina</label>
-        <select id="masina" class="form-select mb-2" onchange="selectMasina()">
-            <option value="">-- Selecteaza masina --</option>
-        </select>
-        <div id="stat_masina"></div>
-
-        <label class="text-muted mt-2 mb-1" style="font-size:13px;">Zi</label>
-        <input type="date" id="zi" class="form-control mb-2" onchange="selectZi()">
-        <div id="stat_zi"></div>
+        <details class="bulk-ops mt-3 pt-3 border-top">
+            <summary>Operatiuni avansate pe lista</summary>
+            <button class="btn btn-danger btn-sm mb-3" onclick="stergeToate()">
+                <i class="fas fa-trash me-1"></i>Sterge toate
+            </button>
+            <p class="text-muted mb-2" style="font-size:12px;">Un nume pe rand — inlocuieste intreaga lista:</p>
+            <textarea id="lista_noua" class="form-control mb-2" rows="3"
+                placeholder="Masina A&#10;Masina B"></textarea>
+            <button class="btn btn-warning btn-sm" onclick="inlocuiesteLista()">
+                <i class="fas fa-sync me-1"></i>Inlocuieste lista
+            </button>
+        </details>
     </div>
 
 </div>
 
+<!-- Modal editare -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">Editeaza masina</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label text-muted small">Nume</label>
+                <input type="text" id="edit_nume" class="form-control mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="edit_activa">
+                    <label class="form-check-label" for="edit_activa">Masina activa</label>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Anuleaza</button>
+                <button type="button" class="btn btn-primary" onclick="salveazaEdit()">Salveaza</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+
+let editId = null;
+let editModal = null;
+
+function esc(text) {
+    const d = document.createElement('div');
+    d.textContent = text == null ? '' : String(text);
+    return d.innerHTML;
+}
+
+function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = 'toast-msg ' + type;
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+function setSaptamanaLabel() {
+    const azi = new Date();
+    const zi = azi.getDay();
+    const diff = zi === 0 ? -6 : 1 - zi;
+    const start = new Date(azi);
+    start.setDate(azi.getDate() + diff);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const fmt = d => d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+    document.getElementById('saptamana_label').textContent =
+        `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+}
 
 async function apiCall(method, url, body) {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -228,18 +397,31 @@ async function apiCall(method, url, body) {
     const res = await fetch(url, opts);
     let data;
     try { data = await res.json(); } catch (e) { data = {}; }
-    if (!res.ok && data.error) alert(data.error);
-    return { res, data };
+    if (!res.ok) {
+        toast(data.error || 'Eroare la cerere', 'error');
+        return { res, data, ok: false };
+    }
+    return { res, data, ok: true };
 }
 
-// =========================
-// MASINI - ITEM
-// =========================
+// ——— Masini ———
 
 async function incarcaMasini() {
-    const { res, data } = await apiCall('GET', '/api/masini/');
-    if (!Array.isArray(data)) {
-        document.getElementById('lista').innerHTML = '<p class="text-danger">Eroare la incarcarea listei.</p>';
+    document.getElementById('lista').innerHTML =
+        '<div class="loading-placeholder"><i class="fas fa-spinner fa-spin me-2"></i>Se incarca...</div>';
+
+    const { data, ok } = await apiCall('GET', '/api/masini/');
+    if (!ok || !Array.isArray(data)) {
+        document.getElementById('lista').innerHTML = '<p class="text-danger small">Nu s-a putut incarca lista.</p>';
+        return;
+    }
+
+    document.getElementById('count_masini').textContent =
+        data.length + (data.length === 1 ? ' masina' : ' masini');
+
+    if (data.length === 0) {
+        document.getElementById('lista').innerHTML =
+            '<p class="text-muted text-center py-3 mb-0"><i class="fas fa-tshirt fa-2x d-block mb-2 opacity-50"></i>Nicio masina in lista.</p>';
         return;
     }
 
@@ -248,118 +430,275 @@ async function incarcaMasini() {
         const qrData = encodeURIComponent(`Masina: ${m.nume} | ID: ${m.id} | washtuiasi.ro`);
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
         const statusBadge = m.activa
-            ? `<span class="badge bg-success" style="font-size:11px;">Activa</span>`
-            : `<span class="badge bg-secondary" style="font-size:11px;">Inactiva</span>`;
+            ? '<span class="badge bg-success" style="font-size:11px;">Activa</span>'
+            : '<span class="badge bg-secondary" style="font-size:11px;">Inactiva</span>';
 
         html += `
             <div class="masina-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <b>${m.nume}</b>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <b>${esc(m.nume)}</b>
                             ${statusBadge}
-                            <span class="text-muted" style="font-size:12px;">ID: ${m.id}</span>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-danger" onclick="stergeMasina(${m.id})">
-                                <i class="fas fa-trash me-1"></i>Sterge
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-sm btn-outline-primary btn-edit"
+                                data-id="${m.id}" data-nume="${encodeURIComponent(m.nume)}" data-activa="${m.activa}">
+                                <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-warning" onclick="editMasina(${m.id})">
-                                <i class="fas fa-edit me-1"></i>Edit
+                            <button class="btn btn-sm btn-danger" onclick="stergeMasina(${m.id})">
+                                <i class="fas fa-trash"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="toggleQR(${m.id})">
-                                <i class="fas fa-qrcode me-1"></i>QR Code
+                                <i class="fas fa-qrcode"></i>
                             </button>
                         </div>
                     </div>
                     <div id="qr_${m.id}" style="display:none; text-align:center; margin-left:12px;">
-                        <img src="${qrUrl}" alt="QR ${m.nume}" width="110" height="110" style="border-radius:8px;">
+                        <img src="${qrUrl}" alt="QR" width="100" height="100" style="border-radius:8px;">
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
+    document.getElementById('lista').innerHTML = html;
+}
 
-    document.getElementById('lista').innerHTML = html || '<p class="text-muted">Nicio masina gasita.</p>';
+
+async function salveazaEdit() {
+    const nume = document.getElementById('edit_nume').value.trim();
+    if (!nume) return toast('Numele nu poate fi gol', 'error');
+    const activa = document.getElementById('edit_activa').checked;
+    const { ok } = await apiCall('PUT', `/api/masini/${editId}/`, { nume, activa });
+    if (ok) {
+        editModal.hide();
+        toast('Masina actualizata');
+        incarcaMasini();
+    }
 }
 
 async function adaugaMasina() {
     const nume = document.getElementById('nume').value.trim();
-    if (!nume) return alert('Scrie un nume pentru masina.');
-    await apiCall('POST', '/api/masini/', { nume });
-    document.getElementById('nume').value = '';
-    incarcaMasini();
+    if (!nume) return toast('Scrie un nume', 'error');
+    const { ok } = await apiCall('POST', '/api/masini/', { nume });
+    if (ok) {
+        document.getElementById('nume').value = '';
+        toast('Masina adaugata');
+        incarcaMasini();
+    }
 }
 
 async function stergeMasina(id) {
-    if (!confirm('Sigur vrei sa stergi aceasta masina?')) return;
-    await apiCall('DELETE', `/api/masini/${id}/`);
-    incarcaMasini();
+    if (!confirm('Stergi aceasta masina?')) return;
+    const { ok } = await apiCall('DELETE', `/api/masini/${id}/`);
+    if (ok) {
+        toast('Masina stearsa');
+        incarcaMasini();
+    }
 }
-
-async function editMasina(id) {
-    const nume = prompt('Nume nou:');
-    if (!nume || !nume.trim()) return;
-    await apiCall('PUT', `/api/masini/${id}/`, { nume: nume.trim() });
-    incarcaMasini();
-}
-
-// =========================
-// MASINI - COLLECTION
-// =========================
 
 async function stergeToate() {
-    if (!confirm('Sigur vrei sa stergi toate masinile din lista?')) return;
-    const { data } = await apiCall('DELETE', '/api/masini/');
-    if (data.message) alert(data.message);
-    incarcaMasini();
+    if (!confirm('Stergi toate masinile din lista?')) return;
+    const { ok, data } = await apiCall('DELETE', '/api/masini/');
+    if (ok) {
+        toast(data.message || 'Lista golita');
+        incarcaMasini();
+    }
 }
 
 async function inlocuiesteLista() {
     const text = document.getElementById('lista_noua').value.trim();
-    if (!text) return alert('Scrie cel putin un nume de masina.');
-    const lista = text.split('\n').map(n => n.trim()).filter(n => n !== '').map(n => ({ nume: n }));
-    const { data } = await apiCall('PUT', '/api/masini/', lista);
-    if (data.masini) alert(data.message + ' — ' + data.masini.length + ' masini adaugate');
-    document.getElementById('lista_noua').value = '';
-    incarcaMasini();
+    if (!text) return toast('Scrie cel putin un nume', 'error');
+    const lista = text.split('\n').map(n => n.trim()).filter(Boolean).map(n => ({ nume: n }));
+    const { ok, data } = await apiCall('PUT', '/api/masini/', lista);
+    if (ok) {
+        toast(`${data.masini?.length || 0} masini in lista`);
+        document.getElementById('lista_noua').value = '';
+        incarcaMasini();
+    }
 }
 
-// =========================
-// STATISTICI
-// =========================
+function toggleQR(id) {
+    const el = document.getElementById('qr_' + id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ——— Grafice (Chart.js) ———
+
+let chartZile = null;
+let chartPrioritati = null;
+
+const CULORI_PRIORITATE = ['#dc3545', '#6c757d', '#0d6efd', '#a47148'];
+
+function destroyCharts() {
+    if (chartZile) { chartZile.destroy(); chartZile = null; }
+    if (chartPrioritati) { chartPrioritati.destroy(); chartPrioritati = null; }
+}
+
+function updateCharts(data) {
+    const row = document.getElementById('charts_row');
+    if (!data || !data.per_zi) {
+        row.classList.remove('visible');
+        destroyCharts();
+        return;
+    }
+    row.classList.add('visible');
+
+    if (chartZile) chartZile.destroy();
+    chartZile = new Chart(document.getElementById('chart_zile'), {
+        type: 'bar',
+        data: {
+            labels: data.per_zi.map(d => d.zi),
+            datasets: [{
+                label: 'Rezervari',
+                data: data.per_zi.map(d => d.count),
+                backgroundColor: 'rgba(124, 77, 189, 0.8)',
+                borderRadius: 8,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 },
+                },
+            },
+        },
+    });
+
+    const prio = (data.prioritati || []).sort((a, b) => a.nivel_prioritate - b.nivel_prioritate);
+    if (chartPrioritati) chartPrioritati.destroy();
+
+    if (prio.length === 0) {
+        chartPrioritati = new Chart(document.getElementById('chart_prioritati'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Fara rezervari'],
+                datasets: [{ data: [1], backgroundColor: ['#e9ecef'] }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+            },
+        });
+        return;
+    }
+
+    chartPrioritati = new Chart(document.getElementById('chart_prioritati'), {
+        type: 'doughnut',
+        data: {
+            labels: prio.map(p => p.label || `P${p.nivel_prioritate}`),
+            datasets: [{
+                data: prio.map(p => p.count),
+                backgroundColor: prio.map(p => CULORI_PRIORITATE[(p.nivel_prioritate - 1) % 4]),
+                borderWidth: 2,
+                borderColor: '#fff',
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            },
+        },
+    });
+}
+
+// ——— Statistici ———
 
 async function loadCamine() {
-    const { data } = await apiCall('GET', '/api/camine/');
+    const { data, ok } = await apiCall('GET', '/api/camine/');
+    if (!ok || !Array.isArray(data)) return;
     const select = document.getElementById('camin');
-    data.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.nume;
-        select.appendChild(opt);
-    });
+    data
+        .filter(c => c.nume !== 'API_TEST')
+        .forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.nume;
+            select.appendChild(opt);
+        });
+}
+
+function renderStat(divId, data) {
+    const el = document.getElementById(divId);
+    if (!data || data.error) {
+        el.innerHTML = '<p class="text-danger small">' + esc(data?.error || 'Eroare') + '</p>';
+        return;
+    }
+
+    const total = data.total || 0;
+    const prioritati = data.prioritati || [];
+    const maxCount = Math.max(...prioritati.map(p => p.count), 1);
+
+    let bars = '';
+    if (prioritati.length === 0) {
+        bars = '<p class="text-muted small mb-0 mt-2">Nicio rezervare in perioada selectata.</p>';
+    } else {
+        prioritati.sort((a, b) => a.nivel_prioritate - b.nivel_prioritate);
+        prioritati.forEach(p => {
+            const pct = Math.round((p.count / maxCount) * 100);
+            const lbl = p.label || `Prioritate ${p.nivel_prioritate}`;
+            bars += `
+                <div class="priority-row">
+                    <span style="min-width:72px;">${esc(lbl)}</span>
+                    <div class="priority-bar"><span style="width:${pct}%"></span></div>
+                    <b>${p.count}</b>
+                </div>`;
+        });
+    }
+
+    el.innerHTML = `
+        <div class="stat-summary">
+            <div class="stat-pill">
+                <div class="num">${total}</div>
+                <div class="lbl">Total rezervari</div>
+            </div>
+            <div class="stat-pill">
+                <div class="num">${prioritati.length}</div>
+                <div class="lbl">Niveluri prioritate</div>
+            </div>
+        </div>
+        ${bars}`;
 }
 
 async function selectCamin() {
     const camin = document.getElementById('camin').value;
-    document.getElementById('masina').innerHTML = '<option value="">-- Selecteaza masina --</option>';
+    const filtre = document.getElementById('filtre_extra');
+    document.getElementById('masina').innerHTML = '<option value="">— Toate masinile —</option>';
     document.getElementById('stat_masina').innerHTML = '';
-    document.getElementById('zi').value = '';
     document.getElementById('stat_zi').innerHTML = '';
-    if (!camin) { document.getElementById('stat_camin').innerHTML = ''; return; }
+    document.getElementById('zi').value = '';
+
+    if (!camin) {
+        document.getElementById('stat_camin').innerHTML = '';
+        filtre.style.display = 'none';
+        document.getElementById('charts_row').classList.remove('visible');
+        destroyCharts();
+        return;
+    }
+
+    filtre.style.display = 'block';
     const [statOut, masiniOut] = await Promise.all([
         apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}`),
         apiCall('GET', `/api/masini-camin/?camin_id=${camin}`)
     ]);
-    afiseaza('stat_camin', statOut.data);
-    const masini = masiniOut.data;
-    const select = document.getElementById('masina');
-    masini.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.nume;
-        select.appendChild(opt);
-    });
+    renderStat('stat_camin', statOut.data);
+    updateCharts(statOut.data);
+
+    if (masiniOut.ok && Array.isArray(masiniOut.data)) {
+        const select = document.getElementById('masina');
+        masiniOut.data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.nume;
+            select.appendChild(opt);
+        });
+    }
 }
 
 async function selectMasina() {
@@ -367,40 +706,42 @@ async function selectMasina() {
     const masina = document.getElementById('masina').value;
     document.getElementById('zi').value = '';
     document.getElementById('stat_zi').innerHTML = '';
-    if (!masina) { document.getElementById('stat_masina').innerHTML = ''; return; }
+
+    if (!masina) {
+        document.getElementById('stat_masina').innerHTML = '';
+        const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}`);
+        renderStat('stat_camin', data);
+        updateCharts(data);
+        return;
+    }
+
     const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}`);
-    afiseaza('stat_masina', data);
+    renderStat('stat_masina', data);
+    updateCharts(data);
 }
 
 async function selectZi() {
     const camin = document.getElementById('camin').value;
     const masina = document.getElementById('masina').value;
     const zi = document.getElementById('zi').value;
-    if (!zi) { document.getElementById('stat_zi').innerHTML = ''; return; }
-    const { data } = await apiCall('GET', `/api/statistici/avansate/?camin_id=${camin}&masina_id=${masina}&zi=${zi}`);
-    afiseaza('stat_zi', data);
-}
-
-function afiseaza(divId, data) {
-    if (!data || data.error) {
-        document.getElementById(divId).innerHTML = '<p class="text-danger small">' + (data?.error || 'Eroare') + '</p>';
+    if (!zi) {
+        document.getElementById('stat_zi').innerHTML = '';
+        let url = `/api/statistici/avansate/?camin_id=${camin}`;
+        if (masina) url += `&masina_id=${masina}`;
+        const { data } = await apiCall('GET', url);
+        if (masina) renderStat('stat_masina', data);
+        else renderStat('stat_camin', data);
+        updateCharts(data);
         return;
     }
-    let html = `<div class="stat-box"><b>Total rezervari: ${data.total}</b><br>`;
-    if (!data.prioritati || data.prioritati.length === 0) {
-        html += '<span class="text-muted">Nicio rezervare gasita.</span>';
-    } else {
-        data.prioritati.forEach(p => {
-            html += `Prioritate ${p.nivel_prioritate}: <b>${p.count}</b><br>`;
-        });
-    }
-    html += '</div>';
-    document.getElementById(divId).innerHTML = html;
+    let url = `/api/statistici/avansate/?camin_id=${camin}&zi=${zi}`;
+    if (masina) url += `&masina_id=${masina}`;
+    const { data } = await apiCall('GET', url);
+    renderStat('stat_zi', data);
+    updateCharts(data);
 }
 
-// =========================
-// API-URI PUBLICE
-// =========================
+// ——— API-uri publice ———
 
 async function loadSarbatori() {
     try {
@@ -412,7 +753,7 @@ async function loadSarbatori() {
             select.value = countryCode;
         }
         await fetchSarbatoriPentruTara(countryCode);
-    } catch(e) {
+    } catch (e) {
         await fetchSarbatoriPentruTara('RO');
     }
 }
@@ -422,15 +763,19 @@ async function fetchSarbatoriPentruTara(countryCode) {
     try {
         const res = await fetch(`https://date.nager.at/api/v3/NextPublicHolidays/${countryCode}`);
         const data = await res.json();
-        let html = '';
-        data.slice(0, 4).forEach(s => {
-            const d = new Date(s.date);
-            const formatat = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
-            html += `<div class="holiday-item"><b>${formatat}</b> — ${s.localName}</div>`;
-        });
-        document.getElementById('sarbatori').innerHTML = html;
-    } catch(e) {
-        document.getElementById('sarbatori').innerHTML = '<span class="text-muted">Date indisponibile momentan.</span>';
+        if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById('sarbatori').innerHTML = '<span class="text-muted">Nicio sarbatoare in curand.</span>';
+        } else {
+            let html = '';
+            data.slice(0, 4).forEach(s => {
+                const d = new Date(s.date);
+                const formatat = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+                html += `<div class="holiday-item"><b>${formatat}</b> — ${esc(s.localName)}</div>`;
+            });
+            document.getElementById('sarbatori').innerHTML = html;
+        }
+    } catch (e) {
+        document.getElementById('sarbatori').innerHTML = '<span class="text-muted">Indisponibil momentan.</span>';
     }
     await updateCursValutar(countryCode);
 }
@@ -439,50 +784,52 @@ const MONEDE = {
     RO: 'EUR', DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR',
     GB: 'GBP', HU: 'HUF', BG: 'BGN', MD: 'MDL', US: 'USD'
 };
-
 const NUME_MONEDE = {
-    EUR: 'Euro', GBP: 'Lira sterlina', HUF: 'Forint maghiar',
-    BGN: 'Lev bulgar', MDL: 'Leu moldovenesc', USD: 'Dolar american'
+    EUR: 'Euro', GBP: 'Lira sterlina', HUF: 'Forint',
+    BGN: 'Lev', MDL: 'Leu MDL', USD: 'Dolar'
 };
 
 async function updateCursValutar(countryCode) {
     const moneda = MONEDE[countryCode] || 'EUR';
-    document.getElementById('curs_titlu').textContent = `Curs valutar ${moneda} / RON`;
+    document.getElementById('curs_titlu').textContent = `Curs ${moneda} / RON`;
     document.getElementById('curs').innerHTML = '<span class="text-muted">Se incarca...</span>';
     try {
         const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${moneda.toLowerCase()}.min.json`);
         const data = await res.json();
         const ron = data[moneda.toLowerCase()].ron;
-        const costMoneda = (5 / ron).toFixed(4);
-        const numeMoneda = NUME_MONEDE[moneda] || moneda;
-
+        const costMoneda = (5 / ron).toFixed(2);
         document.getElementById('curs').innerHTML = `
             <div class="rate-box">
-                <div class="text-muted mb-1" style="font-size:12px;">${numeMoneda}</div>
+                <div class="text-muted mb-1" style="font-size:12px;">${NUME_MONEDE[moneda] || moneda}</div>
                 <div class="rate-number">1 ${moneda} = ${ron.toFixed(4)} RON</div>
             </div>
-            <div class="text-muted" style="font-size:13px; text-align:center;">
-                O spalare (5 RON) &asymp; <b>${costMoneda} ${moneda}</b>
-            </div>
-            <small class="text-muted d-block text-center mt-1">Actualizat: ${data.date}</small>
-        `;
-    } catch(e) {
-        document.getElementById('curs').innerHTML = '<span class="text-muted">Date indisponibile momentan.</span>';
+            <p class="text-muted text-center mb-0" style="font-size:13px;">
+                O spalare (5 RON) ≈ <b>${costMoneda} ${moneda}</b>
+            </p>
+            <small class="text-muted d-block text-center mt-2">${data.date}</small>`;
+    } catch (e) {
+        document.getElementById('curs').innerHTML = '<span class="text-muted">Indisponibil momentan.</span>';
     }
 }
 
-function toggleQR(id) {
-    const el = document.getElementById('qr_' + id);
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
+// ——— Init ———
 
-// =========================
-// INIT
-// =========================
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-edit');
+    if (!btn) return;
+    editId = btn.dataset.id;
+    document.getElementById('edit_nume').value = decodeURIComponent(btn.dataset.nume);
+    document.getElementById('edit_activa').checked = btn.dataset.activa === 'true';
+    editModal.show();
+});
 
-loadSarbatori();
-loadCamine();
-incarcaMasini();
+document.addEventListener('DOMContentLoaded', () => {
+    editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    setSaptamanaLabel();
+    loadSarbatori();
+    loadCamine();
+    incarcaMasini();
+});
 
 </script>
 </body>

@@ -186,6 +186,16 @@ def masina_detail(request, id):
     return method_not_allowed(["GET", "POST", "PUT", "DELETE"])
 
 
+ZI_SAPTAMANA = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"]
+
+PRIORITATE_LABELS = {
+    1: "Maxima",
+    2: "Inalta",
+    3: "Medie",
+    4: "Scazuta",
+}
+
+
 @require_http_methods(["GET"])
 def statistici_avansate(request):
     camin_id = request.GET.get("camin_id")
@@ -209,10 +219,41 @@ def statistici_avansate(request):
         rezervari = rezervari.filter(data_rezervare=zi)
 
     total = rezervari.count()
-    prioritati = rezervari.values("nivel_prioritate").annotate(count=Count("id"))
+    prioritati_qs = rezervari.values("nivel_prioritate").annotate(count=Count("id"))
+    prioritati = [
+        {
+            "nivel_prioritate": p["nivel_prioritate"],
+            "label": PRIORITATE_LABELS.get(p["nivel_prioritate"], f"Nivel {p['nivel_prioritate']}"),
+            "count": p["count"],
+        }
+        for p in prioritati_qs
+    ]
+
+    counts_by_date = {
+        row["data_rezervare"]: row["count"]
+        for row in rezervari.values("data_rezervare").annotate(count=Count("id"))
+    }
+    per_zi = []
+    for i in range(7):
+        d = start_sapt + timedelta(days=i)
+        per_zi.append(
+            {
+                "data": d.isoformat(),
+                "zi": ZI_SAPTAMANA[d.weekday()],
+                "count": counts_by_date.get(d, 0),
+            }
+        )
 
     return JsonResponse(
-        {"total": total, "prioritati": list(prioritati)},
+        {
+            "total": total,
+            "prioritati": prioritati,
+            "per_zi": per_zi,
+            "saptamana": {
+                "start": start_sapt.isoformat(),
+                "end": end_sapt.isoformat(),
+            },
+        },
         status=200,
     )
 
