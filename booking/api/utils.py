@@ -1,11 +1,8 @@
 import json
-
 from django.http import JsonResponse
-
 from booking.models import Camin
 
 API_TEST_CAMIN_NAME = "API_TEST"
-
 
 def ensure_camin_test():
     camin, _ = Camin.objects.get_or_create(
@@ -13,7 +10,6 @@ def ensure_camin_test():
         defaults={"durata_interval": 2},
     )
     return camin
-
 
 def parse_json_body(request):
     if not request.body:
@@ -26,7 +22,6 @@ def parse_json_body(request):
             status=400,
         )
 
-
 def method_not_allowed(allowed_methods):
     return JsonResponse(
         {
@@ -35,7 +30,6 @@ def method_not_allowed(allowed_methods):
         },
         status=405,
     )
-
 
 def masina_to_dict(masina):
     return {

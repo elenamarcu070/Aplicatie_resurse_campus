@@ -531,7 +531,7 @@ async function incarcaMasini() {
 
     let html = '';
     data.forEach(m => {
-        const qrData = encodeURIComponent(`Masina: ${m.nume} | ID: ${m.id} | washtuiasi.ro`);
+        const qrData = encodeURIComponent(`${m.nume} - ${m.id} `);
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
         const statusBadge = m.activa
             ? '<span class="badge bg-success" style="font-size:11px;">Activa</span>'
