@@ -531,7 +531,7 @@ async function incarcaMasini() {
 
     let html = '';
     data.forEach(m => {
-        const qrData = encodeURIComponent(`${m.camin_id}-${m.nume}`);
+        const qrData = encodeURIComponent(`${c.nume}-${m.nume[len(m.nume)-1]}`);
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
         const statusBadge = m.activa
             ? '<span class="badge bg-success" style="font-size:11px;">Activa</span>'
@@ -840,9 +840,9 @@ async function selectZi() {
 
 async function loadSarbatori() {
     try {
-        const ipRes = await fetch('https://ipapi.co/json/');
+        const ipRes = await fetch('https://ipwho.is/');
         const ipData = await ipRes.json();
-        const countryCode = ipData.country_code || 'RO';
+        const countryCode = (ipData.success && ipData.country_code) || 'RO';
         const select = document.getElementById('tara_select');
         if ([...select.options].some(o => o.value === countryCode)) {
             select.value = countryCode;
