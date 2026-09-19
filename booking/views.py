@@ -40,7 +40,7 @@ from booking.models import (
     IntervalDezactivare   # 🟡 asigură-te că ai acest import
 )
 from datetime import datetime, timedelta, date, time
-from django.db.models import Min, Max
+from django.db.models import Min, Max, F, Q
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -549,6 +549,22 @@ def detalii_camin_admin(request, camin_id):
         'is_super_admin': is_super_admin(request.user),
     })
 
+def filtru_suprapunere(ora_start, ora_end):
+    """
+    Q pentru intervalele care se suprapun cu [ora_start, ora_end) dintr-o zi.
+
+    Programul mașinilor trece de miezul nopții (07:00 → 01:00), deci ultimul
+    slot al zilei are ora_end mai mică decât ora_start (ex. 22:00 → 01:00).
+    Pentru astfel de intervale comparația directă `ora_start < ora_end` este
+    mereu falsă, iar slotul ar putea fi rezervat de oricâte ori. Aici tratăm
+    un interval care trece de miezul nopții ca ocupând ziua până la 24:00.
+    """
+    sfarsit_efectiv = ora_end if ora_end > ora_start else time(23, 59, 59)
+    return Q(ora_start__lt=sfarsit_efectiv) & (
+        Q(ora_end__gt=ora_start) | Q(ora_end__lte=F("ora_start"))
+    )
+
+
 def genereaza_intervale(ora_start, ora_end, durata):
     """
     Generează intervale chiar dacă ora_end trece peste miezul nopții.
@@ -756,10 +772,9 @@ def creeaza_rezervare(request):
 
             # 🟡 Verificăm dacă intervalul cerut este într-un interval dezactivat
             exista_blocaj = IntervalDezactivare.objects.filter(
+                filtru_suprapunere(ora_start, ora_end),
                 masina=masina,
                 data=data_rezervare,
-                ora_start__lt=ora_end,
-                ora_end__gt=ora_start
             ).exists()
 
             if exista_blocaj:
@@ -823,12 +838,11 @@ def creeaza_rezervare(request):
                 masina = Masina.objects.select_for_update().get(id=masina.id)
 
                 rezervari_existente = Rezervare.objects.filter(
+                    filtru_suprapunere(ora_start, ora_end),
                     masina=masina,
                     data_rezervare=data_rezervare,
-                    ora_start__lt=ora_end,
-                    ora_end__gt=ora_start,
-                    anulata=False
-                    )
+                    anulata=False,
+                )
 
                 if rezervari_existente.exists():
                     # dacă nu e preluare validă → STOP

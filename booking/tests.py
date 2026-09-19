@@ -485,3 +485,85 @@ class IzolareIntreCamine(BazaRezervari):
             "Nu ai un cămin asociat. Contactează administratorul.",
             self._mesaje(raspuns),
         )
+
+
+class SlotPesteMiezulNoptii(BazaRezervari):
+    """
+    Programul real e 07:00 → 01:00, deci ultimul slot al zilei se termină după
+    miezul nopții (22:00 → 01:00 la un interval de 3 ore). Comparațiile de
+    suprapunere trebuie să trateze corect cazul ora_end < ora_start.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.camin.durata_interval = 3
+        self.camin.save()
+
+    def test_slotul_de_noapte_se_salveaza_cu_ora_end_dupa_miezul_noptii(self):
+        self._rezerva(self.masina, LUNI, "22:00")
+
+        rezervare = Rezervare.objects.get(utilizator=self.student)
+        self.assertEqual(rezervare.ora_start, time(22, 0))
+        self.assertEqual(rezervare.ora_end, time(1, 0))
+
+    def test_slotul_de_noapte_nu_poate_fi_rezervat_de_doua_ori(self):
+        Rezervare.objects.create(
+            utilizator=self.alt_student,
+            masina=self.masina,
+            data_rezervare=LUNI,
+            ora_start=time(22, 0),
+            ora_end=time(1, 0),
+            nivel_prioritate=1,
+        )
+
+        raspuns = self._rezerva(self.masina, LUNI, "22:00")
+
+        self.assertEqual(Rezervare.objects.filter(utilizator=self.student).count(), 0)
+        self.assertIn("Intervalul este deja ocupat.", self._mesaje(raspuns))
+
+    def test_slotul_de_noapte_se_suprapune_cu_o_cerere_mai_tarzie(self):
+        """22:00-01:00 ocupat ⇒ o cerere de la 23:00 se suprapune."""
+        Rezervare.objects.create(
+            utilizator=self.alt_student,
+            masina=self.masina,
+            data_rezervare=LUNI,
+            ora_start=time(22, 0),
+            ora_end=time(1, 0),
+            nivel_prioritate=1,
+        )
+
+        raspuns = self._rezerva(self.masina, LUNI, "23:00")
+
+        self.assertEqual(Rezervare.objects.filter(utilizator=self.student).count(), 0)
+        self.assertIn("Intervalul este deja ocupat.", self._mesaje(raspuns))
+
+    def test_slotul_de_noapte_respecta_masina_dezactivata(self):
+        IntervalDezactivare.objects.create(
+            masina=self.masina,
+            data=LUNI,
+            ora_start=time(21, 0),
+            ora_end=time(23, 0),
+        )
+
+        raspuns = self._rezerva(self.masina, LUNI, "22:00")
+
+        self.assertEqual(Rezervare.objects.count(), 0)
+        self.assertIn(
+            "Mașina este dezactivată în intervalul selectat. Alege alt interval.",
+            self._mesaje(raspuns),
+        )
+
+    def test_slotul_de_dimineata_ramane_liber(self):
+        """Slotul de noapte nu trebuie să blocheze restul zilei."""
+        Rezervare.objects.create(
+            utilizator=self.alt_student,
+            masina=self.masina,
+            data_rezervare=LUNI,
+            ora_start=time(22, 0),
+            ora_end=time(1, 0),
+            nivel_prioritate=1,
+        )
+
+        self._rezerva(self.masina, LUNI, "07:00")
+
+        self.assertEqual(Rezervare.objects.filter(utilizator=self.student).count(), 1)
