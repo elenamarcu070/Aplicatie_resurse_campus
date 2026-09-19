@@ -631,3 +631,48 @@ class AutentificareAPI(TestCase):
 
         self.assertEqual(raspuns.status_code, 302)
         self.assertIn("login", raspuns.url)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class Deconectare(TestCase):
+    """
+    Logout-ul trebuie sa duca pe pagina de autentificare, nu inapoi in fluxul
+    Google: `/accounts/login/` e deturnat catre Google, care re-autentifica
+    tacut utilizatorul si anuleaza efectul deconectarii.
+    """
+
+    def setUp(self):
+        app = SocialApp.objects.create(
+            provider="google", name="Google", client_id="test", secret="test"
+        )
+        app.sites.add(Site.objects.get_current())
+
+        self.user = User.objects.create_user(
+            username="ana@student.tuiasi.ro", email="ana@student.tuiasi.ro"
+        )
+        ProfilStudent.objects.create(utilizator=self.user, numar_camera="101")
+
+    def test_logout_duce_pe_pagina_de_autentificare(self):
+        self.client.force_login(self.user)
+
+        raspuns = self.client.get(reverse("custom_logout"), follow=True)
+
+        self.assertRedirects(raspuns, reverse("home"))
+        self.assertContains(raspuns, "Conectează-te")
+
+    def test_logout_nu_trimite_inapoi_la_google(self):
+        self.client.force_login(self.user)
+
+        raspuns = self.client.get(reverse("custom_logout"))
+
+        self.assertNotIn("accounts/login", raspuns.url)
+        self.assertNotIn("google", raspuns.url)
+
+    def test_sesiunea_chiar_se_inchide(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse("custom_logout"))
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertEqual(raspuns.status_code, 302)
+        self.assertNotIn("_auth_user_id", self.client.session)

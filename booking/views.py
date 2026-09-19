@@ -144,7 +144,12 @@ def callback(request):
 # =========================
 def custom_logout(request):
     logout(request)
-    return redirect('account_login')
+    # NU catre 'account_login': acea ruta e deturnata catre Google
+    # (vezi rezervari_spalatorie/urls.py), iar Google re-autentifica tacut
+    # utilizatorul cat timp sesiunea lui din browser e vie — deci apasarea
+    # butonului de logout parea ca nu face nimic. `home` este chiar pagina
+    # de autentificare, cu butonul de Google pe ea.
+    return redirect('home')
 
 
 # =========================
