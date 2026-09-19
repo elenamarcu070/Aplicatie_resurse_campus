@@ -1,65 +1,57 @@
 import json
-from datetime import datetime, timedelta, date
+import logging
 import re
-import pandas as pd
+import traceback
+from datetime import datetime, time, timedelta
 from functools import wraps
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
+import pandas as pd
+
 from django.contrib import messages
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse
-from django.db import transaction, close_old_connections, IntegrityError
-from django.views.decorators.http import require_POST
 from django.core.files.storage import default_storage
-from django.core.mail import send_mail
-from django.conf import settings
+from django.db import IntegrityError, close_old_connections, transaction
+from django.db.models import F, Max, Min, Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
 from booking.models import (
-    Camin, ProfilStudent, AdminCamin,
-    Rezervare, ProgramMasina, Masina,
-    Avertisment, Uscator, ProgramUscator
-
-
-
+    AdminCamin,
+    Avertisment,
+    Camin,
+    IntervalDezactivare,
+    Masina,
+    ProfilStudent,
+    ProgramMasina,
+    ProgramUscator,
+    Rezervare,
+    Uscator,
 )
+from booking.utils import get_camin_curent, trimite_whatsapp
 
-from booking.utils import trimite_sms
-from booking.utils import get_camin_curent
-
-
-import logging, traceback
-from .utils import trimite_sms
 logger = logging.getLogger(__name__)
 
-from booking.models import (
-    Camin, ProfilStudent, AdminCamin,
-    Rezervare, ProgramMasina, Masina,
-    Avertisment, Uscator, ProgramUscator,
-    IntervalDezactivare   # 🟡 asigură-te că ai acest import
-)
-from datetime import datetime, timedelta, date, time
-from django.db.models import Min, Max, F, Q
-from django.utils import timezone
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.contrib import messages
 
-from booking.models import (
-    Camin, ProfilStudent, AdminCamin,
-    Masina, Rezervare, Avertisment,
-    IntervalDezactivare, ProgramMasina
-)
-from booking.utils import get_camin_curent
+def inapoi_la(request, implicit):
+    """
+    Redirect inapoi la pagina de unde a venit cererea.
 
-from datetime import date, timedelta
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from booking.models import ProfilStudent, Rezervare
-
-from datetime import date, timedelta
-from booking.models import Rezervare, ProfilStudent, Avertisment
+    Foloseste Referer doar daca trimite catre acest site: altfel o pagina
+    externa ar putea redirecta utilizatorul unde vrea ea.
+    """
+    referer = request.META.get("HTTP_REFERER")
+    if referer and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return redirect(referer)
+    return redirect(implicit)
 
 
 def login_redirect_google(request):
@@ -199,9 +191,6 @@ def dashboard_student(request):
 # =========================
 # Dashboard Admin Cămin
 # =========================
-from datetime import date, timedelta
-from booking.models import AdminCamin, Rezervare
-
 @login_required
 @only_admins
 def dashboard_admin_camin(request):
@@ -287,13 +276,6 @@ def sterge_camin_view(request, camin_id):
 # =========================
 # Admin cămin - Detalii cămin
 # =========================
-import logging, traceback
-logger = logging.getLogger(__name__)
-
-
-from booking.utils import trimite_whatsapp
-
-            
 @login_required
 @only_admins
 def detalii_camin_admin(request, camin_id):
@@ -624,7 +606,6 @@ def calendar_rezervari_view(request):
         index_saptamana = 0
 
     azi = timezone.localdate()
-    now = timezone.localtime()
     now_hour = timezone.localtime().hour  # ← folosim acest întreg în template
 
 
@@ -743,8 +724,11 @@ def creeaza_rezervare(request):
         return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
     
     if profil and not profil.telefon:
+        # Formularul de telefon este pe dashboard-ul studentului; `adauga_telefon`
+        # accepta doar POST, deci un redirect acolo ar fi aruncat utilizatorul
+        # pe pagina de start, fara niciun formular.
         messages.warning(request, "Trebuie să adaugi un număr de telefon înainte de a face o rezervare.")
-        return redirect('adauga_telefon')
+        return redirect('dashboard_student')
 
 
     if request.method == 'POST':
@@ -856,12 +840,6 @@ def creeaza_rezervare(request):
                             return redirect(f"{reverse('calendar_rezervari')}?saptamana={saptamana}")
                 # 🔁 Logica de preluare rezervare existentă
                 for rez in rezervari_existente:
-                    rezervari_alt_user = Rezervare.objects.filter(
-                        utilizator=rez.utilizator,
-                        data_rezervare__range=(start_sapt, end_sapt),
-                        anulata=False
-                    )
-
                     if rez.nivel_prioritate > nr_rezervari + 1:
                         rez.anulata = True
                         rez.save()
@@ -934,9 +912,6 @@ def creeaza_rezervare(request):
             return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
 
     return redirect(f'{reverse("calendar_rezervari")}?saptamana={saptamana}')
-
-
-from django.db.models import Q
 
 @login_required
 def programari_student_view(request):
@@ -1055,12 +1030,6 @@ def anuleaza_rezervare(request, rezervare_id):
 # =========================
 # Avertisment pentru rezervări neutilizate
 # =========================
-from django.utils import timezone
-from django.core.mail import send_mail, EmailMultiAlternatives
-from django.conf import settings
-from django.contrib import messages
-from django.shortcuts import redirect, get_object_or_404
-
 @login_required
 @only_admins
 def adauga_avertisment_din_calendar(request):
@@ -1311,19 +1280,11 @@ def adauga_student_view(request):
 
 
 
-# views.py
-import re
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
-
-from booking.models import ProfilStudent, AdminCamin  # ajustează importul dacă ai alt app
-
 @login_required
 def adauga_telefon(request):
     # Accept doar POST; altfel, întoarce utilizatorul înapoi.
     if request.method != "POST":
-        return redirect(request.META.get("HTTP_REFERER") or "home")
+        return inapoi_la(request, "home")
 
     # 1) Colectare & normalizare
     telefon_raw = (request.POST.get("telefon") or "").strip()
@@ -1355,7 +1316,7 @@ def adauga_telefon(request):
     # validare simplă E.164: + urmat de 9–15 cifre
     if not re.fullmatch(r"^\+\d{9,15}$", num):
         messages.error(request, "Numărul introdus nu este valid. Verifică și încearcă din nou.")
-        return redirect(request.META.get("HTTP_REFERER") or "home")
+        return inapoi_la(request, "home")
 
     # 2) Actualizare în toate locurile unde poate fi stocat
     updated = 0
@@ -1373,7 +1334,7 @@ def adauga_telefon(request):
         messages.warning(request, "Nu am găsit un profil de student sau admin asociat utilizatorului curent.")
 
     # 4) Înapoi la pagina de unde a venit utilizatorul
-    return redirect(request.META.get("HTTP_REFERER") or "home")
+    return inapoi_la(request, "home")
 
 
 
@@ -1463,11 +1424,6 @@ def update_student(request, student_id):
 
 
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from booking.models import ProfilStudent
-
 @csrf_exempt
 def save_fcm_token(request):
     if request.method == "POST" and request.user.is_authenticated:
@@ -1496,7 +1452,7 @@ def selecteaza_camin(request):
         camin_id = request.POST.get("camin_id")
         if camin_id:
             request.session["camin_selectat"] = camin_id
-    return redirect(request.META.get("HTTP_REFERER", "dashboard_admin_camin"))
+    return inapoi_la(request, "dashboard_admin_camin")
 
 
 def api_dashboard(request):

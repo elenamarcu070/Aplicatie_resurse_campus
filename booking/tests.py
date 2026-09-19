@@ -14,7 +14,7 @@ from allauth.socialaccount.models import SocialApp
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from booking.models import (
@@ -32,6 +32,9 @@ MARTI = LUNI + timedelta(days=1)
 FAKE_NOW = datetime(2026, 3, 2, 7, 0, tzinfo=dt_timezone.utc)
 
 
+# În producție cererile HTTP sunt redirectate către HTTPS. Clientul de test
+# vorbește HTTP, deci fără asta fiecare cerere s-ar opri într-un 301.
+@override_settings(SECURE_SSL_REDIRECT=False)
 class BazaRezervari(TestCase):
     """Fixture comun: un cămin cu două mașini și doi studenți."""
 
@@ -340,7 +343,12 @@ class RestrictiiCont(BazaRezervari):
 
         self.assertEqual(Rezervare.objects.count(), 1)
 
-    def test_fara_telefon_este_trimis_la_adaugare_telefon(self):
+    def test_fara_telefon_ajunge_pe_dashboard_unde_e_formularul(self):
+        """
+        `adauga_telefon` accepta doar POST, deci un redirect acolo ar fi lasat
+        studentul pe pagina de start, fara formular. Formularul de telefon este
+        pe dashboard-ul studentului.
+        """
         profil = ProfilStudent.objects.get(utilizator=self.student)
         profil.telefon = ""
         profil.save()
@@ -348,7 +356,11 @@ class RestrictiiCont(BazaRezervari):
         raspuns = self._rezerva(self.masina, LUNI, "10:00")
 
         self.assertEqual(Rezervare.objects.count(), 0)
-        self.assertEqual(raspuns.redirect_chain[0][0], reverse("adauga_telefon"))
+        self.assertEqual(raspuns.redirect_chain[0][0], reverse("dashboard_student"))
+        self.assertContains(raspuns, "Completează numărul tău de telefon")
+        self.assertTrue(
+            any("număr de telefon" in m for m in self._mesaje(raspuns))
+        )
 
     def test_utilizator_fara_rol_nu_poate_rezerva(self):
         strain = User.objects.create_user(

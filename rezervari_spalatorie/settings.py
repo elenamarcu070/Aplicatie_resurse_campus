@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -14,8 +16,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --------------------
 # SECURITY
 # --------------------
-SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-secret-key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-cheie-doar-pentru-dezvoltare-locala"
+    else:
+        raise ImproperlyConfigured(
+            "SECRET_KEY lipseste. Seteaza-l in variabilele de mediu ale serviciului. "
+            "Fara el, sesiunile si token-urile CSRF ar fi semnate cu o cheie publica."
+        )
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "")
 if ALLOWED_HOSTS == "*":
@@ -125,10 +136,13 @@ AUTHENTICATION_BACKENDS = [
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+
+# Inlocuiesc ACCOUNT_AUTHENTICATION_METHOD / ACCOUNT_EMAIL_REQUIRED /
+# ACCOUNT_USERNAME_REQUIRED / ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE, depreciate in
+# allauth 65 si eliminate intr-o versiune viitoare. Comportamentul ramane acelasi:
+# autentificare pe email, fara username, fara confirmarea parolei.
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 
 LOGIN_REDIRECT_URL = "/callback/"
@@ -143,7 +157,6 @@ ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_ADAPTER = "booking.adapters.MySocialAccountAdapter"
 
 ACCOUNT_ADAPTER = "allauth.account.adapter.DefaultAccountAdapter"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # --------------------
 # STATIC & MEDIA
@@ -166,8 +179,6 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-import logging
-
 # --------------------
 # LOCALE
 # --------------------
@@ -175,9 +186,38 @@ LANGUAGE_CODE = os.getenv("LANGUAGE_CODE", "ro")
 TIME_ZONE = os.getenv("TIME_ZONE", "Europe/Bucharest")
 USE_I18N = True
 USE_TZ = True
-# logging pentru debugging SMTP
 EMAIL_USE_LOCALTIME = True
-logging.basicConfig(level=logging.DEBUG)
+
+# --------------------
+# LOGGING
+# --------------------
+# Inainte era logging.basicConfig(level=DEBUG), care in productie scotea in
+# jurnal inclusiv dialogul SMTP si fiecare interogare SQL.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if DEBUG else "INFO")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simplu": {
+            "format": "{levelname} {asctime} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "consola": {
+            "class": "logging.StreamHandler",
+            "formatter": "simplu",
+        },
+    },
+    "root": {"handlers": ["consola"], "level": LOG_LEVEL},
+    "loggers": {
+        # Zgomotoase pe DEBUG si fara valoare in jurnalul de productie.
+        "django.db.backends": {"level": "INFO", "propagate": True},
+        "urllib3": {"level": "WARNING", "propagate": True},
+        "asyncio": {"level": "WARNING", "propagate": True},
+    },
+}
 # --------------------
 # DEFAULT
 # --------------------
@@ -185,7 +225,20 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-#SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_HTTPONLY = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+
+# Railway termina TLS inaintea aplicatiei si trimite protocolul real in
+# X-Forwarded-Proto. Fara asta, redirectul catre HTTPS ar intra in bucla.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Ambele pot fi oprite dintr-o variabila de mediu, fara alt deploy, daca apare
+# vreo problema: SECURE_SSL_REDIRECT=False, respectiv SECURE_HSTS_SECONDS=0.
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", str(not DEBUG)) == "True"
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
 
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
