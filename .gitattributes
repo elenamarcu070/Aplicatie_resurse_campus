@@ -1,0 +1,13 @@
+# Normalizează terminațiile de linie: în repo se stochează LF, iar la checkout
+# fiecare sistem primește ce îi trebuie (CRLF pe Windows). Fără asta, aceleași
+# fișiere apar „modificate" doar pentru că s-a lucrat pe alt sistem de operare.
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.xlsx binary
+*.sqlite3 binary
