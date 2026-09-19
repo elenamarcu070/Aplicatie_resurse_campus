@@ -158,6 +158,15 @@ SOCIALACCOUNT_ADAPTER = "booking.adapters.MySocialAccountAdapter"
 
 ACCOUNT_ADAPTER = "allauth.account.adapter.DefaultAccountAdapter"
 
+# Fara `select_account`, dupa deconectare Google reintra instantaneu cu acelasi
+# cont, fara sa intrebe: pe un calculator comun din camin, urmatorul student ar
+# ajunge in contul precedentului. Costul este un clic in plus la autentificare.
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "AUTH_PARAMS": {"prompt": "select_account"},
+    },
+}
+
 # --------------------
 # STATIC & MEDIA
 # --------------------

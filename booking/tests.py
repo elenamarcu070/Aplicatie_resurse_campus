@@ -676,3 +676,13 @@ class Deconectare(TestCase):
 
         self.assertEqual(raspuns.status_code, 302)
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_google_cere_alegerea_contului(self):
+        """
+        Pe calculatoarele comune din camin, Google trebuie sa intrebe cu ce cont
+        se intra, altfel urmatorul utilizator ajunge in contul precedentului.
+        """
+        raspuns = self.client.get("/accounts/google/login/?process=login")
+
+        self.assertEqual(raspuns.status_code, 302)
+        self.assertIn("prompt=select_account", raspuns.url)
