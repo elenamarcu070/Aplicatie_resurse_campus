@@ -103,7 +103,7 @@ class ProfilStudent(models.Model):
         return self.utilizator.email
     
     def este_blocat(self):
-        return self.suspendat_pana_la and self.suspendat_pana_la >= date.today()
+        return self.suspendat_pana_la and self.suspendat_pana_la >= timezone.localdate()
 
 
 
@@ -158,6 +158,16 @@ class Rezervare(models.Model):
 
     class Meta:
         ordering = ['data_rezervare', 'ora_start']
+        constraints = [
+            # Ultima linie de apărare împotriva dublei rezervări: chiar dacă două
+            # cereri simultane trec de verificările din view, baza de date
+            # respinge a doua inserare pe același slot activ.
+            models.UniqueConstraint(
+                fields=['masina', 'data_rezervare', 'ora_start'],
+                condition=models.Q(anulata=False),
+                name='rezervare_unica_pe_slot_activ',
+            ),
+        ]
 
 # ------------------------------------------
 # AVERTISMENTE
