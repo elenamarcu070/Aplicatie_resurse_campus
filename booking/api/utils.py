@@ -1,5 +1,8 @@
 import json
+from functools import wraps
+
 from django.http import JsonResponse
+
 from booking.models import Camin
 
 API_TEST_CAMIN_NAME = "API_TEST"
@@ -38,3 +41,23 @@ def masina_to_dict(masina):
         "activa": masina.activa,
         "camin_id": masina.camin_id,
     }
+
+
+def necesita_autentificare(view):
+    """
+    Raspunde 401 JSON daca utilizatorul nu e autentificat.
+
+    Nu folosim `login_required`, care ar raspunde cu un redirect 302 catre
+    pagina de login — greu de interpretat pentru un client care asteapta JSON.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {"error": "Autentificare necesara pentru acest endpoint"},
+                status=401,
+            )
+        return view(request, *args, **kwargs)
+
+    return wrapper

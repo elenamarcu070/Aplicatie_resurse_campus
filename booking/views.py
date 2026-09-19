@@ -1455,5 +1455,6 @@ def selecteaza_camin(request):
     return inapoi_la(request, "dashboard_admin_camin")
 
 
+@login_required
 def api_dashboard(request):
     return render(request, 'api/dashboard.html')

@@ -7,6 +7,7 @@ săptămâna curentă sunt deterministe, indiferent de ziua în care rulează
 testele, iar comportamentul dependent de fus orar poate fi verificat.
 """
 
+import json
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
@@ -579,3 +580,54 @@ class SlotPesteMiezulNoptii(BazaRezervari):
         self._rezerva(self.masina, LUNI, "07:00")
 
         self.assertEqual(Rezervare.objects.filter(utilizator=self.student).count(), 1)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AutentificareAPI(TestCase):
+    """API-ul TAD si dashboard-ul lui nu mai sunt accesibile fara cont."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="api@student.tuiasi.ro", email="api@student.tuiasi.ro"
+        )
+
+    def test_citirile_cer_autentificare(self):
+        for cale in [
+            "/api/",
+            "/api/masini/",
+            "/api/camine/",
+            "/api/masini-camin/?camin_id=1",
+            "/api/statistici/avansate/",
+        ]:
+            with self.subTest(cale=cale):
+                raspuns = self.client.get(cale)
+                self.assertEqual(raspuns.status_code, 401)
+                self.assertIn("Autentificare", raspuns.json()["error"])
+
+    def test_scrierile_cer_autentificare(self):
+        raspuns = self.client.post(
+            "/api/masini/",
+            data=json.dumps({"nume": "Masina intrusului"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(raspuns.status_code, 401)
+        self.assertFalse(Masina.objects.filter(nume="Masina intrusului").exists())
+
+    def test_stergerea_in_masa_cere_autentificare(self):
+        raspuns = self.client.delete("/api/masini/")
+
+        self.assertEqual(raspuns.status_code, 401)
+
+    def test_utilizatorul_logat_are_acces(self):
+        self.client.force_login(self.user)
+
+        raspuns = self.client.get("/api/masini/")
+
+        self.assertEqual(raspuns.status_code, 200)
+
+    def test_dashboardul_api_cere_autentificare(self):
+        raspuns = self.client.get(reverse("api_dashboard"))
+
+        self.assertEqual(raspuns.status_code, 302)
+        self.assertIn("login", raspuns.url)

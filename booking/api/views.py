@@ -10,12 +10,14 @@ from booking.models import Camin, Masina, Rezervare
 
 from .utils import (
     ensure_camin_test,
+    necesita_autentificare,
     masina_to_dict,
     method_not_allowed,
     parse_json_body,
 )
 
 
+@necesita_autentificare
 def api_root(request):
     if request.method != "GET":
         return method_not_allowed(["GET"])
@@ -53,6 +55,7 @@ def api_root(request):
 
 
 @csrf_exempt
+@necesita_autentificare
 def masini_list(request):
     camin_test = ensure_camin_test()
 
@@ -119,6 +122,7 @@ def masini_list(request):
 
 
 @csrf_exempt
+@necesita_autentificare
 def masina_detail(request, id):
     camin_test = ensure_camin_test()
 
@@ -218,6 +222,7 @@ def _period_bounds(period, referinta):
 
 
 @require_http_methods(["GET"])
+@necesita_autentificare
 def statistici_avansate(request):
     camin_id = request.GET.get("camin_id")
     masina_id = request.GET.get("masina_id")
@@ -297,12 +302,14 @@ def statistici_avansate(request):
 
 
 @require_http_methods(["GET"])
+@necesita_autentificare
 def get_camine(request):
     data = list(Camin.objects.values("id", "nume"))
     return JsonResponse(data, safe=False, status=200)
 
 
 @require_http_methods(["GET"])
+@necesita_autentificare
 def get_masini(request):
     camin_id = request.GET.get("camin_id")
     if not camin_id:
