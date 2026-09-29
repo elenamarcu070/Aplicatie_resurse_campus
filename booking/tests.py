@@ -28,6 +28,7 @@ from booking.models import (
     Camin,
     IntervalDezactivare,
     Masina,
+    Notificare,
     NotificareLog,
     ProfilStudent,
     Rezervare,
@@ -1423,3 +1424,93 @@ class CheiaContuluiDeServiciu(TestCase):
     def test_nesetata(self):
         with override_settings(FIREBASE_SERVICE_ACCOUNT=None):
             self.assertIsNone(_cont_de_serviciu())
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class NotificariInAplicatie(BazaRezervari):
+    """
+    Caseta din bara de sus păstrează notificarea chiar dacă studentul a ratat
+    mesajul de sistem sau nu are WhatsApp.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.profil = ProfilStudent.objects.get(utilizator=self.student)
+        self.client.force_login(self.student)
+
+    def _notificare(self, titlu="Rezervarea ta a fost preluată", citita=False):
+        return Notificare.objects.create(
+            profil=self.profil, titlu=titlu, corp="Mașina 1, 2 mar la 10:00", citita=citita
+        )
+
+    def test_clopotelul_apare_pentru_student(self):
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertContains(raspuns, "clopotelNotificari")
+
+    def test_notificarea_este_afisata(self):
+        self._notificare()
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertContains(raspuns, "Rezervarea ta a fost preluată")
+        self.assertContains(raspuns, "necitita")
+
+    def test_contorul_numara_doar_necitite(self):
+        self._notificare()
+        self._notificare(titlu="A doua")
+        self._notificare(titlu="Deja citită", citita=True)
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertEqual(raspuns.context["notificari_necitite"], 2)
+
+    def test_deschiderea_le_marcheaza_citite(self):
+        self._notificare()
+        self._notificare(titlu="A doua")
+
+        raspuns = self.client.post(reverse("marcheaza_notificari_citite"))
+
+        self.assertEqual(raspuns.json()["marcate"], 2)
+        self.assertEqual(Notificare.objects.filter(citita=False).count(), 0)
+
+    def test_marcarea_nu_atinge_alt_student(self):
+        self._notificare()
+        alt_profil = ProfilStudent.objects.get(utilizator=self.alt_student)
+        a_lui = Notificare.objects.create(profil=alt_profil, titlu="A lui", corp="x")
+
+        self.client.post(reverse("marcheaza_notificari_citite"))
+
+        a_lui.refresh_from_db()
+        self.assertFalse(a_lui.citita)
+
+    def test_marcarea_cere_post_si_cont(self):
+        self.assertEqual(
+            self.client.get(reverse("marcheaza_notificari_citite")).status_code, 405
+        )
+        self.client.logout()
+        self.assertEqual(
+            self.client.post(reverse("marcheaza_notificari_citite")).status_code, 302
+        )
+
+    @patch("booking.push.trimite_push", return_value=None)
+    @patch("booking.utils.trimite_whatsapp", return_value=None)
+    def test_notificarea_ramane_chiar_daca_ambele_canale_esueaza(self, *_):
+        notifica_student(
+            self.profil, "rezervare_preluata_student", {"1": "x"},
+            "Rezervarea ta a fost preluată", "Mașina 1",
+        )
+
+        notificare = Notificare.objects.get(profil=self.profil)
+        self.assertEqual(notificare.titlu, "Rezervarea ta a fost preluată")
+        self.assertFalse(notificare.citita)
+
+    def test_cine_nu_e_student_nu_vede_clopotelul(self):
+        self.client.logout()
+        admin_user = User.objects.create_user(username="a@t.ro", email="a@t.ro")
+        AdminCamin.objects.create(email="a@t.ro", camin=self.camin)
+        self.client.force_login(admin_user)
+
+        raspuns = self.client.get(reverse("dashboard_admin_camin"))
+
+        self.assertNotContains(raspuns, "clopotelNotificari")

@@ -56,6 +56,24 @@
       transition: all 0.3s ease;
     }
 
+    .lista-notificari {
+      width: 340px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .lista-notificari .notificare {
+      white-space: normal;
+      border-left: 3px solid transparent;
+      padding-top: .5rem;
+      padding-bottom: .5rem;
+    }
+
+    .lista-notificari .notificare.necitita {
+      border-left-color: #0d6efd;
+      background-color: #f1f6ff;
+    }
+
     .navbar-center a:hover {
       font-weight: bold;
       background-color: #e7f1ff;
@@ -256,6 +274,43 @@
       </button>
       {% endif %} {% if user.is_authenticated %}
       <div class="d-flex align-items-center ms-3">
+        {% if panou_notificari %}
+        <div class="dropdown me-3">
+          <button class="btn btn-outline-secondary position-relative" type="button"
+                  id="clopotelNotificari" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  aria-expanded="false" aria-label="Notificări">
+            <i class="fas fa-bell"></i>
+            {% if notificari_necitite %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  id="contorNotificari">{{ notificari_necitite }}</span>
+            {% endif %}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow lista-notificari"
+              aria-labelledby="clopotelNotificari">
+            <li class="dropdown-header d-flex justify-content-between align-items-center">
+              <span>Notificări</span>
+              {% if notificari_necitite %}
+              <span class="badge bg-secondary">{{ notificari_necitite }} necitite</span>
+              {% endif %}
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            {% for n in notificari_recente %}
+            <li>
+              <a class="dropdown-item notificare {% if not n.citita %}necitita{% endif %}"
+                 href="{{ n.link|default:'/dashboard/student/' }}">
+                <div class="fw-semibold">{{ n.titlu }}</div>
+                <div class="small text-muted">{{ n.corp }}</div>
+                <div class="small text-secondary mt-1">{{ n.creat_la|date:"d M Y, H:i" }}</div>
+              </a>
+            </li>
+            {% empty %}
+            <li class="px-3 py-3 text-muted small text-center">
+              Nu ai nicio notificare deocamdată.
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
         <span class="me-3 fw-bold text-dark">{{ user.email }}</span>
         <a href="#" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#logoutModal">
           <i class="fas fa-sign-out-alt"></i> Logout
@@ -381,6 +436,25 @@
 
       return { activeaza: activeaza, suportat: suportat };
     })();
+  </script>
+  {% endif %}
+
+  {% if panou_notificari %}
+  <script>
+    // Notificarile se marcheaza citite cand studentul deschide clopotelul.
+    document.addEventListener("DOMContentLoaded", function () {
+      const clopotel = document.getElementById("clopotelNotificari");
+      if (!clopotel) { return; }
+
+      clopotel.addEventListener("shown.bs.dropdown", function () {
+        const contor = document.getElementById("contorNotificari");
+        if (!contor) { return; }
+        const csrf = (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || "";
+        fetch("/notificari/citite/", { method: "POST", headers: { "X-CSRFToken": csrf } })
+          .then(function (r) { if (r.ok) { contor.remove(); } })
+          .catch(function () { /* ramane necitit; se reincearca la urmatoarea deschidere */ });
+      });
+    });
   </script>
   {% endif %}
 

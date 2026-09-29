@@ -254,3 +254,32 @@ class NotificareLog(models.Model):
         if self.stare in self.STARI_ESUATE:
             return "Mesajul nu a putut fi livrat la acest număr."
         return ""
+
+
+# ------------------------------------------
+# NOTIFICĂRI ÎN APLICAȚIE
+# ------------------------------------------
+class Notificare(models.Model):
+    """
+    Notificarea așa cum o vede studentul în aplicație.
+
+    `NotificareLog` spune dacă mesajul a plecat pe WhatsApp sau push și dacă a
+    ajuns; aici stă evenimentul în sine, o singură dată, indiferent pe câte
+    canale a fost trimis. Așa rămâne vizibil chiar dacă studentul a ratat
+    notificarea de sistem sau nu are WhatsApp.
+    """
+
+    profil = models.ForeignKey(
+        ProfilStudent, on_delete=models.CASCADE, related_name="notificari_primite"
+    )
+    titlu = models.CharField(max_length=120)
+    corp = models.TextField(blank=True)
+    link = models.CharField(max_length=200, blank=True)
+    citita = models.BooleanField(default=False)
+    creat_la = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-creat_la", "-id"]
+
+    def __str__(self):
+        return f"{self.titlu} → {self.profil.email}"

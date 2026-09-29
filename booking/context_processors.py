@@ -71,3 +71,22 @@ def firebase_config(request):
             "vapidKey": settings.FIREBASE_VAPID_KEY,
         }
     }
+
+
+def notificari_utilizator(request):
+    """Clopoțelul din bara de sus, pe fiecare pagină."""
+    if not request.user.is_authenticated:
+        return {}
+
+    from booking.models import Notificare, ProfilStudent
+
+    profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+    if not profil:
+        return {}
+
+    notificari = Notificare.objects.filter(profil=profil)
+    return {
+        "panou_notificari": True,
+        "notificari_recente": notificari[:8],
+        "notificari_necitite": notificari.filter(citita=False).count(),
+    }

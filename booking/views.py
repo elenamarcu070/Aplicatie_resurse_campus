@@ -29,6 +29,7 @@ from booking.models import (
     Camin,
     IntervalDezactivare,
     Masina,
+    Notificare,
     NotificareLog,
     ProfilStudent,
     ProgramMasina,
@@ -1271,6 +1272,21 @@ def incarca_studenti_view(request):
         'camine': camine,
         'is_super_admin': admin_camin.is_super_admin
     })
+
+
+# =========================
+# Notificari in aplicatie
+# =========================
+@login_required
+@require_POST
+def marcheaza_notificari_citite(request):
+    """Apelat cand studentul deschide clopotelul din bara de sus."""
+    profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+    if not profil:
+        return JsonResponse({"error": "Profil inexistent"}, status=404)
+
+    numar = Notificare.objects.filter(profil=profil, citita=False).update(citita=True)
+    return JsonResponse({"marcate": numar})
 
 
 # =========================

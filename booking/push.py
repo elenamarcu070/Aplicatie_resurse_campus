@@ -171,9 +171,18 @@ def notifica_student(profil, sablon, variabile, titlu, corp):
     Un canal care eșuează nu îl oprește pe celălalt și nu oprește acțiunea care
     a declanșat notificarea.
     """
+    from booking.models import Notificare
     from booking.utils import trimite_whatsapp
 
-    rezultat = {"whatsapp": None, "push": None}
+    rezultat = {"whatsapp": None, "push": None, "in_aplicatie": None}
+
+    # Intai notificarea din aplicatie: ea ramane vizibila chiar daca ambele
+    # canale de livrare esueaza.
+    if profil:
+        rezultat["in_aplicatie"] = Notificare.objects.create(
+            profil=profil, titlu=titlu[:120], corp=corp,
+            link="/dashboard/student/programari/",
+        )
 
     if profil and profil.telefon:
         try:

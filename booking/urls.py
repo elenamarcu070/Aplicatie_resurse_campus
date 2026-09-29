@@ -46,6 +46,7 @@ urlpatterns = [
     path('dashboard/admin_camin/student/<int:student_id>/comuta-activ/', views.comuta_activ_student, name='comuta_activ_student'),
     
 
+    path("notificari/citite/", views.marcheaza_notificari_citite, name="marcheaza_notificari_citite"),
     path("twilio/status/", views.twilio_status_callback, name="twilio_status"),
     path("save-fcm-token/", views.save_fcm_token, name="save_fcm_token"),
 

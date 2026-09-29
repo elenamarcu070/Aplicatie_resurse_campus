@@ -287,4 +287,5 @@ FIREBASE_SERVICE_ACCOUNT = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 
 TEMPLATES[0]["OPTIONS"]["context_processors"] += [
     "booking.context_processors.firebase_config",
+    "booking.context_processors.notificari_utilizator",
 ]
