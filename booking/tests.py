@@ -7,6 +7,7 @@ săptămâna curentă sunt deterministe, indiferent de ziua în care rulează
 testele, iar comportamentul dependent de fus orar poate fi verificat.
 """
 
+import base64
 import json
 import shutil
 import tempfile
@@ -20,7 +21,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from booking.push import notifica_student, trimite_push
+from booking.push import _cont_de_serviciu, notifica_student, trimite_push
 from booking.utils import trimite_whatsapp, valideaza_numar
 from booking.models import (
     AdminCamin,
@@ -1211,7 +1212,11 @@ class AvertismentPeDashboard(BazaRezervari):
 class NotificariPush(BazaRezervari):
     """Push-ul completează WhatsApp-ul și se înregistrează la fel."""
 
-    CONT = json.dumps({"project_id": "washtuiasi-push", "client_email": "x@y.z"})
+    CONT = json.dumps({
+        "project_id": "washtuiasi-push",
+        "client_email": "x@y.z",
+        "private_key": "cheie-de-test",
+    })
 
     def setUp(self):
         super().setUp()
@@ -1357,7 +1362,11 @@ class ButonActivarePush(BazaRezervari):
     altfel studentul ar acorda permisiunea degeaba.
     """
 
-    CONT = json.dumps({"project_id": "washtuiasi-push", "client_email": "x@y.z"})
+    CONT = json.dumps({
+        "project_id": "washtuiasi-push",
+        "client_email": "x@y.z",
+        "private_key": "cheie-de-test",
+    })
 
     def setUp(self):
         super().setUp()
@@ -1386,3 +1395,31 @@ class ButonActivarePush(BazaRezervari):
             raspuns = self.client.get(reverse("dashboard_student"))
 
         self.assertNotContains(raspuns, "Primește notificările și în browser")
+
+
+class CheiaContuluiDeServiciu(TestCase):
+    """Cheia poate veni ca JSON sau ca base64, fiindcă se strică ușor la copiere."""
+
+    CONT = {"project_id": "p", "client_email": "c@d.e", "private_key": "cheie"}
+
+    def test_json_direct(self):
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=json.dumps(self.CONT)):
+            self.assertEqual(_cont_de_serviciu()["project_id"], "p")
+
+    def test_json_codificat_base64(self):
+        codificat = base64.b64encode(json.dumps(self.CONT).encode()).decode()
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=codificat):
+            self.assertEqual(_cont_de_serviciu()["project_id"], "p")
+
+    def test_text_care_nu_e_nici_una_nici_alta(self):
+        with override_settings(FIREBASE_SERVICE_ACCOUNT="ceva gresit"):
+            self.assertIsNone(_cont_de_serviciu())
+
+    def test_cheie_incompleta_este_respinsa(self):
+        """O cheie fără private_key ar produce erori obscure abia la trimitere."""
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=json.dumps({"project_id": "p"})):
+            self.assertIsNone(_cont_de_serviciu())
+
+    def test_nesetata(self):
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=None):
+            self.assertIsNone(_cont_de_serviciu())

@@ -11,6 +11,7 @@ studentul a adăugat site-ul pe ecranul principal, iar token-ul expiră când î
 schimbă browserul.
 """
 
+import base64
 import json
 import logging
 
@@ -29,15 +30,40 @@ TOKEN_INVALID = {"UNREGISTERED", "INVALID_ARGUMENT", "NOT_FOUND"}
 
 
 def _cont_de_serviciu():
-    """Cheia contului de serviciu, ca dicționar, sau None dacă nu e configurată."""
+    """
+    Cheia contului de serviciu, ca dicționar, sau None dacă nu e configurată.
+
+    Acceptă atât JSON direct, cât și JSON codificat base64: cheia privată
+    conține caractere de linie nouă, care se pot strica la copiere între
+    interfețe, iar base64 trece neatins oriunde.
+    """
     brut = getattr(settings, "FIREBASE_SERVICE_ACCOUNT", None)
     if not brut:
         return None
+    if isinstance(brut, dict):
+        return brut
+
+    text = brut.strip()
+    if not text.startswith("{"):
+        try:
+            text = base64.b64decode(text).decode("utf-8")
+        except Exception:
+            logger.error(
+                "FIREBASE_SERVICE_ACCOUNT nu este nici JSON, nici base64 valid."
+            )
+            return None
+
     try:
-        return json.loads(brut) if isinstance(brut, str) else brut
-    except json.JSONDecodeError:
-        logger.error("FIREBASE_SERVICE_ACCOUNT nu conține JSON valid.")
+        cont = json.loads(text)
+    except json.JSONDecodeError as e:
+        logger.error(f"FIREBASE_SERVICE_ACCOUNT nu conține JSON valid: {e}")
         return None
+
+    lipsa = [c for c in ("project_id", "client_email", "private_key") if not cont.get(c)]
+    if lipsa:
+        logger.error(f"Cheia contului de serviciu e incompleta, lipsesc: {', '.join(lipsa)}")
+        return None
+    return cont
 
 
 def _token_acces(info_cont):
