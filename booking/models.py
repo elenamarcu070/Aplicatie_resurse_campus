@@ -87,6 +87,11 @@ class ProfilStudent(models.Model):
     telefon = models.CharField(max_length=15, blank=True, null=True)
     fcm_token = models.TextField(null=True, blank=True)
 
+    # Studenții care pleacă din cămin sunt marcați inactivi, nu șterși:
+    # ștergerea contului ar duce, prin CASCADE, la pierderea întregului lor
+    # istoric de rezervări. Un student inactiv nu se mai poate autentifica.
+    activ = models.BooleanField(default=True)
+
 
     def clean(self):
         if not self.utilizator.email:

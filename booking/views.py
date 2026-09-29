@@ -5,8 +5,6 @@ import traceback
 from datetime import datetime, time, timedelta
 from functools import wraps
 
-import pandas as pd
-
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -34,6 +32,7 @@ from booking.models import (
     Rezervare,
     Uscator,
 )
+from booking.import_studenti import aplica_plan, citeste_fisier, construieste_plan
 from booking.utils import get_camin_curent, trimite_whatsapp
 
 logger = logging.getLogger(__name__)
@@ -54,6 +53,12 @@ def inapoi_la(request, implicit):
     return redirect(implicit)
 
 
+MESAJ_CONT_INACTIV = (
+    "Contul tău nu mai este activ. Dacă locuiești în continuare în cămin, "
+    "contactează administratorul căminului."
+)
+
+
 def login_redirect_google(request):
     return redirect('/accounts/google/login/?process=login')
 # =========================
@@ -63,8 +68,11 @@ def login_redirect_google(request):
 def only_students(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not ProfilStudent.objects.filter(utilizator=request.user).exists():
+        profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+        if not profil:
             return render(request, 'not_allowed.html', {'message': 'Acces permis doar studenților.'})
+        if not profil.activ:
+            return render(request, 'not_allowed.html', {'message': MESAJ_CONT_INACTIV})
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -121,6 +129,10 @@ def callback(request):
     # 🟢 2. Verificăm dacă e student valid în baza de date
     profil = ProfilStudent.objects.filter(email=email).first()
     if profil:
+        if not profil.activ:
+            # Nu stergem nimic: contul si istoricul raman, doar accesul e oprit.
+            logout(request)
+            return render(request, 'not_allowed.html', {'message': MESAJ_CONT_INACTIV})
         # dacă există profil, dar nu e legat de userul curent → îl reatașăm
         if profil.utilizator != user:
             profil.utilizator = user
@@ -713,11 +725,11 @@ def creeaza_rezervare(request):
 
     # ✅ Verificare drepturi acces
     if not (AdminCamin.objects.filter(email=user.email).exists() or
-            ProfilStudent.objects.filter(utilizator=user).exists()):
+            ProfilStudent.objects.filter(utilizator=user, activ=True).exists()):
         return render(request, 'not_allowed.html', {
             'message': 'Acces permis doar studenților sau administratorilor.'
         })
-    
+
     camin = get_camin_curent(request)
     if camin is None:
         messages.error(request, "Nu ai un cămin asociat. Contactează administratorul.")
@@ -1115,6 +1127,13 @@ def programari_admin_camin_view(request):
 # =========================
 # Admin cămin - Încărcare studenți din Excel
 # =========================
+def _curata_import(request):
+    """Șterge fișierul rămas de la un import început și neterminat."""
+    cale = request.session.pop("import_studenti_cale", None)
+    if cale and default_storage.exists(cale):
+        default_storage.delete(cale)
+
+
 @login_required
 @only_admins
 def incarca_studenti_view(request):
@@ -1137,91 +1156,115 @@ def incarca_studenti_view(request):
     # 🧱 Închide conexiunile vechi
     close_old_connections()
 
-    studenti_importati = []
+    plan = None
     camine = Camin.objects.all()
 
-    # 🧩 Dacă e super-admin — are voie să importe Excel
-    if admin_camin.is_super_admin and request.method == 'POST' and request.FILES.get('fisier'):
-        fisier = request.FILES['fisier']
-        path = default_storage.save(f"temp/{fisier.name}", fisier)
+    # 🧩 Importul Excel e doar pentru super-admin, în doi pași:
+    # întâi previzualizare, abia după confirmare se scrie în baza de date.
+    if admin_camin.is_super_admin and request.method == 'POST':
+        actiune = request.POST.get('actiune', 'previzualizeaza')
 
-        try:
-            # ✅ Verifică formatul fișierului
-            if not (path.endswith('.xlsx') or path.endswith('.xls')):
+        if actiune == 'anuleaza':
+            _curata_import(request)
+            messages.info(request, "Importul a fost anulat. Nu s-a modificat nimic.")
+            return redirect('incarca_studenti')
+
+        if actiune == 'confirma':
+            cale = request.session.get("import_studenti_cale")
+            if not cale or not default_storage.exists(cale):
+                _curata_import(request)
+                messages.error(request, "Fișierul nu mai este disponibil. Încarcă-l din nou.")
+                return redirect('incarca_studenti')
+
+            dezactiveaza = request.POST.get('dezactiveaza') == 'on'
+            try:
+                randuri, _ = citeste_fisier(default_storage.path(cale))
+                rezultat = aplica_plan(randuri, dezactiveaza=dezactiveaza)
+            except Exception as e:
+                logger.error(f"Eroare la importul de studenti: {e}\n{traceback.format_exc()}")
+                messages.error(request, "Importul nu a putut fi finalizat. Nu s-a modificat nimic.")
+                return redirect('incarca_studenti')
+
+            _curata_import(request)
+            messages.success(request, (
+                f"Import finalizat: {len(rezultat.de_creat)} adăugați, "
+                f"{len(rezultat.de_actualizat)} actualizați, "
+                f"{len(rezultat.de_reactivat)} reactivați, "
+                f"{len(rezultat.de_dezactivat)} dezactivați."
+            ))
+            return redirect('incarca_studenti')
+
+        fisier = request.FILES.get('fisier')
+        if fisier:
+            if not fisier.name.lower().endswith(('.xlsx', '.xls')):
                 messages.error(request, "Fișierul trebuie să fie în format Excel (.xlsx sau .xls).")
                 return redirect('incarca_studenti')
 
-            df = pd.read_excel(default_storage.path(path))
+            _curata_import(request)
+            cale = default_storage.save(f"temp/{fisier.name}", fisier)
+            try:
+                randuri, erori = citeste_fisier(default_storage.path(cale))
+                plan = construieste_plan(randuri, erori=erori)
+            except Exception as e:
+                default_storage.delete(cale)
+                logger.error(f"Eroare la citirea fisierului de import: {e}")
+                messages.error(request, f"Nu am putut citi fișierul: {e}")
+                return redirect('incarca_studenti')
 
-            if df.empty:
-                raise ValueError("Fișierul este gol sau nu conține date valide.")
-
-            df.columns = df.columns.str.strip().str.lower()
-            required_cols = ['email', 'nume', 'prenume', 'camin', 'camera']
-            if not all(col in df.columns for col in required_cols):
-                raise ValueError("Fișierul trebuie să conțină coloanele: email, nume, prenume, camin, camera.")
-
-            with transaction.atomic():
-                for _, row in df.iterrows():
-                    email = str(row['email']).strip().lower()
-                    nume = str(row['nume']).strip().title()
-                    prenume = str(row['prenume']).strip().title()
-                    camin_nume = str(row['camin']).strip().upper()
-                    camera = str(row['camera']).strip()
-
-                    camin_obj, _ = Camin.objects.get_or_create(nume=camin_nume)
-
-                    user, _ = User.objects.update_or_create(
-                        username=email,
-                        defaults={'email': email, 'first_name': prenume, 'last_name': nume}
-                    )
-
-                    ProfilStudent.objects.update_or_create(
-                        utilizator=user,
-                        defaults={
-                            'email': email,
-                            'nume': nume,
-                            'prenume': prenume,
-                            'camin': camin_obj,
-                            'numar_camera': camera
-                        }
-                    )
-
-                    studenti_importati.append({
-                        'email': email,
-                        'nume': nume,
-                        'prenume': prenume,
-                        'camin': camin_nume,
-                        'camera': camera
-                    })
-
-            default_storage.delete(path)
-            messages.success(request, "Lista de studenți a fost importată cu succes.")
-        except Exception as e:
-            messages.error(request, f"Eroare la procesare: {e}")
-            if 'path' in locals():
-                default_storage.delete(path)
-
-
+            # Calea sta in sesiune, nu intr-un camp ascuns din formular:
+            # altfel utilizatorul ar putea cere citirea oricarui fisier.
+            request.session["import_studenti_cale"] = cale
 
     # 🧩 Adminii de cămin văd doar lista studenților lor
     if admin_camin.is_super_admin:
-        if camin:  # dacă super-adminul a selectat un cămin din dropdown
+        if camin:
             studenti = ProfilStudent.objects.filter(camin=camin)
         else:
-           studenti = ProfilStudent.objects.all()
+            studenti = ProfilStudent.objects.all()
     else:
         studenti = ProfilStudent.objects.filter(camin=admin_camin.camin)
 
+    studenti = studenti.select_related('utilizator', 'camin').order_by(
+        'activ', 'nume', 'prenume'
+    )
 
     return render(request, 'dashboard/admin_camin/incarca_studenti.html', {
-        'studenti_importati': studenti_importati,
+        'plan': plan,
         'camin': camin,
         'studenti': studenti,
         'camine': camine,
         'is_super_admin': admin_camin.is_super_admin
     })
 
+
+# =========================
+# Admin cămin - Activare / dezactivare student
+# =========================
+@login_required
+@require_POST
+@only_admins
+def comuta_activ_student(request, student_id):
+    student = get_object_or_404(ProfilStudent, id=student_id)
+    admin = AdminCamin.objects.filter(email=request.user.email).first()
+
+    if not is_super_admin(request.user):
+        if not admin or not admin.camin or student.camin_id != admin.camin_id:
+            return render(request, 'not_allowed.html', {
+                'message': 'Nu ai acces la acest student.'
+            })
+
+    student.activ = not student.activ
+    student.save()
+
+    if student.activ:
+        messages.success(request, f"{student.nume} {student.prenume} a fost reactivat.")
+    else:
+        messages.success(
+            request,
+            f"{student.nume} {student.prenume} a fost dezactivat. "
+            "Contul si istoricul raman in baza de date."
+        )
+    return redirect('incarca_studenti')
 
 
 # =========================

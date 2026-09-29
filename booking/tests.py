@@ -8,6 +8,8 @@ testele, iar comportamentul dependent de fus orar poate fi verificat.
 """
 
 import json
+import shutil
+import tempfile
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
@@ -686,3 +688,317 @@ class Deconectare(TestCase):
 
         self.assertEqual(raspuns.status_code, 302)
         self.assertIn("prompt=select_account", raspuns.url)
+
+
+def _fisier_excel(randuri):
+    """Construiește un .xlsx în memorie, ca cel încărcat de administrator."""
+    import io
+
+    import pandas as pd
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    df = pd.DataFrame(randuri, columns=["email", "nume", "prenume", "camin", "camera"])
+    buffer = io.BytesIO()
+    df.to_excel(buffer, index=False)
+    buffer.seek(0)
+    return SimpleUploadedFile(
+        "lista.xlsx",
+        buffer.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+# Fișierele încărcate în teste nu au ce căuta în directorul proiectului.
+_MEDIA_TESTE = tempfile.mkdtemp(prefix="washtuiasi-teste-")
+
+
+@override_settings(MEDIA_ROOT=_MEDIA_TESTE)
+class BazaImport(TestCase):
+    """Fixture comun pentru importul de studenți."""
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(_MEDIA_TESTE, ignore_errors=True)
+
+    def setUp(self):
+        app = SocialApp.objects.create(
+            provider="google", name="Google", client_id="test", secret="test"
+        )
+        app.sites.add(Site.objects.get_current())
+
+        self.t1 = Camin.objects.create(nume="T1", durata_interval=2)
+        self.t2 = Camin.objects.create(nume="T2", durata_interval=2)
+
+        self.admin_user = User.objects.create_user(
+            username="admin@tuiasi.ro", email="admin@tuiasi.ro"
+        )
+        AdminCamin.objects.create(email="admin@tuiasi.ro", is_super_admin=True)
+
+    def _student(self, email, camin, camera="101", activ=True, username=None):
+        user = User.objects.create_user(
+            username=username or email, email=email,
+            first_name="Vechi", last_name="Nume",
+        )
+        return ProfilStudent.objects.create(
+            utilizator=user, camin=camin, numar_camera=camera, activ=activ
+        )
+
+    def _incarca(self, randuri):
+        self.client.force_login(self.admin_user)
+        return self.client.post(
+            reverse("incarca_studenti"), {"fisier": _fisier_excel(randuri)}, follow=True
+        )
+
+    def _confirma(self, dezactiveaza=False):
+        date = {"actiune": "confirma"}
+        if dezactiveaza:
+            date["dezactiveaza"] = "on"
+        return self.client.post(reverse("incarca_studenti"), date, follow=True)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class PlanificareImport(BazaImport):
+    """Planul se calculează fără să atingă baza de date."""
+
+    def test_previzualizarea_nu_scrie_nimic(self):
+        raspuns = self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        self.assertEqual(ProfilStudent.objects.count(), 0)
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.de_creat), 1)
+
+    def test_confirmarea_creeaza_studentii(self):
+        self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma()
+
+        profil = ProfilStudent.objects.get(email="ana@student.tuiasi.ro")
+        self.assertEqual(profil.camin, self.t1)
+        self.assertEqual(profil.numar_camera, "203")
+        self.assertEqual(profil.nume, "Pop")
+        self.assertTrue(profil.activ)
+
+    def test_studentul_existent_este_actualizat_nu_duplicat(self):
+        self._student("ana@student.tuiasi.ro", self.t1, camera="101")
+
+        raspuns = self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T2", "305"]])
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.de_creat), 0)
+        self.assertEqual(len(plan.de_actualizat), 1)
+
+        self._confirma()
+
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        profil = ProfilStudent.objects.get()
+        self.assertEqual(profil.camin, self.t2)
+        self.assertEqual(profil.numar_camera, "305")
+
+    def test_contul_creat_la_login_nu_este_duplicat(self):
+        """
+        Conturile create la autentificare au username-ul fără domeniu. Căutarea
+        după username ar crea un al doilea cont pentru același om.
+        """
+        self._student("ana@student.tuiasi.ro", self.t1, username="ana")
+
+        self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "305"]])
+        self._confirma()
+
+        self.assertEqual(User.objects.filter(email="ana@student.tuiasi.ro").count(), 1)
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+
+    def test_contul_fara_profil_este_refolosit(self):
+        """
+        Cazul real din producție: cineva s-a autentificat, a fost respins,
+        și a rămas un cont cu username fără domeniu și fără ProfilStudent.
+        O căutare după username nu-l găsește și creează un al doilea cont
+        cu același email.
+        """
+        User.objects.create_user(username="ana", email="ana@student.tuiasi.ro")
+
+        self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma()
+
+        self.assertEqual(User.objects.filter(email="ana@student.tuiasi.ro").count(), 1)
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        self.assertEqual(
+            ProfilStudent.objects.get().utilizator.username, "ana"
+        )
+
+    def test_randurile_invalide_sunt_raportate_si_sarite(self):
+        raspuns = self._incarca([
+            ["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"],
+            ["", "Ionescu", "Dan", "T1", "204"],
+            ["fara-adresa", "Marin", "Ioana", "T1", "205"],
+            ["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "206"],
+        ])
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.de_creat), 1)
+        self.assertEqual(len(plan.erori), 3)
+
+    def test_domeniul_fara_punct_este_semnalat(self):
+        raspuns = self._incarca([["ana@student", "Pop", "Ana", "T1", "203"]])
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.avertismente), 1)
+        self.assertIn("student", plan.avertismente[0][1])
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class DezactivareLaImport(BazaImport):
+    """Studenții care nu mai apar în liste sunt dezactivați, niciodată șterși."""
+
+    def test_fara_bifa_nu_se_dezactiveaza_nimeni(self):
+        plecat = self._student("plecat@student.tuiasi.ro", self.t1)
+
+        self._incarca([["nou@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(dezactiveaza=False)
+
+        plecat.refresh_from_db()
+        self.assertTrue(plecat.activ)
+
+    def test_cu_bifa_cei_lipsa_sunt_dezactivati(self):
+        plecat = self._student("plecat@student.tuiasi.ro", self.t1)
+        ramas = self._student("ramas@student.tuiasi.ro", self.t1)
+
+        self._incarca([["ramas@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(dezactiveaza=True)
+
+        plecat.refresh_from_db()
+        ramas.refresh_from_db()
+        self.assertFalse(plecat.activ)
+        self.assertTrue(ramas.activ)
+
+    def test_dezactivarea_nu_atinge_alte_camine(self):
+        alt_camin = self._student("altul@student.tuiasi.ro", self.t2)
+
+        self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(dezactiveaza=True)
+
+        alt_camin.refresh_from_db()
+        self.assertTrue(alt_camin.activ)
+
+    def test_dezactivarea_nu_sterge_nimic(self):
+        plecat = self._student("plecat@student.tuiasi.ro", self.t1)
+        masina = Masina.objects.create(camin=self.t1, nume="Masina 1")
+        Rezervare.objects.create(
+            utilizator=plecat.utilizator, masina=masina,
+            data_rezervare=LUNI, ora_start=time(10, 0), ora_end=time(12, 0),
+        )
+
+        self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(dezactiveaza=True)
+
+        self.assertTrue(User.objects.filter(id=plecat.utilizator_id).exists())
+        self.assertEqual(Rezervare.objects.count(), 1)
+
+    def test_studentul_reaparut_este_reactivat(self):
+        intors = self._student("intors@student.tuiasi.ro", self.t1, activ=False)
+
+        raspuns = self._incarca([["intors@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self.assertEqual(len(raspuns.context["plan"].de_reactivat), 1)
+
+        self._confirma()
+
+        intors.refresh_from_db()
+        self.assertTrue(intors.activ)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AccesStudentInactiv(BazaImport):
+    """Un student dezactivat nu mai intră în aplicație, dar nu pierde nimic."""
+
+    def setUp(self):
+        super().setUp()
+        self.profil = self._student("ana@student.tuiasi.ro", self.t1, activ=False)
+        self.masina = Masina.objects.create(camin=self.t1, nume="Masina 1")
+
+    def test_nu_ajunge_pe_dashboard(self):
+        self.client.force_login(self.profil.utilizator)
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertContains(raspuns, "nu mai este activ")
+
+    def test_nu_poate_rezerva(self):
+        self.client.force_login(self.profil.utilizator)
+
+        self.client.post(reverse("creeaza_rezervare"), {
+            "masina_id": self.masina.id,
+            "data": LUNI.isoformat(),
+            "ora_start": "10:00",
+        })
+
+        self.assertEqual(Rezervare.objects.count(), 0)
+
+    def test_callbackul_il_opreste_fara_sa_stearga_contul(self):
+        self.client.force_login(self.profil.utilizator)
+
+        raspuns = self.client.get(reverse("callback"))
+
+        self.assertContains(raspuns, "nu mai este activ")
+        self.assertTrue(User.objects.filter(id=self.profil.utilizator_id).exists())
+        self.assertTrue(ProfilStudent.objects.filter(id=self.profil.id).exists())
+
+    def test_adminul_il_poate_reactiva_dintr_un_clic(self):
+        self.client.force_login(self.admin_user)
+
+        self.client.post(reverse("comuta_activ_student", args=[self.profil.id]))
+
+        self.profil.refresh_from_db()
+        self.assertTrue(self.profil.activ)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AccesLaImport(BazaImport):
+    """Pagina de import nu e pentru oricine."""
+
+    def test_anonimul_este_trimis_la_autentificare(self):
+        raspuns = self.client.get(reverse("incarca_studenti"))
+
+        self.assertEqual(raspuns.status_code, 302)
+        self.assertIn("login", raspuns.url)
+
+    def test_studentul_nu_are_acces(self):
+        profil = self._student("ana@student.tuiasi.ro", self.t1)
+        self.client.force_login(profil.utilizator)
+
+        raspuns = self.client.get(reverse("incarca_studenti"))
+
+        self.assertContains(raspuns, "administratorilor")
+        self.assertEqual(raspuns.status_code, 200)
+
+    def test_studentul_nu_poate_dezactiva_pe_altcineva(self):
+        tinta = self._student("victima@student.tuiasi.ro", self.t1)
+        atacator = self._student("ana@student.tuiasi.ro", self.t1)
+        self.client.force_login(atacator.utilizator)
+
+        self.client.post(reverse("comuta_activ_student", args=[tinta.id]))
+
+        tinta.refresh_from_db()
+        self.assertTrue(tinta.activ)
+
+    def test_renuntarea_nu_schimba_nimic(self):
+        self._student("plecat@student.tuiasi.ro", self.t1)
+        self.client.force_login(self.admin_user)
+        self._incarca([["ana@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        self.client.post(
+            reverse("incarca_studenti"), {"actiune": "anuleaza"}, follow=True
+        )
+
+        self.assertFalse(ProfilStudent.objects.filter(email="ana@student.tuiasi.ro").exists())
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+
+    def test_confirmarea_fara_fisier_incarcat_nu_face_nimic(self):
+        self.client.force_login(self.admin_user)
+
+        raspuns = self.client.post(
+            reverse("incarca_studenti"), {"actiune": "confirma"}, follow=True
+        )
+
+        self.assertEqual(ProfilStudent.objects.count(), 0)
+        self.assertTrue(
+            any("nu mai este disponibil" in m for m in
+                [str(x) for x in raspuns.context["messages"]])
+        )

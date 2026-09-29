@@ -20,9 +20,157 @@
                 <input type="file" class="form-control" id="fisier" name="fisier" accept=".xlsx,.xls" required>
             </div>
             <button type="submit" class="btn btn-primary">
-                <i class="fas fa-file-import"></i> Importă lista Excel
+                <i class="fas fa-search"></i> Analizează fișierul
             </button>
+            <div class="form-text">
+                Fișierul este doar citit. Vei vedea exact ce se schimbă și confirmi după aceea.
+            </div>
         </form>
+        {% endif %}
+
+        <!-- Previzualizarea importului -->
+        {% if plan %}
+        <div class="card border-primary mb-4">
+            <div class="card-header bg-primary text-white fw-semibold">
+                <i class="fas fa-clipboard-list"></i> Previzualizare — încă nu s-a modificat nimic
+            </div>
+            <div class="card-body">
+
+                <div class="row text-center mb-4">
+                    <div class="col">
+                        <div class="fs-3 fw-bold text-success">{{ plan.de_creat|length }}</div>
+                        <div class="small text-muted">de adăugat</div>
+                    </div>
+                    <div class="col">
+                        <div class="fs-3 fw-bold text-primary">{{ plan.de_actualizat|length }}</div>
+                        <div class="small text-muted">de actualizat</div>
+                    </div>
+                    <div class="col">
+                        <div class="fs-3 fw-bold text-secondary">{{ plan.neschimbate|length }}</div>
+                        <div class="small text-muted">neschimbați</div>
+                    </div>
+                    <div class="col">
+                        <div class="fs-3 fw-bold text-info">{{ plan.de_reactivat|length }}</div>
+                        <div class="small text-muted">de reactivat</div>
+                    </div>
+                    <div class="col">
+                        <div class="fs-3 fw-bold text-warning">{{ plan.de_dezactivat|length }}</div>
+                        <div class="small text-muted">pot fi dezactivați</div>
+                    </div>
+                </div>
+
+                <p class="text-muted small">
+                    Cămine în fișier: <b>{{ plan.camine_in_fisier|join:", " }}</b>
+                </p>
+
+                {% if plan.erori %}
+                <div class="alert alert-danger">
+                    <b>{{ plan.erori|length }} rânduri sunt ignorate:</b>
+                    <ul class="mb-0 mt-2">
+                        {% for linie, motiv in plan.erori|slice:":10" %}
+                        <li>Linia {{ linie }}: {{ motiv }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% if plan.erori|length > 10 %}
+                    <div class="mt-2 small">…și încă {{ plan.erori|length|add:"-10" }}.</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if plan.avertismente %}
+                <div class="alert alert-warning">
+                    <b>Adrese care par greșite:</b>
+                    <ul class="mb-0 mt-2">
+                        {% for email, motiv in plan.avertismente|slice:":10" %}
+                        <li>{{ email }} — {{ motiv }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if plan.de_actualizat %}
+                <details class="mb-3">
+                    <summary class="fw-semibold">Ce se schimbă la cei {{ plan.de_actualizat|length }} studenți actualizați</summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr><th>Email</th><th>Modificări</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for rand, modificari in plan.de_actualizat|slice:":20" %}
+                                <tr>
+                                    <td>{{ rand.email }}</td>
+                                    <td>
+                                        {% for camp, valori in modificari.items %}
+                                        <span class="badge bg-light text-dark border me-1">
+                                            {{ camp }}: {{ valori.0 }} → <b>{{ valori.1 }}</b>
+                                        </span>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if plan.de_actualizat|length > 20 %}
+                    <div class="mt-2 small text-muted">…și încă {{ plan.de_actualizat|length|add:"-20" }}.</div>
+                    {% endif %}
+                </details>
+                {% endif %}
+
+                {% if plan.de_dezactivat %}
+                <details class="mb-3">
+                    <summary class="fw-semibold text-warning">
+                        Cei {{ plan.de_dezactivat|length }} studenți care nu apar în fișier
+                    </summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr><th>Email</th><th>Nume</th><th>Cămin</th><th>Camera</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for s in plan.de_dezactivat|slice:":20" %}
+                                <tr>
+                                    <td>{{ s.email }}</td>
+                                    <td>{{ s.nume }} {{ s.prenume }}</td>
+                                    <td>{{ s.camin.nume }}</td>
+                                    <td>{{ s.numar_camera }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if plan.de_dezactivat|length > 20 %}
+                    <div class="mt-2 small text-muted">…și încă {{ plan.de_dezactivat|length|add:"-20" }}.</div>
+                    {% endif %}
+                </details>
+                {% endif %}
+
+                <form method="post" class="mt-3">
+                    {% csrf_token %}
+                    {% if plan.de_dezactivat %}
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="dezactiveaza" id="dezactiveaza">
+                        <label class="form-check-label" for="dezactiveaza">
+                            Dezactivează cei <b>{{ plan.de_dezactivat|length }}</b> studenți din căminele de mai sus
+                            care nu apar în fișier
+                            <span class="d-block small text-muted">
+                                Nu se șterge nimic: conturile și istoricul rămân, doar nu se mai pot autentifica.
+                                Îi poți reactiva oricând din listă.
+                            </span>
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" name="actiune" value="confirma" class="btn btn-success">
+                        <i class="fas fa-check"></i> Confirmă importul
+                    </button>
+                    <button type="submit" name="actiune" value="anuleaza" class="btn btn-outline-secondary" formnovalidate>
+                        Renunță
+                    </button>
+                </form>
+            </div>
+        </div>
         {% endif %}
 
         <!-- Mesaje -->
@@ -74,13 +222,14 @@
                         <th>Prenume</th>
                         <th>Cămin</th>
                         <th>Camera</th>
+                        <th>Stare</th>
                         <th>Acțiuni</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for s in studenti %}
                     
-                    <tr id="row-{{ s.id }}">
+                    <tr id="row-{{ s.id }}" class="{% if not s.activ %}table-secondary{% endif %}">
                         <td style="text-align:center;">{{ forloop.counter }}</td>
                         <td>
                             <span class="view-mode">{{ s.utilizator.email }}</span>
@@ -107,6 +256,21 @@
                         <td>
                             <span class="view-mode">{{ s.numar_camera }}</span>
                             <input type="text" class="form-control edit-mode d-none" value="{{ s.numar_camera }}">
+                        </td>
+                        <td>
+                            {% if s.activ %}
+                            <span class="badge bg-success">Activ</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactiv</span>
+                            {% endif %}
+                            <form method="post" action="{% url 'comuta_activ_student' s.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="btn btn-sm {% if s.activ %}btn-outline-warning{% else %}btn-outline-success{% endif %} mt-1"
+                                        onclick="return confirm('{% if s.activ %}Dezactivezi acest student? Contul si istoricul raman.{% else %}Reactivezi acest student?{% endif %}');">
+                                    {% if s.activ %}Dezactivează{% else %}Reactivează{% endif %}
+                                </button>
+                            </form>
                         </td>
                         <td>
                             <div class="btn-group view-mode">
