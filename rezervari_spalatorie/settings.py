@@ -279,6 +279,12 @@ FIREBASE_MESSAGING_SENDER_ID = os.getenv("FIREBASE_MESSAGING_SENDER_ID")
 FIREBASE_APP_ID = os.getenv("FIREBASE_APP_ID")
 FIREBASE_VAPID_KEY = os.getenv("FIREBASE_VAPID_KEY")
 
+# Cheia contului de serviciu (JSON), necesara ca serverul sa poata trimite push.
+# Variabilele de mai sus sunt doar configurarea din browser si nu autorizeaza
+# trimiterea. Fara aceasta cheie, push-ul este dezactivat, iar restul
+# aplicatiei functioneaza neschimbat.
+FIREBASE_SERVICE_ACCOUNT = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+
 TEMPLATES[0]["OPTIONS"]["context_processors"] += [
     "booking.context_processors.firebase_config",
 ]

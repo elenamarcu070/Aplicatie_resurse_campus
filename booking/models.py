@@ -211,10 +211,15 @@ class NotificareLog(models.Model):
     EROARE_TRIMITERE = "eroare_trimitere"
     STARI_ESUATE = ("undelivered", "failed", EROARE_TRIMITERE)
 
+    WHATSAPP = "whatsapp"
+    PUSH = "push"
+    CANALE = [(WHATSAPP, "WhatsApp"), (PUSH, "Push în browser")]
+
     profil = models.ForeignKey(
         ProfilStudent, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="notificari",
     )
+    canal = models.CharField(max_length=16, choices=CANALE, default=WHATSAPP)
     destinatar = models.CharField(max_length=20)
     sablon = models.CharField(max_length=64)
     message_sid = models.CharField(max_length=64, blank=True, db_index=True)
@@ -230,7 +235,7 @@ class NotificareLog(models.Model):
         ordering = ["-creat_la", "-id"]
 
     def __str__(self):
-        return f"{self.sablon} → {self.destinatar} ({self.stare})"
+        return f"{self.canal}: {self.sablon} → {self.destinatar} ({self.stare})"
 
     @property
     def a_esuat(self):
@@ -238,6 +243,9 @@ class NotificareLog(models.Model):
 
     def explicatie(self):
         """Ce să-i spui studentului, pe înțelesul lui."""
+        if self.canal == self.PUSH:
+            return ("Notificarea din browser nu a putut fi livrată. Probabil ai "
+                    "schimbat browserul sau ai retras permisiunea.")
         if self.cod_eroare == "63024":
             return ("Numărul nu poate primi mesaje pe WhatsApp. Verifică dacă ai "
                     "WhatsApp instalat pe acest număr și dacă ai acceptat termenii aplicației.")

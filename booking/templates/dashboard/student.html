@@ -41,6 +41,25 @@
         {% endif %}
 
 
+        <!-- 🔔 Activare notificări în browser -->
+        {% if push_configurat and not profil.fcm_token %}
+        <div class="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2"
+             id="cardNotificari">
+            <div>
+                <strong>Primește notificările și în browser</strong><br>
+                <small class="text-muted">
+                    Pe lângă WhatsApp, te anunțăm direct în browser când cineva îți preia
+                    rezervarea sau când o mașină se strică. Pe iPhone trebuie întâi să
+                    adaugi site-ul pe ecranul principal.
+                </small>
+                <div id="stareNotificari" class="small mt-1"></div>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" id="butonNotificari">
+                <i class="fas fa-bell"></i> Activează
+            </button>
+        </div>
+        {% endif %}
+
         <!-- 🔴 ALERTĂ notificare nelivrată -->
         {% if notificare_esuata %}
         <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -202,6 +221,31 @@
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const buton = document.getElementById("butonNotificari");
+    if (!buton || !window.pushWashtuiasi) { return; }
+    const stare = document.getElementById("stareNotificari");
+
+    if (!window.pushWashtuiasi.suportat()) {
+        buton.disabled = true;
+        stare.innerHTML = '<span class="text-muted">Browserul acesta nu acceptă notificări push.</span>';
+        return;
+    }
+
+    buton.addEventListener("click", async function () {
+        buton.disabled = true;
+        stare.innerHTML = '<span class="text-muted">Se activează...</span>';
+        const rezultat = await window.pushWashtuiasi.activeaza();
+        if (rezultat.ok) {
+            stare.innerHTML = '<span class="text-success">Gata, notificările sunt active pe acest dispozitiv.</span>';
+            buton.innerHTML = '<i class="fas fa-check"></i> Activat';
+        } else {
+            stare.innerHTML = '<span class="text-danger">' + rezultat.motiv + '</span>';
+            buton.disabled = false;
+        }
+    });
+});
+
 function seteazaPrefix() {
     const select = document.getElementById("tara");
     const prefix = document.getElementById("prefix");

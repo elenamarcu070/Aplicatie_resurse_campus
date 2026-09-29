@@ -300,6 +300,80 @@
   <!-- 🔥 Firebase pentru notificări -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+  {% if user.is_authenticated and firebase_config.apiKey %}
+  <script>
+    // Notificări push în browser. Permisiunea se cere doar la apăsarea butonului:
+    // browserele ignoră (sau blochează definitiv) cererile făcute automat la
+    // încărcarea paginii.
+    window.pushWashtuiasi = (function () {
+      const config = {
+        apiKey: "{{ firebase_config.apiKey }}",
+        authDomain: "{{ firebase_config.authDomain }}",
+        projectId: "{{ firebase_config.projectId }}",
+        storageBucket: "{{ firebase_config.storageBucket }}",
+        messagingSenderId: "{{ firebase_config.messagingSenderId }}",
+        appId: "{{ firebase_config.appId }}"
+      };
+      const vapidKey = "{{ firebase_config.vapidKey }}";
+
+      function suportat() {
+        return ("Notification" in window) && ("serviceWorker" in navigator);
+      }
+
+      function cookieCsrf() {
+        const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return m ? m[1] : "";
+      }
+
+      async function activeaza() {
+        if (!suportat()) {
+          return { ok: false, motiv: "Browserul tău nu acceptă notificări push." };
+        }
+        try {
+          const permisiune = await Notification.requestPermission();
+          if (permisiune !== "granted") {
+            return { ok: false, motiv: "Nu ai acordat permisiunea pentru notificări." };
+          }
+
+          const sw = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+          await navigator.serviceWorker.ready;
+
+          if (!firebase.apps.length) { firebase.initializeApp(config); }
+          const messaging = firebase.messaging();
+          const token = await messaging.getToken({
+            vapidKey: vapidKey,
+            serviceWorkerRegistration: sw
+          });
+          if (!token) {
+            return { ok: false, motiv: "Nu s-a putut obține un token de notificare." };
+          }
+
+          const raspuns = await fetch("/save-fcm-token/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": cookieCsrf() },
+            body: JSON.stringify({ token: token })
+          });
+          if (!raspuns.ok) {
+            return { ok: false, motiv: "Token-ul nu a putut fi salvat. Încearcă din nou." };
+          }
+
+          // Mesajele primite cât timp pagina e deschisă nu trec prin service worker.
+          messaging.onMessage(function (payload) {
+            const n = payload.notification || {};
+            new Notification(n.title || "Spălătorie", { body: n.body || "" });
+          });
+
+          return { ok: true };
+        } catch (e) {
+          console.error("Eroare la activarea notificărilor:", e);
+          return { ok: false, motiv: "A apărut o eroare la activarea notificărilor." };
+        }
+      }
+
+      return { activeaza: activeaza, suportat: suportat };
+    })();
+  </script>
+  {% endif %}
 
   <div class="modal fade" id="logoutModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">

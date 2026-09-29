@@ -20,6 +20,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from booking.push import notifica_student, trimite_push
 from booking.utils import trimite_whatsapp, valideaza_numar
 from booking.models import (
     AdminCamin,
@@ -190,8 +191,8 @@ class OcupareInterval(BazaRezervari):
             self._mesaje(raspuns),
         )
 
-    @patch("booking.views.trimite_whatsapp")
-    def test_preluare_rezervare_cu_prioritate_mai_mica(self, mock_whatsapp):
+    @patch("booking.views.notifica_student")
+    def test_preluare_rezervare_cu_prioritate_mai_mica(self, mock_notifica):
         """Un student fără rezervări preia slotul deținut cu prioritate 4."""
         ocupata = Rezervare.objects.create(
             utilizator=self.alt_student,
@@ -215,7 +216,7 @@ class OcupareInterval(BazaRezervari):
                 anulata=False,
             ).exists()
         )
-        mock_whatsapp.assert_called_once()
+        mock_notifica.assert_called_once()
 
 
 class ConstrangereBazaDeDate(BazaRezervari):
@@ -1204,3 +1205,184 @@ class AvertismentPeDashboard(BazaRezervari):
         raspuns = self.client.get(reverse("dashboard_student"))
 
         self.assertNotContains(raspuns, "Ultimul mesaj nu a ajuns la tine")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class NotificariPush(BazaRezervari):
+    """Push-ul completează WhatsApp-ul și se înregistrează la fel."""
+
+    CONT = json.dumps({"project_id": "washtuiasi-push", "client_email": "x@y.z"})
+
+    def setUp(self):
+        super().setUp()
+        self.profil = ProfilStudent.objects.get(utilizator=self.student)
+        self.profil.fcm_token = "token-de-test"
+        self.profil.save()
+
+    def test_fara_token_nu_se_trimite_nimic(self):
+        self.profil.fcm_token = None
+        self.profil.save()
+
+        self.assertIsNone(trimite_push(self.profil, "Titlu", "Corp"))
+        self.assertEqual(NotificareLog.objects.count(), 0)
+
+    @override_settings(FIREBASE_SERVICE_ACCOUNT=None)
+    def test_fara_cheie_de_serviciu_push_ul_e_oprit(self):
+        self.assertIsNone(trimite_push(self.profil, "Titlu", "Corp"))
+        self.assertEqual(NotificareLog.objects.count(), 0)
+
+    @patch("booking.push._token_acces", return_value="jeton")
+    @patch("booking.push.requests.post")
+    def test_trimiterea_reusita_este_inregistrata(self, mock_post, _):
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"name": "projects/x/messages/1"}
+
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=self.CONT):
+            jurnal = trimite_push(self.profil, "Titlu", "Corp")
+
+        self.assertEqual(jurnal.canal, NotificareLog.PUSH)
+        self.assertEqual(jurnal.stare, "delivered")
+        self.assertFalse(jurnal.a_esuat)
+
+    @patch("booking.push._token_acces", return_value="jeton")
+    @patch("booking.push.requests.post")
+    def test_esecul_este_inregistrat_cu_cod(self, mock_post, _):
+        mock_post.return_value.status_code = 400
+        mock_post.return_value.content = b"{}"
+        mock_post.return_value.json.return_value = {
+            "error": {"status": "INVALID_ARGUMENT", "message": "token stricat"}
+        }
+
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=self.CONT):
+            jurnal = trimite_push(self.profil, "Titlu", "Corp")
+
+        self.assertTrue(jurnal.a_esuat)
+        self.assertEqual(jurnal.cod_eroare, "INVALID_ARGUMENT")
+
+    @patch("booking.push._token_acces", return_value="jeton")
+    @patch("booking.push.requests.post")
+    def test_tokenul_invalid_este_sters(self, mock_post, _):
+        """Altfel am reîncerca la infinit către un browser care nu mai există."""
+        mock_post.return_value.status_code = 404
+        mock_post.return_value.content = b"{}"
+        mock_post.return_value.json.return_value = {"error": {"status": "UNREGISTERED"}}
+
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=self.CONT):
+            trimite_push(self.profil, "Titlu", "Corp")
+
+        self.profil.refresh_from_db()
+        self.assertIsNone(self.profil.fcm_token)
+
+    @patch("booking.push._token_acces", return_value="jeton")
+    @patch("booking.push.requests.post")
+    @patch("booking.utils.Client")
+    def test_ambele_canale_sunt_folosite(self, MockTwilio, mock_post, _):
+        MockTwilio.return_value.messages.create.return_value.sid = "SM1"
+        MockTwilio.return_value.messages.create.return_value.status = "queued"
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"name": "m/1"}
+
+        with override_settings(
+            FIREBASE_SERVICE_ACCOUNT=self.CONT,
+            WHATSAPP_TEMPLATES={"rezervare_preluata_student": "HXtest"},
+        ):
+            rezultat = notifica_student(
+                self.profil, "rezervare_preluata_student", {"1": "x"}, "Titlu", "Corp"
+            )
+
+        self.assertIsNotNone(rezultat["whatsapp"])
+        self.assertIsNotNone(rezultat["push"])
+        canale = set(NotificareLog.objects.values_list("canal", flat=True))
+        self.assertEqual(canale, {NotificareLog.WHATSAPP, NotificareLog.PUSH})
+
+    @patch("booking.push.trimite_push", side_effect=RuntimeError("push picat"))
+    @patch("booking.utils.Client")
+    def test_un_canal_picat_nu_il_opreste_pe_celalalt(self, MockTwilio, _):
+        MockTwilio.return_value.messages.create.return_value.sid = "SM1"
+        MockTwilio.return_value.messages.create.return_value.status = "queued"
+
+        with override_settings(WHATSAPP_TEMPLATES={"rezervare_preluata_student": "HXtest"}):
+            rezultat = notifica_student(
+                self.profil, "rezervare_preluata_student", {"1": "x"}, "Titlu", "Corp"
+            )
+
+        self.assertIsNotNone(rezultat["whatsapp"])
+        self.assertIsNone(rezultat["push"])
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class SalvareTokenPush(BazaRezervari):
+    """Endpoint-ul de salvare a token-ului cere cont și metoda POST."""
+
+    def test_anonimul_nu_poate_salva(self):
+        raspuns = self.client.post(
+            reverse("save_fcm_token"), data=json.dumps({"token": "t"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(raspuns.status_code, 302)
+
+    def test_get_nu_este_permis(self):
+        self.client.force_login(self.student)
+
+        self.assertEqual(self.client.get(reverse("save_fcm_token")).status_code, 405)
+
+    def test_tokenul_se_salveaza(self):
+        self.client.force_login(self.student)
+
+        raspuns = self.client.post(
+            reverse("save_fcm_token"), data=json.dumps({"token": "abc123"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(raspuns.status_code, 200)
+        profil = ProfilStudent.objects.get(utilizator=self.student)
+        self.assertEqual(profil.fcm_token, "abc123")
+
+    def test_tokenul_gol_este_respins(self):
+        self.client.force_login(self.student)
+
+        raspuns = self.client.post(
+            reverse("save_fcm_token"), data=json.dumps({"token": "  "}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(raspuns.status_code, 400)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class ButonActivarePush(BazaRezervari):
+    """
+    Butonul de activare apare doar cand serverul chiar poate trimite push:
+    altfel studentul ar acorda permisiunea degeaba.
+    """
+
+    CONT = json.dumps({"project_id": "washtuiasi-push", "client_email": "x@y.z"})
+
+    def setUp(self):
+        super().setUp()
+        self.profil = ProfilStudent.objects.get(utilizator=self.student)
+        self.profil.fcm_token = None
+        self.profil.save()
+        self.client.force_login(self.student)
+
+    @override_settings(FIREBASE_SERVICE_ACCOUNT=None)
+    def test_lipseste_cat_timp_push_ul_nu_e_configurat(self):
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertNotContains(raspuns, "Primește notificările și în browser")
+
+    def test_apare_cand_push_ul_e_configurat(self):
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=self.CONT):
+            raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertContains(raspuns, "Primește notificările și în browser")
+
+    def test_nu_apare_daca_studentul_l_a_activat_deja(self):
+        self.profil.fcm_token = "deja-activat"
+        self.profil.save()
+
+        with override_settings(FIREBASE_SERVICE_ACCOUNT=self.CONT):
+            raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertNotContains(raspuns, "Primește notificările și în browser")

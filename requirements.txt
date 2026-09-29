@@ -29,3 +29,4 @@ psycopg[binary]==3.2.2
 dj-database-url==2.3.0
 python-dotenv==1.0.1
 twilio==9.8.3
+google-auth==2.38.0

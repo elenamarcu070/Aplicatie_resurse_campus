@@ -37,7 +37,8 @@ from booking.models import (
     Uscator,
 )
 from booking.import_studenti import aplica_plan, citeste_fisier, construieste_plan
-from booking.utils import get_camin_curent, trimite_whatsapp, valideaza_numar
+from booking.push import notifica_student, push_este_configurat
+from booking.utils import get_camin_curent, valideaza_numar
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +202,9 @@ def dashboard_student(request):
 
     # Daca ultima notificare catre el nu a ajuns, studentul trebuie sa afle:
     # altfel isi pierde rezervarile preluate fara sa stie de ce.
-    ultima_notificare = NotificareLog.objects.filter(profil=profil).first()
+    ultima_notificare = NotificareLog.objects.filter(
+        profil=profil, canal=NotificareLog.WHATSAPP
+    ).first()
     notificare_esuata = (
         ultima_notificare if ultima_notificare and ultima_notificare.a_esuat else None
     )
@@ -211,6 +214,9 @@ def dashboard_student(request):
         'rezervare_activa': rezervare_activa,
         'avertismente_active': avertismente_active,
         'notificare_esuata': notificare_esuata,
+        # Butonul de activare apare doar daca serverul chiar poate trimite push,
+        # ca studentul sa nu acorde permisiunea degeaba.
+        'push_configurat': push_este_configurat(),
     }
 
     return render(request, 'dashboard/student.html', context)
@@ -402,16 +408,22 @@ def detalii_camin_admin(request, camin_id):
                 for rez in rezervari_viitoare:
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                        if profil_vechi and profil_vechi.telefon:
-                            trimite_whatsapp(
-                                destinatar=profil_vechi.telefon,
-                                template_name="dezactivare_masina_complet",
-                                variabile={
+                        if profil_vechi:
+                            notifica_student(
+                                profil_vechi,
+                                "dezactivare_masina_complet",
+                                {
                                     "2": rez.data_rezervare.strftime('%d %b %Y'),
                                     "3": rez.ora_start.strftime('%H:%M'),
                                     "4": rez.ora_end.strftime('%H:%M'),
                                     "1": rez.masina.nume,
-                                }
+                                },
+                                titlu="Mașina a fost scoasă din uz",
+                                corp=(
+                                    f"Rezervarea ta la {rez.masina.nume} din "
+                                    f"{rez.data_rezervare.strftime('%d %b')}, "
+                                    f"{rez.ora_start.strftime('%H:%M')}, a fost anulată."
+                                ),
                             )
                             numar_notificari += 1
                         rez.anulata = True
@@ -453,16 +465,22 @@ def detalii_camin_admin(request, camin_id):
                 for rez in rezervari_afectate:
                     try:
                         profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                        if profil_vechi and profil_vechi.telefon:
-                            trimite_whatsapp(
-                                destinatar=profil_vechi.telefon,
-                                template_name="dezactivare_masina_interval",
-                                variabile={
+                        if profil_vechi:
+                            notifica_student(
+                                profil_vechi,
+                                "dezactivare_masina_interval",
+                                {
                                     "2": rez.data_rezervare.strftime('%d %b %Y'),
                                     "3": rez.ora_start.strftime('%H:%M'),
                                     "4": rez.ora_end.strftime('%H:%M'),
                                     "1": rez.masina.nume,
-                                }
+                                },
+                                titlu="Mașina e indisponibilă în intervalul tău",
+                                corp=(
+                                    f"Rezervarea ta la {rez.masina.nume} din "
+                                    f"{rez.data_rezervare.strftime('%d %b')}, "
+                                    f"{rez.ora_start.strftime('%H:%M')}, a fost anulată."
+                                ),
                             )
                             numar_notificari += 1
                         rez.anulata = True
@@ -876,23 +894,27 @@ def creeaza_rezervare(request):
                         # 📲 Notificare — WhatsApp dacă are nr., altfel fallback
                         try:
                             profil_vechi = ProfilStudent.objects.filter(utilizator=rez.utilizator).first()
-                            if profil_vechi and profil_vechi.telefon:
-                                trimite_whatsapp(
-                                    destinatar=profil_vechi.telefon,
-                                    template_name="rezervare_preluata_student",
-                                    variabile={
+                            if profil_vechi:
+                                notifica_student(
+                                    profil_vechi,
+                                    "rezervare_preluata_student",
+                                    {
                                         "1": rez.data_rezervare.strftime('%d %b %Y'),
                                         "2": rez.ora_start.strftime('%H:%M'),
                                         "3": rez.ora_end.strftime('%H:%M'),
                                         "4": rez.masina.nume,
                                         "5": rez.nivel_prioritate,
                                         "6": nr_rezervari + 1,
-                                    }
+                                    },
+                                    titlu="Rezervarea ta a fost preluată",
+                                    corp=(
+                                        f"{rez.masina.nume}, {rez.data_rezervare.strftime('%d %b')} "
+                                        f"la {rez.ora_start.strftime('%H:%M')}. "
+                                        "Poți alege alt interval din calendar."
+                                    ),
                                 )
-                                logger.info(f"✅ WhatsApp trimis către {profil_vechi.telefon}")
                             else:
-                                logger.warning(f"Niciun număr de telefon pentru {rez.utilizator.email}")
-                                # opțional fallback trimite_sms(...) sau email aici
+                                logger.warning(f"Fara profil de student pentru {rez.utilizator.email}")
                         except Exception as e:
                             logger.error(f"Eroare trimitere WhatsApp: {e}")
 
@@ -1096,24 +1118,26 @@ def adauga_avertisment_din_calendar(request):
         profil.save()
 
     # 🔥 Trimitere WhatsApp dacă studentul are număr
-    if profil and profil.telefon:
-        try:
-            trimite_whatsapp(
-                destinatar=profil.telefon,
-                template_name="advertisment_rezervare",
-                
-                variabile={
-                    "1": utilizator.get_full_name() or utilizator.username,
-                    "2": rezervare.data_rezervare.strftime('%d %b %Y'),
-                    "3": f"{rezervare.ora_start.strftime('%H:%M')}–{rezervare.ora_end.strftime('%H:%M')}",
-                    "4": rezervare.masina.nume,
-                }
-            )
-            messages.success(request, "Avertisment trimis și notificare WhatsApp către student.")
-        except Exception as e:
-            messages.warning(request, f"Avertisment creat, dar nu s-a putut trimite mesajul WhatsApp: {e}")
+    if profil:
+        notifica_student(
+            profil,
+            "advertisment_rezervare",
+            {
+                "1": utilizator.get_full_name() or utilizator.username,
+                "2": rezervare.data_rezervare.strftime('%d %b %Y'),
+                "3": f"{rezervare.ora_start.strftime('%H:%M')}–{rezervare.ora_end.strftime('%H:%M')}",
+                "4": rezervare.masina.nume,
+            },
+            titlu="Ai primit un avertisment",
+            corp=(
+                f"Rezervare neutilizată: {rezervare.masina.nume}, "
+                f"{rezervare.data_rezervare.strftime('%d %b')}, "
+                f"{rezervare.ora_start.strftime('%H:%M')}."
+            ),
+        )
+        messages.success(request, "Avertisment trimis și notificare către student.")
     else:
-        messages.warning(request, "Avertisment trimis, dar studentul nu are număr de telefon.")
+        messages.warning(request, "Avertisment trimis, dar studentul nu are profil.")
 
     return redirect('calendar_rezervari_admin')
 
@@ -1529,25 +1553,27 @@ def update_student(request, student_id):
 
 
 
-@csrf_exempt
+@login_required
+@require_POST
 def save_fcm_token(request):
-    if request.method == "POST" and request.user.is_authenticated:
-        try:
-            data = json.loads(request.body)
-            token = data.get("token")
-            if not token:
-                return JsonResponse({"error": "Token lipsă"}, status=400)
-            
-            profil = ProfilStudent.objects.filter(utilizator=request.user).first()
-            if profil:
-                profil.fcm_token = token
-                profil.save()
-                return JsonResponse({"success": True})
-            else:
-                return JsonResponse({"error": "Profil inexistent"}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    return JsonResponse({"error": "Metodă invalidă sau utilizator neautentificat"}, status=400)
+    """Salveaza token-ul de notificari al browserului pentru studentul logat."""
+    try:
+        date = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Cerere invalidă"}, status=400)
+
+    token = (date.get("token") or "").strip()
+    if not token:
+        return JsonResponse({"error": "Token lipsă"}, status=400)
+
+    profil = ProfilStudent.objects.filter(utilizator=request.user).first()
+    if not profil:
+        return JsonResponse({"error": "Profil inexistent"}, status=404)
+
+    profil.fcm_token = token
+    profil.save(update_fields=["fcm_token"])
+    logger.info(f"Token push salvat pentru {profil.email}")
+    return JsonResponse({"success": True})
 
 
 
