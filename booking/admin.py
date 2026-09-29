@@ -89,3 +89,23 @@ class RezervareAdmin(admin.ModelAdmin):
 
 
 
+
+
+from booking.models import NotificareLog
+
+
+@admin.register(NotificareLog)
+class NotificareLogAdmin(admin.ModelAdmin):
+    """Ce s-a trimis, ce a ajuns si ce nu."""
+
+    list_display = ("creat_la", "sablon", "destinatar", "stare", "cod_eroare", "profil")
+    list_filter = ("stare", "sablon", "cod_eroare")
+    search_fields = ("destinatar", "message_sid", "profil__email")
+    readonly_fields = (
+        "profil", "destinatar", "sablon", "message_sid",
+        "stare", "cod_eroare", "detaliu", "creat_la", "actualizat_la",
+    )
+    date_hierarchy = "creat_la"
+
+    def has_add_permission(self, request):
+        return False

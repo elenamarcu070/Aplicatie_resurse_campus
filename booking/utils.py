@@ -1,4 +1,7 @@
 # booking/utils.py
+import json
+import re
+
 from twilio.rest import Client
 from django.conf import settings
 import logging
@@ -28,42 +31,85 @@ def trimite_sms(numar, mesaj):
 
 #"twilio-domain-verification=aeef8bb394851e10b5e36ff12d8721f3"
 
-import os, json
-from twilio.rest import Client
-from django.conf import settings
+def _url_status_callback():
+    """Adresa pe care Twilio o apeleaza cand stie starea finala a mesajului."""
+    domeniu = (settings.SITE_DOMAIN or "").rstrip("/")
+    if not domeniu:
+        return None
+    from django.urls import reverse
+    return f"{domeniu}{reverse('twilio_status')}"
 
-def trimite_whatsapp(destinatar, template_name, variabile):
-    account_sid = settings.TWILIO_ACCOUNT_SID
-    auth_token = settings.TWILIO_AUTH_TOKEN
-    from_number = settings.TWILIO_WHATSAPP_NUMBER
 
-    TEMPLATE_MAP = {
-        "rezervare_preluata_student": os.getenv("WHATSAPP_CONTENT_SID_PRELUATA"),
-        "dezactivare_masina_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
-        "dezactivare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
-        "advertisment_rezervare": os.getenv("WHATSAPP_CONTENT_SID_ADVERTISMENT"),
-    }
+def valideaza_numar(numar):
+    """
+    Intoarce (valid, mesaj_de_eroare).
 
-    content_sid = TEMPLATE_MAP.get(template_name)
+    Regula generala E.164 accepta 9-15 cifre, ceea ce pentru un numar romanesc
+    lasa sa treaca si unul caruia ii lipseste o cifra. Numerele astfel salvate
+    nu primesc niciodata mesaje, iar Twilio raspunde cu eroarea 21211.
+    """
+    if not re.fullmatch(r"\+\d{9,15}", numar or ""):
+        return False, "Numărul introdus nu este valid. Verifică și încearcă din nou."
+    if numar.startswith("+40") and not re.fullmatch(r"\+40\d{9}", numar):
+        return False, ("Un număr de telefon românesc are 9 cifre după prefixul +40. "
+                       "Verifică dacă nu lipsește sau nu e în plus o cifră.")
+    if numar.startswith("+373") and not re.fullmatch(r"\+373\d{8}", numar):
+        return False, ("Un număr de telefon din Republica Moldova are 8 cifre după "
+                       "prefixul +373. Verifică numărul.")
+    return True, ""
+
+
+def trimite_whatsapp(destinatar, template_name, variabile, profil=None):
+    """
+    Trimite o notificare WhatsApp si inregistreaza incercarea in NotificareLog.
+
+    Intoarce randul de jurnal. Nu arunca exceptii: o notificare care nu pleaca
+    nu trebuie sa opreasca actiunea care a declansat-o.
+
+    Starea intoarsa aici este cea initiala („queued"). Starea finala vine mai
+    tarziu, prin webhook-ul de status, si se scrie peste.
+    """
+    content_sid = (settings.WHATSAPP_TEMPLATES or {}).get(template_name)
     if not content_sid:
-        print(f"⚠️ Template necunoscut: {template_name}")
-        return
+        logger.error(f"Sablon WhatsApp necunoscut sau neconfigurat: {template_name}")
+        return None
 
-    # 🧼 Curățăm numărul și variabilele
-    destinatar = destinatar.replace(" ", "")
+    destinatar = (destinatar or "").replace(" ", "")
     variabile = {str(k): str(v) for k, v in variabile.items()}
 
-    client = Client(account_sid, auth_token)
-    message = client.messages.create(
-        from_=f'whatsapp:{from_number}',
-        to=f'whatsapp:{destinatar}',
-        content_sid=content_sid,
-        content_variables=json.dumps(variabile)
+    jurnal = NotificareLog.objects.create(
+        profil=profil, destinatar=destinatar, sablon=template_name
     )
 
-    print(f"✅ WhatsApp trimis către {destinatar} (template: {template_name}) — SID: {message.sid}")
+    try:
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        argumente = {
+            "from_": f"whatsapp:{settings.TWILIO_WHATSAPP_NUMBER}",
+            "to": f"whatsapp:{destinatar}",
+            "content_sid": content_sid,
+            "content_variables": json.dumps(variabile),
+        }
+        callback = _url_status_callback()
+        if callback:
+            argumente["status_callback"] = callback
 
-from booking.models import Camin, AdminCamin, ProfilStudent
+        mesaj = client.messages.create(**argumente)
+        jurnal.message_sid = mesaj.sid or ""
+        jurnal.stare = mesaj.status or "queued"
+        jurnal.save(update_fields=["message_sid", "stare", "actualizat_la"])
+        logger.info(
+            f"Notificare {template_name} trimisa: SID={mesaj.sid} stare={mesaj.status}"
+        )
+    except Exception as e:
+        jurnal.stare = NotificareLog.EROARE_TRIMITERE
+        jurnal.detaliu = str(e)[:500]
+        jurnal.save(update_fields=["stare", "detaliu", "actualizat_la"])
+        logger.error(f"Eroare la trimiterea notificarii {template_name}: {e}")
+
+    return jurnal
+
+
+from booking.models import Camin, AdminCamin, NotificareLog, ProfilStudent
 
 def get_camin_curent(request):
     """

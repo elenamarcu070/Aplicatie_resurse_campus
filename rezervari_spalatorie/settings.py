@@ -258,6 +258,16 @@ WHATSAPP_CONTENT_SID = os.getenv('WHATSAPP_CONTENT_SID')
 TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
 WHATSAPP_TEMPLATE_LANGUAGE = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE")
+
+# ID-urile sabloanelor aprobate de WhatsApp. Tinute aici, nu citite cu os.getenv
+# in interiorul functiei de trimitere, ca sa fie vizibile in configurare si
+# inlocuibile in teste.
+WHATSAPP_TEMPLATES = {
+    "rezervare_preluata_student": os.getenv("WHATSAPP_CONTENT_SID_PRELUATA"),
+    "dezactivare_masina_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
+    "dezactivare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
+    "advertisment_rezervare": os.getenv("WHATSAPP_CONTENT_SID_ADVERTISMENT"),
+}
 SITE_DOMAIN = os.getenv("SITE_DOMAIN")
 
 # 🔥 Firebase Web Push

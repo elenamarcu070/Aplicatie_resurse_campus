@@ -20,11 +20,13 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from booking.utils import trimite_whatsapp, valideaza_numar
 from booking.models import (
     AdminCamin,
     Camin,
     IntervalDezactivare,
     Masina,
+    NotificareLog,
     ProfilStudent,
     Rezervare,
 )
@@ -1002,3 +1004,203 @@ class AccesLaImport(BazaImport):
             any("nu mai este disponibil" in m for m in
                 [str(x) for x in raspuns.context["messages"]])
         )
+
+
+class ValidareNumar(TestCase):
+    """
+    Regula generala E.164 accepta 9-15 cifre, deci lasa sa treaca si un numar
+    romanesc caruia ii lipseste o cifra. Acela nu primeste niciodata mesaje.
+    """
+
+    def test_numar_romanesc_corect(self):
+        valid, _ = valideaza_numar("+40712345678")
+        self.assertTrue(valid)
+
+    def test_numar_romanesc_cu_o_cifra_lipsa(self):
+        valid, mesaj = valideaza_numar("+4071234567")
+        self.assertFalse(valid)
+        self.assertIn("9 cifre", mesaj)
+
+    def test_numar_romanesc_cu_o_cifra_in_plus(self):
+        valid, _ = valideaza_numar("+407123456789")
+        self.assertFalse(valid)
+
+    def test_numar_moldovenesc(self):
+        self.assertTrue(valideaza_numar("+37360123456")[0])
+        self.assertFalse(valideaza_numar("+3736012345")[0])
+
+    def test_fara_prefix_international(self):
+        self.assertFalse(valideaza_numar("0712345678")[0])
+
+    def test_alt_prefix_de_tara_ramane_permisiv(self):
+        self.assertTrue(valideaza_numar("+441632960961")[0])
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class FormularTelefon(BazaRezervari):
+    """Numerele scurte nu mai ajung în baza de date."""
+
+    def test_numarul_scurt_este_respins(self):
+        profil = ProfilStudent.objects.get(utilizator=self.student)
+        profil.telefon = ""
+        profil.save()
+        self.client.force_login(self.student)
+
+        raspuns = self.client.post(
+            reverse("adauga_telefon"), {"telefon": "071234567", "tara": "ro"}, follow=True
+        )
+
+        profil.refresh_from_db()
+        self.assertEqual(profil.telefon, "")
+        self.assertTrue(any("9 cifre" in m for m in self._mesaje(raspuns)))
+
+
+@override_settings(
+    SECURE_SSL_REDIRECT=False,
+    WHATSAPP_TEMPLATES={"rezervare_preluata_student": "HXtest"},
+)
+class JurnalNotificari(BazaRezervari):
+    """Fiecare încercare de notificare lasă o urmă."""
+
+    def setUp(self):
+        super().setUp()
+        self.profil = ProfilStudent.objects.get(utilizator=self.student)
+
+    @patch("booking.utils.Client")
+    def test_trimiterea_reusita_este_inregistrata(self, MockClient):
+        mesaj = MockClient.return_value.messages.create.return_value
+        mesaj.sid = "SM123"
+        mesaj.status = "queued"
+
+        jurnal = trimite_whatsapp(
+            "+40712345678", "rezervare_preluata_student", {"1": "x"}, profil=self.profil
+        )
+
+        self.assertEqual(jurnal.message_sid, "SM123")
+        self.assertEqual(jurnal.stare, "queued")
+        self.assertEqual(jurnal.profil, self.profil)
+        self.assertFalse(jurnal.a_esuat)
+
+    @patch("booking.utils.Client")
+    def test_eroarea_twilio_este_inregistrata_fara_sa_arunce(self, MockClient):
+        MockClient.return_value.messages.create.side_effect = RuntimeError("retea picata")
+
+        jurnal = trimite_whatsapp(
+            "+40712345678", "rezervare_preluata_student", {"1": "x"}, profil=self.profil
+        )
+
+        self.assertEqual(jurnal.stare, NotificareLog.EROARE_TRIMITERE)
+        self.assertIn("retea picata", jurnal.detaliu)
+        self.assertTrue(jurnal.a_esuat)
+
+    @patch("booking.utils.Client")
+    def test_se_cere_raportarea_starii_finale(self, MockClient):
+        MockClient.return_value.messages.create.return_value.sid = "SM1"
+        MockClient.return_value.messages.create.return_value.status = "queued"
+
+        trimite_whatsapp("+40712345678", "rezervare_preluata_student", {"1": "x"})
+
+        argumente = MockClient.return_value.messages.create.call_args.kwargs
+        self.assertIn("status_callback", argumente)
+        self.assertIn("/twilio/status/", argumente["status_callback"])
+
+
+@override_settings(SECURE_SSL_REDIRECT=False, TWILIO_AUTH_TOKEN="token-de-test")
+class WebhookTwilio(TestCase):
+    """Starea finală vine de la Twilio, iar cererea e verificată cu semnătura."""
+
+    def setUp(self):
+        self.jurnal = NotificareLog.objects.create(
+            destinatar="+40712345678", sablon="rezervare_preluata_student",
+            message_sid="SM999", stare="queued",
+        )
+        self.url = reverse("twilio_status")
+
+    def _trimite(self, date, semnatura=None):
+        from twilio.request_validator import RequestValidator
+
+        adresa = "http://testserver" + self.url
+        if semnatura is None:
+            semnatura = RequestValidator("token-de-test").compute_signature(adresa, date)
+        return self.client.post(self.url, date, HTTP_X_TWILIO_SIGNATURE=semnatura)
+
+    def test_starea_livrata_este_scrisa(self):
+        raspuns = self._trimite({"MessageSid": "SM999", "MessageStatus": "delivered"})
+
+        self.assertEqual(raspuns.status_code, 204)
+        self.jurnal.refresh_from_db()
+        self.assertEqual(self.jurnal.stare, "delivered")
+        self.assertFalse(self.jurnal.a_esuat)
+
+    def test_esecul_este_scris_cu_tot_cu_cod(self):
+        self._trimite({
+            "MessageSid": "SM999", "MessageStatus": "undelivered",
+            "ErrorCode": "63024", "ErrorMessage": "Invalid message recipient",
+        })
+
+        self.jurnal.refresh_from_db()
+        self.assertEqual(self.jurnal.cod_eroare, "63024")
+        self.assertTrue(self.jurnal.a_esuat)
+        self.assertIn("WhatsApp", self.jurnal.explicatie())
+
+    def test_cererea_fara_semnatura_valida_este_respinsa(self):
+        raspuns = self._trimite(
+            {"MessageSid": "SM999", "MessageStatus": "delivered"}, semnatura="inventata"
+        )
+
+        self.assertEqual(raspuns.status_code, 403)
+        self.jurnal.refresh_from_db()
+        self.assertEqual(self.jurnal.stare, "queued")
+
+    def test_sid_necunoscut_nu_produce_eroare(self):
+        raspuns = self._trimite({"MessageSid": "SM-inexistent", "MessageStatus": "delivered"})
+
+        self.assertEqual(raspuns.status_code, 204)
+
+    def test_doar_post(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AvertismentPeDashboard(BazaRezervari):
+    """Studentul află de pe dashboard că mesajele nu ajung la el."""
+
+    def setUp(self):
+        super().setUp()
+        self.profil = ProfilStudent.objects.get(utilizator=self.student)
+        self.client.force_login(self.student)
+
+    def test_esecul_este_aratat_studentului(self):
+        NotificareLog.objects.create(
+            profil=self.profil, destinatar=self.profil.telefon,
+            sablon="rezervare_preluata_student", stare="undelivered", cod_eroare="63024",
+        )
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertContains(raspuns, "Ultimul mesaj nu a ajuns la tine")
+        self.assertContains(raspuns, "WhatsApp instalat")
+
+    def test_fara_esec_nu_se_arata_nimic(self):
+        NotificareLog.objects.create(
+            profil=self.profil, destinatar=self.profil.telefon,
+            sablon="rezervare_preluata_student", stare="delivered",
+        )
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertNotContains(raspuns, "Ultimul mesaj nu a ajuns la tine")
+
+    def test_conteaza_doar_ultima_notificare(self):
+        NotificareLog.objects.create(
+            profil=self.profil, destinatar=self.profil.telefon,
+            sablon="rezervare_preluata_student", stare="failed", cod_eroare="63024",
+        )
+        NotificareLog.objects.create(
+            profil=self.profil, destinatar=self.profil.telefon,
+            sablon="rezervare_preluata_student", stare="delivered",
+        )
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertNotContains(raspuns, "Ultimul mesaj nu a ajuns la tine")

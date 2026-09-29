@@ -41,6 +41,24 @@
         {% endif %}
 
 
+        <!-- 🔴 ALERTĂ notificare nelivrată -->
+        {% if notificare_esuata %}
+        <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <strong>Ultimul mesaj nu a ajuns la tine</strong><br>
+                {{ notificare_esuata.explicatie }}<br>
+                <small class="text-muted">
+                    Număr folosit: {{ notificare_esuata.destinatar }} &middot;
+                    încercare din {{ notificare_esuata.creat_la|date:"d M Y, H:i" }}
+                </small>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-dark"
+                    data-bs-toggle="modal" data-bs-target="#modalTelefon">
+                Schimbă numărul
+            </button>
+        </div>
+        {% endif %}
+
         <!-- 🔵 ALERTĂ completare telefon -->
         {% if not profil.telefon %}
 

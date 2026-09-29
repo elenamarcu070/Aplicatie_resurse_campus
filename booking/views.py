@@ -8,11 +8,12 @@ from functools import wraps
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.storage import default_storage
 from django.db import IntegrityError, close_old_connections, transaction
 from django.db.models import F, Max, Min, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,12 +21,15 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from twilio.request_validator import RequestValidator
+
 from booking.models import (
     AdminCamin,
     Avertisment,
     Camin,
     IntervalDezactivare,
     Masina,
+    NotificareLog,
     ProfilStudent,
     ProgramMasina,
     ProgramUscator,
@@ -33,7 +37,7 @@ from booking.models import (
     Uscator,
 )
 from booking.import_studenti import aplica_plan, citeste_fisier, construieste_plan
-from booking.utils import get_camin_curent, trimite_whatsapp
+from booking.utils import get_camin_curent, trimite_whatsapp, valideaza_numar
 
 logger = logging.getLogger(__name__)
 
@@ -195,10 +199,18 @@ def dashboard_student(request):
         data__gte=data_limita
     ).count()
 
+    # Daca ultima notificare catre el nu a ajuns, studentul trebuie sa afle:
+    # altfel isi pierde rezervarile preluate fara sa stie de ce.
+    ultima_notificare = NotificareLog.objects.filter(profil=profil).first()
+    notificare_esuata = (
+        ultima_notificare if ultima_notificare and ultima_notificare.a_esuat else None
+    )
+
     context = {
         'profil': profil,
         'rezervare_activa': rezervare_activa,
         'avertismente_active': avertismente_active,
+        'notificare_esuata': notificare_esuata,
     }
 
     return render(request, 'dashboard/student.html', context)
@@ -1238,6 +1250,48 @@ def incarca_studenti_view(request):
 
 
 # =========================
+# Twilio - starea notificarilor
+# =========================
+@csrf_exempt
+@require_POST
+def twilio_status_callback(request):
+    """
+    Twilio anunta aici starea finala a fiecarui mesaj trimis.
+
+    Apelul de trimitere se intoarce cu starea „queued", deci livrarea reala se
+    afla abia de aici. Endpoint-ul este public, asa ca fiecare cerere este
+    verificata cu semnatura Twilio inainte sa modifice ceva.
+    """
+    token = settings.TWILIO_AUTH_TOKEN
+    semnatura = request.headers.get("X-Twilio-Signature", "")
+    if not token or not RequestValidator(token).validate(
+        request.build_absolute_uri(), request.POST.dict(), semnatura
+    ):
+        logger.warning("Callback Twilio respins: semnatura invalida")
+        return HttpResponseForbidden("Semnatura invalida")
+
+    sid = request.POST.get("MessageSid", "")
+    jurnal = NotificareLog.objects.filter(message_sid=sid).first()
+    if not jurnal:
+        # Mesaj trimis inainte de introducerea jurnalului, sau din alt sistem.
+        return HttpResponse(status=204)
+
+    jurnal.stare = request.POST.get("MessageStatus") or jurnal.stare
+    cod = request.POST.get("ErrorCode") or ""
+    if cod:
+        jurnal.cod_eroare = cod
+        jurnal.detaliu = (request.POST.get("ErrorMessage") or "")[:500]
+    jurnal.save(update_fields=["stare", "cod_eroare", "detaliu", "actualizat_la"])
+
+    if jurnal.a_esuat:
+        logger.warning(
+            f"Notificare nelivrata: sablon={jurnal.sablon} "
+            f"stare={jurnal.stare} cod={jurnal.cod_eroare}"
+        )
+    return HttpResponse(status=204)
+
+
+# =========================
 # Admin cămin - Activare / dezactivare student
 # =========================
 @login_required
@@ -1361,9 +1415,12 @@ def adauga_telefon(request):
     if not num.startswith("+"):
         num = prefix + num.lstrip("0")
 
-    # validare simplă E.164: + urmat de 9–15 cifre
-    if not re.fullmatch(r"^\+\d{9,15}$", num):
-        messages.error(request, "Numărul introdus nu este valid. Verifică și încearcă din nou.")
+    # Validarea tine cont si de lungimea ceruta de prefixul de tara: regula
+    # generala E.164 lasa sa treaca un numar romanesc cu o cifra lipsa, iar
+    # acela nu primeste niciodata mesaje.
+    valid, eroare = valideaza_numar(num)
+    if not valid:
+        messages.error(request, eroare)
         return inapoi_la(request, "home")
 
     # 2) Actualizare în toate locurile unde poate fi stocat

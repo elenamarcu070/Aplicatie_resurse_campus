@@ -191,3 +191,58 @@ class IntervalDezactivare(models.Model):
     data = models.DateField()
     ora_start = models.TimeField()
     ora_end = models.TimeField()
+
+
+# ------------------------------------------
+# JURNAL DE NOTIFICĂRI
+# ------------------------------------------
+class NotificareLog(models.Model):
+    """
+    Urma unei notificări trimise prin Twilio.
+
+    Fără asta, aplicația nu are cum să știe dacă un mesaj a ajuns: Twilio
+    stabilește livrarea asincron, iar apelul de trimitere se întoarce cu
+    starea „queued". Starea finală vine mai târziu, prin webhook-ul de status,
+    și se scrie aici.
+    """
+
+    # Stările sunt cele raportate de Twilio, plus una proprie pentru cazul în
+    # care apelul către Twilio nici nu a reușit.
+    EROARE_TRIMITERE = "eroare_trimitere"
+    STARI_ESUATE = ("undelivered", "failed", EROARE_TRIMITERE)
+
+    profil = models.ForeignKey(
+        ProfilStudent, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="notificari",
+    )
+    destinatar = models.CharField(max_length=20)
+    sablon = models.CharField(max_length=64)
+    message_sid = models.CharField(max_length=64, blank=True, db_index=True)
+    stare = models.CharField(max_length=24, default="in_asteptare")
+    cod_eroare = models.CharField(max_length=16, blank=True)
+    detaliu = models.TextField(blank=True)
+    creat_la = models.DateTimeField(auto_now_add=True)
+    actualizat_la = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # `-id` departajeaza notificarile trimise in aceeasi secunda, altfel
+        # „ultima notificare" ar fi imprevizibila.
+        ordering = ["-creat_la", "-id"]
+
+    def __str__(self):
+        return f"{self.sablon} → {self.destinatar} ({self.stare})"
+
+    @property
+    def a_esuat(self):
+        return self.stare in self.STARI_ESUATE
+
+    def explicatie(self):
+        """Ce să-i spui studentului, pe înțelesul lui."""
+        if self.cod_eroare == "63024":
+            return ("Numărul nu poate primi mesaje pe WhatsApp. Verifică dacă ai "
+                    "WhatsApp instalat pe acest număr și dacă ai acceptat termenii aplicației.")
+        if self.cod_eroare == "21211":
+            return "Numărul de telefon pare incomplet sau greșit."
+        if self.stare in self.STARI_ESUATE:
+            return "Mesajul nu a putut fi livrat la acest număr."
+        return ""
