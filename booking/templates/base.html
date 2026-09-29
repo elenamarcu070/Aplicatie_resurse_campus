@@ -366,7 +366,16 @@
           return { ok: true };
         } catch (e) {
           console.error("Eroare la activarea notificărilor:", e);
-          return { ok: false, motiv: "A apărut o eroare la activarea notificărilor." };
+          const text = (e && (e.message || e.code)) ? String(e.message || e.code) : String(e);
+          // Eroarea de la cheia VAPID e cea mai frecventă la configurare și
+          // apare cu un text greu de interpretat; o traducem.
+          if (/applicationServerKey|vapid|InvalidAccessError/i.test(text)) {
+            return {
+              ok: false,
+              motiv: "Cheia de notificări a aplicației nu este validă. Anunță administratorul."
+            };
+          }
+          return { ok: false, motiv: "Activarea a eșuat: " + text };
         }
       }
 

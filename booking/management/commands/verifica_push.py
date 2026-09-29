@@ -46,13 +46,26 @@ class Command(BaseCommand):
             return
         self.stdout.write(self.style.SUCCESS("2. Google acceptă cheia: token obținut"))
 
-        cu_token = ProfilStudent.objects.exclude(fcm_token__isnull=True).exclude(fcm_token="")
-        numar = cu_token.count()
-        self.stdout.write(f"3. Studenți cu notificări activate: {numar}")
-        if not numar:
-            self.stdout.write(
-                "   Normal deocamdată: fiecare student apasă butonul de pe dashboard."
+        # Rulată de pe laptop prin `railway run`, comanda are variabilele de
+        # producție, dar nu și acces la baza de date: aceasta ascultă doar în
+        # rețeaua internă Railway. Primii doi pași rămân utili și așa.
+        try:
+            numar = (
+                ProfilStudent.objects.exclude(fcm_token__isnull=True)
+                .exclude(fcm_token="")
+                .count()
             )
+            self.stdout.write(f"3. Studenți cu notificări activate: {numar}")
+            if not numar:
+                self.stdout.write(
+                    "   Normal deocamdată: fiecare student apasă butonul de pe dashboard."
+                )
+        except Exception as e:
+            numar = None
+            self.stdout.write(self.style.WARNING(
+                f"3. Baza de date nu e accesibilă de aici ({type(e).__name__}). "
+                "Normal dacă rulezi comanda de pe laptop."
+            ))
 
         email = optiuni.get("trimite_catre")
         if not email:
