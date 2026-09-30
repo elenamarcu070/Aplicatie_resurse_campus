@@ -1562,6 +1562,13 @@ class BazaCereriCont(TestCase):
     def _mesaje(self, raspuns):
         return [str(m) for m in raspuns.context["messages"]]
 
+    def _raspuns_twilio(self, MockClient, sid="SM1", stare="queued"):
+        """Twilio întoarce șiruri; un MagicMock lăsat așa pică la scrierea în CharField."""
+        mesaj = MockClient.return_value.messages.create.return_value
+        mesaj.sid = sid
+        mesaj.status = stare
+        return mesaj
+
 
 class AccesLaFormularulDeCerere(BazaCereriCont):
     """Formularul se deschide doar după o autentificare Google respinsă."""
@@ -1662,8 +1669,7 @@ class AnuntareaAdminilor(BazaCereriCont):
 
     @patch("booking.utils.Client")
     def test_primesc_seful_caminului_si_super_adminul(self, MockClient):
-        MockClient.return_value.messages.create.return_value.sid = "SM1"
-        MockClient.return_value.messages.create.return_value.status = "queued"
+        self._raspuns_twilio(MockClient)
 
         notifica_admini_cerere(self._cerere(self.t1))
 
@@ -1677,6 +1683,7 @@ class AnuntareaAdminilor(BazaCereriCont):
 
     @patch("booking.utils.Client")
     def test_adminii_fara_telefon_sunt_sariti(self, MockClient):
+        self._raspuns_twilio(MockClient)
         AdminCamin.objects.filter(email="sef1@tuiasi.ro").update(telefon="")
 
         notifica_admini_cerere(self._cerere(self.t1))
@@ -1844,3 +1851,76 @@ class CamineleOferiteInFormular(BazaCereriCont):
 
         self.assertEqual(CerereCont.objects.count(), 0)
         self.assertTrue(any("căminul" in m for m in self._mesaje(raspuns)))
+
+
+@override_settings(WHATSAPP_TEMPLATES={"cerere_aprobata": "HXaprobata"})
+class AnuntareaStudentuluiAprobat(BazaCereriCont):
+    """Studentul află că are cont, fără să mai încerce din nou de unul singur."""
+
+    def setUp(self):
+        super().setUp()
+        self.cerere = CerereCont.objects.create(
+            email="ana@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=self.t1, numar_camera="203", telefon="+40712345678",
+        )
+
+    def _aproba(self):
+        self.client.force_login(self.sef_t1)
+        return self.client.post(
+            reverse("aproba_cerere_cont", args=[self.cerere.id]), follow=True
+        )
+
+    @patch("booking.utils.Client")
+    def test_primeste_whatsapp_pe_numarul_din_cerere(self, MockClient):
+        self._raspuns_twilio(MockClient, sid="SM9")
+
+        self._aproba()
+
+        argumente = MockClient.return_value.messages.create.call_args.kwargs
+        self.assertEqual(argumente["to"], "whatsapp:+40712345678")
+        self.assertEqual(argumente["content_sid"], "HXaprobata")
+
+    @patch("booking.utils.Client")
+    def test_notificarea_din_aplicatie_il_asteapta_la_autentificare(self, MockClient):
+        self._raspuns_twilio(MockClient)
+
+        self._aproba()
+
+        profil = ProfilStudent.objects.get(email="ana@student.tuiasi.ro")
+        notificare = Notificare.objects.get(profil=profil)
+        self.assertIn("aprobată", notificare.titlu)
+        self.assertIn("T1", notificare.corp)
+        self.assertEqual(notificare.link, "/dashboard/student/")
+        self.assertFalse(notificare.citita)
+
+    @patch("booking.utils.Client")
+    def test_fara_numar_ramane_doar_notificarea_din_aplicatie(self, MockClient):
+        self.cerere.telefon = ""
+        self.cerere.save()
+
+        self._aproba()
+
+        MockClient.return_value.messages.create.assert_not_called()
+        self.assertEqual(Notificare.objects.count(), 1)
+
+    @patch("booking.utils.Client")
+    def test_un_whatsapp_esuat_nu_anuleaza_contul(self, MockClient):
+        MockClient.return_value.messages.create.side_effect = RuntimeError("retea picata")
+
+        self._aproba()
+
+        profil = ProfilStudent.objects.get(email="ana@student.tuiasi.ro")
+        self.assertTrue(profil.activ)
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.APROBATA)
+
+    @patch("booking.utils.Client")
+    def test_respingerea_nu_trimite_nimic(self, MockClient):
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(
+            reverse("respinge_cerere_cont", args=[self.cerere.id]), follow=True
+        )
+
+        MockClient.return_value.messages.create.assert_not_called()
+        self.assertEqual(Notificare.objects.count(), 0)

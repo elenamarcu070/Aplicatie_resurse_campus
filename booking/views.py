@@ -1543,6 +1543,27 @@ def aproba_cerere_cont(request, cerere_id):
         cerere.procesat_de = request.user.email
         cerere.save(update_fields=["stare", "procesat_la", "procesat_de"])
 
+    # Anuntul pleaca dupa ce contul e scris de-a binelea: altfel un WhatsApp
+    # care esueaza ar anula crearea contului, iar studentul ar ramane fara si
+    # cu cererea inchisa. Notificarea din aplicatie il asteapta oricum la
+    # prima autentificare, chiar daca nu si-a lasat numarul.
+    notifica_student(
+        profil,
+        "cerere_aprobata",
+        {
+            "1": cerere.prenume or cerere.nume,
+            "2": cerere.camin.nume,
+            "3": cerere.numar_camera or "-",
+        },
+        titlu="Cererea ta a fost aprobată",
+        corp=(
+            f"Ai acum cont pentru căminul {cerere.camin.nume}"
+            f"{', camera ' + cerere.numar_camera if cerere.numar_camera else ''}. "
+            "Poți rezerva o mașină."
+        ),
+        link="/dashboard/student/",
+    )
+
     messages.success(
         request,
         f"{cerere.nume_complet} are acum cont în {cerere.camin.nume}, camera "

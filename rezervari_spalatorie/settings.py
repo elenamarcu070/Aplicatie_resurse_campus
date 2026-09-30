@@ -268,6 +268,7 @@ WHATSAPP_TEMPLATES = {
     "dezactivare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
     "advertisment_rezervare": os.getenv("WHATSAPP_CONTENT_SID_ADVERTISMENT"),
     "cerere_cont_noua": os.getenv("WHATSAPP_CONTENT_SID_CERERE"),
+    "cerere_aprobata": os.getenv("WHATSAPP_CONTENT_SID_APROBATA"),
 }
 SITE_DOMAIN = os.getenv("SITE_DOMAIN")
 

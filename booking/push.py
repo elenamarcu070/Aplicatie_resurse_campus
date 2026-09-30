@@ -164,7 +164,8 @@ def trimite_push(profil, titlu, corp, date_suplimentare=None):
     return jurnal
 
 
-def notifica_student(profil, sablon, variabile, titlu, corp):
+def notifica_student(profil, sablon, variabile, titlu, corp,
+                     link="/dashboard/student/programari/"):
     """
     Trimite aceeași veste pe ambele canale.
 
@@ -180,8 +181,7 @@ def notifica_student(profil, sablon, variabile, titlu, corp):
     # canale de livrare esueaza.
     if profil:
         rezultat["in_aplicatie"] = Notificare.objects.create(
-            profil=profil, titlu=titlu[:120], corp=corp,
-            link="/dashboard/student/programari/",
+            profil=profil, titlu=titlu[:120], corp=corp, link=link,
         )
 
     if profil and profil.telefon:
