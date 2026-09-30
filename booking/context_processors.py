@@ -90,3 +90,24 @@ def notificari_utilizator(request):
         "notificari_recente": notificari[:8],
         "notificari_necitite": notificari.filter(citita=False).count(),
     }
+
+
+def cereri_de_cont(request):
+    """Badge-ul de pe butonul „Studenți", ca o cerere să nu treacă neobservată."""
+    if not request.user.is_authenticated:
+        return {}
+
+    from booking.models import CerereCont
+
+    admin = AdminCamin.objects.filter(email=request.user.email).first()
+    if not admin:
+        return {}
+
+    cereri = CerereCont.objects.filter(stare=CerereCont.IN_ASTEPTARE)
+    if not admin.is_super_admin:
+        # Șeful de cămin vede doar cererile pentru căminul lui.
+        if not admin.camin_id:
+            return {}
+        cereri = cereri.filter(camin_id=admin.camin_id)
+
+    return {"cereri_in_asteptare": cereri.count()}

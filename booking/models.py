@@ -11,6 +11,12 @@ from django.forms import ValidationError
 class Camin(models.Model):
     nume = models.CharField(max_length=100, unique=True)
     durata_interval = models.PositiveIntegerField(default=2, help_text="Durata fiecărui interval de rezervare (ore)")
+    # Căminele de probă (API_TEST) nu au ce căuta în lista pe care o vede un
+    # student când cere cont. Restul aplicației nu ține cont de câmpul ăsta.
+    accepta_cereri = models.BooleanField(
+        default=True,
+        help_text="Apare în lista de cămine din formularul de cerere de cont",
+    )
 
     def __str__(self):
         return self.nume
@@ -283,3 +289,64 @@ class Notificare(models.Model):
 
     def __str__(self):
         return f"{self.titlu} → {self.profil.email}"
+
+
+# ------------------------------------------
+# CERERE DE CONT
+# ------------------------------------------
+class CerereCont(models.Model):
+    """
+    Cererea unui student care s-a autentificat, dar nu se află în liste.
+
+    Se ajunge aici doar după o autentificare Google reușită: `callback` lasă
+    datele în sesiune înainte de a deconecta utilizatorul necunoscut. Adresa
+    de email nu se poate scrie de mână, deci nimeni nu poate cere cont în
+    numele altcuiva, iar formularul nu poate fi completat de roboți.
+
+    Cererea nu creează nimic singură. Contul apare abia când un administrator
+    o aprobă, și atunci trece prin exact aceeași cale ca adăugarea manuală a
+    unui student.
+    """
+
+    IN_ASTEPTARE = "in_asteptare"
+    APROBATA = "aprobata"
+    RESPINSA = "respinsa"
+    STARI = [
+        (IN_ASTEPTARE, "În așteptare"),
+        (APROBATA, "Aprobată"),
+        (RESPINSA, "Respinsă"),
+    ]
+
+    email = models.EmailField()
+    nume = models.CharField(max_length=50)
+    prenume = models.CharField(max_length=50)
+    camin = models.ForeignKey(Camin, on_delete=models.CASCADE, related_name="cereri_cont")
+    numar_camera = models.CharField(max_length=10, blank=True)
+    telefon = models.CharField(max_length=15, blank=True)
+
+    stare = models.CharField(max_length=16, choices=STARI, default=IN_ASTEPTARE)
+    creat_la = models.DateTimeField(auto_now_add=True)
+    procesat_la = models.DateTimeField(null=True, blank=True)
+    # Emailul adminului, nu o cheie străină: adminii se schimbă de la an la an,
+    # iar cine a decis trebuie să rămână scris și după ce contul lui dispare.
+    procesat_de = models.CharField(max_length=254, blank=True)
+    motiv = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-creat_la", "-id"]
+        constraints = [
+            # Un student poate avea o singură cerere deschisă. Cele rezolvate
+            # rămân toate, ca istoric.
+            models.UniqueConstraint(
+                fields=["email"],
+                condition=models.Q(stare="in_asteptare"),
+                name="o_singura_cerere_in_asteptare",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.email} → {self.camin.nume} ({self.stare})"
+
+    @property
+    def nume_complet(self):
+        return f"{self.nume} {self.prenume}".strip()

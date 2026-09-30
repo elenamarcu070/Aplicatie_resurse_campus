@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Camin, Masina, ProgramMasina, ProfilStudent, Rezervare, Avertisment, IntervalDezactivare
-from .models import AdminCamin
+from .models import AdminCamin, CerereCont
 from django.contrib.auth.models import User 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
@@ -20,7 +20,8 @@ class ProgramMasinaAdmin(admin.ModelAdmin):
 
 @admin.register(Camin)
 class CaminAdmin(admin.ModelAdmin):
-    list_display = ('nume',)
+    list_display = ('nume', 'accepta_cereri')
+    list_editable = ('accepta_cereri',)
     search_fields = ('nume',)
     ordering = ('nume',)
 
@@ -109,3 +110,12 @@ class NotificareLogAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(CerereCont)
+class CerereContAdmin(admin.ModelAdmin):
+    list_display = ('email', 'nume', 'prenume', 'camin', 'numar_camera', 'stare', 'creat_la')
+    list_filter = ('stare', 'camin')
+    search_fields = ('email', 'nume', 'prenume')
+    readonly_fields = ('creat_la', 'procesat_la', 'procesat_de')
+    ordering = ('-creat_la',)

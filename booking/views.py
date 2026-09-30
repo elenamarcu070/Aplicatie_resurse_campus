@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 import traceback
 from datetime import datetime, time, timedelta
 from functools import wraps
@@ -27,6 +26,7 @@ from booking.models import (
     AdminCamin,
     Avertisment,
     Camin,
+    CerereCont,
     IntervalDezactivare,
     Masina,
     Notificare,
@@ -39,7 +39,12 @@ from booking.models import (
 )
 from booking.import_studenti import aplica_plan, citeste_fisier, construieste_plan
 from booking.push import notifica_student, push_este_configurat
-from booking.utils import get_camin_curent, valideaza_numar
+from booking.utils import (
+    get_camin_curent,
+    normalizeaza_numar,
+    notifica_admini_cerere,
+    valideaza_numar,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -145,13 +150,24 @@ def callback(request):
             profil.save()
         return redirect('dashboard_student')
 
-    # 🔴 3. Dacă nu e găsit în baza de date → NU îl creăm, doar blocăm accesul
+    # 🔴 3. Dacă nu e găsit în baza de date → NU îl creăm, doar blocăm accesul.
+    # Păstrăm însă datele venite de la Google, ca să poată cere un cont fără
+    # să-și scrie adresa de mână: așa nimeni nu poate cere cont în numele
+    # altuia, iar formularul nu poate fi completat de roboți.
+    date_cerere = {
+        "email": email,
+        "prenume": (user.first_name or "").strip(),
+        "nume": (user.last_name or "").strip(),
+    }
     logout(request)
     try:
         user.delete()
-    except:
-        pass
-    return render(request, 'not_allowed.html')
+    except Exception:
+        logger.warning(f"Nu am putut sterge contul neautorizat {email}.")
+
+    # După `logout` sesiunea e alta, goală: scriem în ea de-abia acum.
+    request.session["cerere_cont"] = date_cerere
+    return render(request, 'not_allowed.html', {'poate_cere_cont': True})
 
 
 
@@ -1265,12 +1281,20 @@ def incarca_studenti_view(request):
         'activ', 'nume', 'prenume'
     )
 
+    # Cererile de cont: super-adminul le vede pe toate, indiferent de căminul
+    # selectat în bara de sus; șeful de cămin doar pe ale lui.
+    cereri = CerereCont.objects.select_related('camin')
+    if not admin_camin.is_super_admin:
+        cereri = cereri.filter(camin=admin_camin.camin)
+
     return render(request, 'dashboard/admin_camin/incarca_studenti.html', {
         'plan': plan,
         'camin': camin,
         'studenti': studenti,
         'camine': camine,
-        'is_super_admin': admin_camin.is_super_admin
+        'is_super_admin': admin_camin.is_super_admin,
+        'cereri': cereri.filter(stare=CerereCont.IN_ASTEPTARE),
+        'cereri_rezolvate': cereri.exclude(stare=CerereCont.IN_ASTEPTARE)[:15],
     })
 
 
@@ -1362,6 +1386,191 @@ def comuta_activ_student(request, student_id):
 
 
 # =========================
+# Cereri de cont
+# =========================
+def cerere_cont_view(request):
+    """
+    Formularul prin care un student negăsit în liste cere un cont.
+
+    Nu e o pagină publică: se ajunge aici doar după o autentificare Google
+    reușită al cărei email nu a fost găsit. `callback` lasă atunci datele în
+    sesiune, iar fără ele formularul nu se deschide. Adresa nu se poate
+    schimba, deci cererea vine sigur de la cine spune că vine.
+    """
+    date_sesiune = request.session.get("cerere_cont") or {}
+    email = (date_sesiune.get("email") or "").strip().lower()
+    if not email:
+        messages.info(request, "Autentifică-te întâi cu Google, apoi poți cere un cont.")
+        return redirect("home")
+
+    # S-ar putea să fi fost adăugat de admin între timp.
+    if ProfilStudent.objects.filter(email__iexact=email, activ=True).exists():
+        request.session.pop("cerere_cont", None)
+        messages.success(request, "Ai deja cont. Autentifică-te din nou.")
+        return redirect("home")
+
+    in_asteptare = CerereCont.objects.filter(
+        email__iexact=email, stare=CerereCont.IN_ASTEPTARE
+    ).select_related("camin").first()
+
+    context = {
+        "email": email,
+        "nume": date_sesiune.get("nume", ""),
+        "prenume": date_sesiune.get("prenume", ""),
+        "camine": Camin.objects.filter(accepta_cereri=True).order_by("nume"),
+        "cerere": in_asteptare,
+    }
+
+    if request.method != "POST" or in_asteptare:
+        return render(request, "cerere_cont.html", context)
+
+    # `filter(id=...)` arunca ValueError pe orice nu e numar, inclusiv pe
+    # optiunea goala „Alege caminul…"; aia e o completare lipsa, nu o eroare.
+    ales = request.POST.get("camin", "").strip()
+    camin = (Camin.objects.filter(id=ales, accepta_cereri=True).first()
+             if ales.isdigit() else None)
+    nume = request.POST.get("nume", "").strip().title()
+    prenume = request.POST.get("prenume", "").strip().title()
+    camera = request.POST.get("numar_camera", "").strip()
+    telefon = normalizeaza_numar(request.POST.get("telefon"), request.POST.get("tara"))
+
+    erori = []
+    if not camin:
+        erori.append("Alege căminul în care stai.")
+    if not nume or not prenume:
+        erori.append("Completează numele și prenumele.")
+    if not camera:
+        erori.append("Completează numărul camerei.")
+    if telefon:
+        valid, mesaj = valideaza_numar(telefon)
+        if not valid:
+            erori.append(mesaj)
+
+    if erori:
+        for eroare in erori:
+            messages.error(request, eroare)
+        # Ce a apucat să scrie rămâne în formular.
+        context.update({"nume": nume, "prenume": prenume, "numar_camera": camera,
+                        "telefon": request.POST.get("telefon", ""),
+                        "camin_ales": camin.id if camin else None})
+        return render(request, "cerere_cont.html", context)
+
+    try:
+        cerere = CerereCont.objects.create(
+            email=email, nume=nume, prenume=prenume, camin=camin,
+            numar_camera=camera[:10], telefon=telefon[:15],
+        )
+    except IntegrityError:
+        # A trimis cererea de două ori la rând; constrângerea din baza de date
+        # a oprit-o pe a doua.
+        messages.info(request, "Cererea ta a fost deja trimisă.")
+        return redirect("cerere_cont")
+
+    notifica_admini_cerere(cerere)
+    logger.info(f"Cerere de cont noua: {email} pentru {camin.nume}.")
+    messages.success(
+        request,
+        "Cererea a fost trimisă șefului de cămin. Vei putea intra în aplicație "
+        "imediat ce o aprobă.",
+    )
+    return redirect("cerere_cont")
+
+
+def _cerere_accesibila(request, cerere):
+    """Super-adminul vede toate cererile; șeful de cămin doar pe ale lui."""
+    if is_super_admin(request.user):
+        return True
+    admin = AdminCamin.objects.filter(email=request.user.email).first()
+    return bool(admin and admin.camin_id and admin.camin_id == cerere.camin_id)
+
+
+def _cerere_de_procesat(request, cerere_id):
+    """
+    Întoarce (cerere, raspuns_de_oprire).
+
+    Cele două verificări — dreptul de acces și faptul că cererea e încă
+    deschisă — sunt identice la aprobare și la respingere.
+    """
+    cerere = get_object_or_404(CerereCont, id=cerere_id)
+
+    if not _cerere_accesibila(request, cerere):
+        return cerere, render(request, "not_allowed.html", {
+            "message": "Nu ai acces la cererile acestui cămin."
+        })
+
+    if cerere.stare != CerereCont.IN_ASTEPTARE:
+        messages.info(request, "Cererea fusese deja rezolvată de altcineva.")
+        return cerere, redirect("incarca_studenti")
+
+    return cerere, None
+
+
+@login_required
+@require_POST
+@only_admins
+def aproba_cerere_cont(request, cerere_id):
+    """Aprobarea creează contul pe aceeași cale ca adăugarea manuală."""
+    cerere, oprire = _cerere_de_procesat(request, cerere_id)
+    if oprire:
+        return oprire
+
+    with transaction.atomic():
+        # Căutarea se face după email, nu după username: conturile create la
+        # autentificare au username-ul fără domeniu, iar o căutare după
+        # username ar crea un al doilea cont pentru același om.
+        utilizator = User.objects.filter(email__iexact=cerere.email).order_by("id").first()
+        if utilizator is None:
+            utilizator = User(username=cerere.email)
+        utilizator.email = cerere.email
+        utilizator.first_name = cerere.prenume
+        utilizator.last_name = cerere.nume
+        utilizator.save()
+
+        profil, _ = ProfilStudent.objects.update_or_create(
+            utilizator=utilizator,
+            defaults={
+                "camin": cerere.camin,
+                "numar_camera": cerere.numar_camera,
+                "activ": True,
+            },
+        )
+        if cerere.telefon:
+            profil.telefon = cerere.telefon
+            profil.save(update_fields=["telefon"])
+
+        cerere.stare = CerereCont.APROBATA
+        cerere.procesat_la = timezone.now()
+        cerere.procesat_de = request.user.email
+        cerere.save(update_fields=["stare", "procesat_la", "procesat_de"])
+
+    messages.success(
+        request,
+        f"{cerere.nume_complet} are acum cont în {cerere.camin.nume}, camera "
+        f"{cerere.numar_camera or '—'}.",
+    )
+    return redirect("incarca_studenti")
+
+
+@login_required
+@require_POST
+@only_admins
+def respinge_cerere_cont(request, cerere_id):
+    """Respingerea nu creează și nu șterge nimic; cererea rămâne ca istoric."""
+    cerere, oprire = _cerere_de_procesat(request, cerere_id)
+    if oprire:
+        return oprire
+
+    cerere.stare = CerereCont.RESPINSA
+    cerere.motiv = request.POST.get("motiv", "").strip()[:500]
+    cerere.procesat_la = timezone.now()
+    cerere.procesat_de = request.user.email
+    cerere.save(update_fields=["stare", "motiv", "procesat_la", "procesat_de"])
+
+    messages.info(request, f"Cererea lui {cerere.nume_complet} a fost respinsă.")
+    return redirect("incarca_studenti")
+
+
+# =========================
 # Admin cămin - Adăugare student
 # =========================
 @login_required
@@ -1432,28 +1641,8 @@ def adauga_telefon(request):
     telefon_raw = (request.POST.get("telefon") or "").strip()
     tara = (request.POST.get("tara") or "ro").strip().lower()
 
-    # elimină spații/liniuțe/paranteze/puncte, păstrând + și cifre
-    num = re.sub(r"[^\d+]", "", telefon_raw)
-
-    # prefix implicit după țară
-       # 2️⃣ Mapare prefixe pentru mai multe țări
-    prefix_map = {
-        "ro": "+40",   # România
-        "md": "+373",  # Moldova
-        "bg": "+359",  # Bulgaria
-        "hu": "+36",   # Ungaria
-        "de": "+49",   # Germania
-        "it": "+39",   # Italia
-        "fr": "+33",   # Franța
-        "es": "+34",   # Spania
-        "uk": "+44",   # Marea Britanie
-        "gr": "+30",   # Grecia
-    }
-    prefix = prefix_map.get(tara, "+40")  # fallback la România
-
-    # dacă nu începe cu +, adaugă prefixul și taie 0 din față (ex: 07xx…)
-    if not num.startswith("+"):
-        num = prefix + num.lstrip("0")
+    # Curățare + prefix de țară, aceeași regulă ca la cererea de cont.
+    num = normalizeaza_numar(telefon_raw, tara)
 
     # Validarea tine cont si de lungimea ceruta de prefixul de tara: regula
     # generala E.164 lasa sa treaca un numar romanesc cu o cifra lipsa, iar

@@ -59,6 +59,37 @@ def valideaza_numar(numar):
     return True, ""
 
 
+# Prefixele acceptate la introducerea unui număr fără prefix internațional.
+PREFIXE_TARA = {
+    "ro": "+40",   # România
+    "md": "+373",  # Moldova
+    "bg": "+359",  # Bulgaria
+    "hu": "+36",   # Ungaria
+    "de": "+49",   # Germania
+    "it": "+39",   # Italia
+    "fr": "+33",   # Franța
+    "es": "+34",   # Spania
+    "uk": "+44",   # Marea Britanie
+    "gr": "+30",   # Grecia
+}
+
+
+def normalizeaza_numar(telefon_brut, tara="ro"):
+    """
+    Curăță un număr scris de om și îi pune prefixul de țară dacă lipsește.
+
+    Studenții scriu numărul cu spații, liniuțe sau începând cu 0. Fără pasul
+    ăsta, validarea ar respinge numere perfect bune.
+    """
+    numar = re.sub(r"[^\d+]", "", (telefon_brut or "").strip())
+    if not numar:
+        return ""
+    if not numar.startswith("+"):
+        prefix = PREFIXE_TARA.get((tara or "ro").strip().lower(), "+40")
+        numar = prefix + numar.lstrip("0")
+    return numar
+
+
 def trimite_whatsapp(destinatar, template_name, variabile, profil=None):
     """
     Trimite o notificare WhatsApp si inregistreaza incercarea in NotificareLog.
@@ -110,6 +141,58 @@ def trimite_whatsapp(destinatar, template_name, variabile, profil=None):
 
 
 from booking.models import Camin, AdminCamin, NotificareLog, ProfilStudent
+
+
+def destinatari_cerere_cont(camin):
+    """
+    Cine trebuie să afle că s-a depus o cerere de cont pentru căminul dat:
+    șeful căminului respectiv și super-adminii.
+
+    Sunt lăsați deoparte cei fără număr de telefon — nu se poate trimite nimic
+    către ei, iar cererea se vede oricum în pagina de studenți.
+    """
+    from django.db.models import Q
+
+    return (
+        AdminCamin.objects.filter(Q(camin=camin) | Q(is_super_admin=True))
+        .exclude(telefon__isnull=True)
+        .exclude(telefon="")
+        .distinct()
+    )
+
+
+def notifica_admini_cerere(cerere):
+    """
+    Anunță pe WhatsApp adminii care au de-a face cu o cerere nouă de cont.
+
+    Nu aruncă excepții: mesajul e o curtoazie, cererea e deja salvată și
+    vizibilă în listă, deci un WhatsApp care nu pleacă nu trebuie să-i arate
+    studentului un ecran de eroare.
+    """
+    trimise = []
+    for admin in destinatari_cerere_cont(cerere.camin):
+        try:
+            jurnal = trimite_whatsapp(
+                admin.telefon,
+                "cerere_cont_noua",
+                {
+                    "1": cerere.nume_complet or cerere.email,
+                    "2": cerere.camin.nume,
+                    "3": cerere.numar_camera or "-",
+                    "4": cerere.email,
+                },
+            )
+            if jurnal:
+                trimise.append(jurnal)
+        except Exception as e:
+            logger.error(f"Nu am putut anunta adminul {admin.email} de cererea {cerere.id}: {e}")
+
+    if not trimise:
+        logger.warning(
+            f"Cererea de cont {cerere.id} ({cerere.email}, {cerere.camin.nume}) "
+            "nu a ajuns pe WhatsApp la niciun admin."
+        )
+    return trimise
 
 def get_camin_curent(request):
     """

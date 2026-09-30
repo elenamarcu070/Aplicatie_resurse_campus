@@ -22,10 +22,11 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from booking.push import _cont_de_serviciu, notifica_student, trimite_push
-from booking.utils import trimite_whatsapp, valideaza_numar
+from booking.utils import notifica_admini_cerere, trimite_whatsapp, valideaza_numar
 from booking.models import (
     AdminCamin,
     Camin,
+    CerereCont,
     IntervalDezactivare,
     Masina,
     Notificare,
@@ -1514,3 +1515,332 @@ class NotificariInAplicatie(BazaRezervari):
         raspuns = self.client.get(reverse("dashboard_admin_camin"))
 
         self.assertNotContains(raspuns, "clopotelNotificari")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class BazaCereriCont(TestCase):
+    """Fixture comun: două cămine, șefii lor și un super-admin."""
+
+    def setUp(self):
+        app = SocialApp.objects.create(
+            provider="google", name="Google", client_id="test", secret="test"
+        )
+        app.sites.add(Site.objects.get_current())
+
+        self.t1 = Camin.objects.create(nume="T1", durata_interval=2)
+        self.t2 = Camin.objects.create(nume="T2", durata_interval=2)
+
+        self.sef_t1 = self._admin("sef1@tuiasi.ro", camin=self.t1, telefon="+40711111111")
+        self.sef_t2 = self._admin("sef2@tuiasi.ro", camin=self.t2, telefon="+40722222222")
+        self.super_admin = self._admin(
+            "sefa@tuiasi.ro", camin=None, telefon="+40733333333", super_admin=True
+        )
+
+    def _admin(self, email, camin=None, telefon="", super_admin=False):
+        user = User.objects.create_user(username=email, email=email)
+        AdminCamin.objects.create(
+            email=email, camin=camin, telefon=telefon, is_super_admin=super_admin
+        )
+        return user
+
+    def _sesiune_dupa_google(self, email, nume="Pop", prenume="Ana"):
+        """Ce lasă `callback` în sesiune când emailul nu e în liste."""
+        sesiune = self.client.session
+        sesiune["cerere_cont"] = {"email": email, "nume": nume, "prenume": prenume}
+        sesiune.save()
+
+    def _trimite(self, email="ana@student.tuiasi.ro", **suprascrieri):
+        self._sesiune_dupa_google(email)
+        date = {
+            "nume": "Pop", "prenume": "Ana",
+            "camin": self.t1.id, "numar_camera": "203",
+            "telefon": "", "tara": "ro",
+        }
+        date.update(suprascrieri)
+        return self.client.post(reverse("cerere_cont"), date, follow=True)
+
+    def _mesaje(self, raspuns):
+        return [str(m) for m in raspuns.context["messages"]]
+
+
+class AccesLaFormularulDeCerere(BazaCereriCont):
+    """Formularul se deschide doar după o autentificare Google respinsă."""
+
+    def test_callback_lasa_datele_in_sesiune_si_arata_butonul(self):
+        strain = User.objects.create_user(
+            username="strain", email="strain@student.tuiasi.ro",
+            first_name="Ion", last_name="Ionescu",
+        )
+        self.client.force_login(strain)
+
+        raspuns = self.client.get(reverse("callback"))
+
+        self.assertContains(raspuns, "Cere un cont")
+        self.assertEqual(
+            self.client.session["cerere_cont"],
+            {"email": "strain@student.tuiasi.ro", "prenume": "Ion", "nume": "Ionescu"},
+        )
+        # Contul neautorizat nu rămâne în baza de date.
+        self.assertFalse(User.objects.filter(email="strain@student.tuiasi.ro").exists())
+
+    def test_fara_autentificare_formularul_nu_se_deschide(self):
+        raspuns = self.client.get(reverse("cerere_cont"), follow=True)
+
+        self.assertEqual(CerereCont.objects.count(), 0)
+        self.assertTrue(any("Autentifică-te" in m for m in self._mesaje(raspuns)))
+
+    def test_emailul_vine_din_sesiune_nu_din_formular(self):
+        """Altfel oricine ar putea cere cont în numele altcuiva."""
+        self._trimite(email="ana@student.tuiasi.ro", email_ascuns="rector@tuiasi.ro")
+
+        cerere = CerereCont.objects.get()
+        self.assertEqual(cerere.email, "ana@student.tuiasi.ro")
+
+    def test_studentul_deja_inregistrat_este_trimis_la_autentificare(self):
+        user = User.objects.create_user(
+            username="ana@student.tuiasi.ro", email="ana@student.tuiasi.ro"
+        )
+        ProfilStudent.objects.create(utilizator=user, camin=self.t1, activ=True)
+        self._sesiune_dupa_google("ana@student.tuiasi.ro")
+
+        raspuns = self.client.get(reverse("cerere_cont"), follow=True)
+
+        self.assertTrue(any("Ai deja cont" in m for m in self._mesaje(raspuns)))
+
+
+class TrimitereaCererii(BazaCereriCont):
+    """Ce ajunge în baza de date când studentul apasă „Trimite"."""
+
+    def test_cererea_se_salveaza_cu_caminul_ales(self):
+        self._trimite(camin=self.t2.id, numar_camera="510")
+
+        cerere = CerereCont.objects.get()
+        self.assertEqual(cerere.camin, self.t2)
+        self.assertEqual(cerere.numar_camera, "510")
+        self.assertEqual(cerere.stare, CerereCont.IN_ASTEPTARE)
+
+    def test_numarul_primeste_prefixul_de_tara(self):
+        self._trimite(telefon="0712 345 678")
+
+        self.assertEqual(CerereCont.objects.get().telefon, "+40712345678")
+
+    def test_numarul_incomplet_este_respins(self):
+        raspuns = self._trimite(telefon="071234567")
+
+        self.assertEqual(CerereCont.objects.count(), 0)
+        self.assertTrue(any("9 cifre" in m for m in self._mesaje(raspuns)))
+
+    def test_fara_camin_nu_se_salveaza_nimic(self):
+        raspuns = self._trimite(camin="")
+
+        self.assertEqual(CerereCont.objects.count(), 0)
+        self.assertTrue(any("căminul" in m for m in self._mesaje(raspuns)))
+
+    def test_a_doua_cerere_nu_creeaza_duplicat(self):
+        self._trimite()
+        self._trimite()
+
+        self.assertEqual(CerereCont.objects.count(), 1)
+
+    def test_dupa_trimitere_vede_starea_cererii(self):
+        self._trimite()
+
+        raspuns = self.client.get(reverse("cerere_cont"))
+
+        self.assertContains(raspuns, "Cererea ta a fost trimisă")
+
+
+@override_settings(WHATSAPP_TEMPLATES={"cerere_cont_noua": "HXcerere"})
+class AnuntareaAdminilor(BazaCereriCont):
+    """Cine primește WhatsApp când vine o cerere."""
+
+    def _cerere(self, camin):
+        return CerereCont.objects.create(
+            email="ana@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=camin, numar_camera="203",
+        )
+
+    @patch("booking.utils.Client")
+    def test_primesc_seful_caminului_si_super_adminul(self, MockClient):
+        MockClient.return_value.messages.create.return_value.sid = "SM1"
+        MockClient.return_value.messages.create.return_value.status = "queued"
+
+        notifica_admini_cerere(self._cerere(self.t1))
+
+        destinatari = {
+            apel.kwargs["to"]
+            for apel in MockClient.return_value.messages.create.call_args_list
+        }
+        self.assertEqual(
+            destinatari, {"whatsapp:+40711111111", "whatsapp:+40733333333"}
+        )
+
+    @patch("booking.utils.Client")
+    def test_adminii_fara_telefon_sunt_sariti(self, MockClient):
+        AdminCamin.objects.filter(email="sef1@tuiasi.ro").update(telefon="")
+
+        notifica_admini_cerere(self._cerere(self.t1))
+
+        destinatari = [
+            apel.kwargs["to"]
+            for apel in MockClient.return_value.messages.create.call_args_list
+        ]
+        self.assertEqual(destinatari, ["whatsapp:+40733333333"])
+
+    @patch("booking.utils.Client")
+    def test_o_eroare_twilio_nu_opreste_cererea(self, MockClient):
+        MockClient.return_value.messages.create.side_effect = RuntimeError("retea picata")
+
+        self._trimite()
+
+        self.assertEqual(CerereCont.objects.count(), 1)
+
+
+class RezolvareaCererii(BazaCereriCont):
+    """Aprobarea și respingerea, și cine are voie să le apese."""
+
+    def setUp(self):
+        super().setUp()
+        self.cerere = CerereCont.objects.create(
+            email="ana@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=self.t1, numar_camera="203", telefon="+40712345678",
+        )
+
+    def _aproba(self, cine):
+        self.client.force_login(cine)
+        return self.client.post(
+            reverse("aproba_cerere_cont", args=[self.cerere.id]), follow=True
+        )
+
+    def test_aprobarea_creeaza_contul(self):
+        self._aproba(self.sef_t1)
+
+        profil = ProfilStudent.objects.get(email="ana@student.tuiasi.ro")
+        self.assertEqual(profil.camin, self.t1)
+        self.assertEqual(profil.numar_camera, "203")
+        self.assertEqual(profil.telefon, "+40712345678")
+        self.assertTrue(profil.activ)
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.APROBATA)
+        self.assertEqual(self.cerere.procesat_de, "sef1@tuiasi.ro")
+
+    def test_aprobarea_refoloseste_contul_existent(self):
+        """Conturile create la autentificare au username-ul fără domeniu."""
+        User.objects.create_user(username="ana", email="ana@student.tuiasi.ro")
+
+        self._aproba(self.super_admin)
+
+        self.assertEqual(User.objects.filter(email="ana@student.tuiasi.ro").count(), 1)
+
+    def test_seful_altui_camin_nu_poate_aproba(self):
+        raspuns = self._aproba(self.sef_t2)
+
+        self.assertContains(raspuns, "Nu ai acces")
+        self.assertFalse(ProfilStudent.objects.exists())
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.IN_ASTEPTARE)
+
+    def test_studentul_nu_poate_aproba(self):
+        user = User.objects.create_user(
+            username="alt@student.tuiasi.ro", email="alt@student.tuiasi.ro"
+        )
+        ProfilStudent.objects.create(utilizator=user, camin=self.t1)
+
+        self._aproba(user)
+
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.IN_ASTEPTARE)
+
+    def test_anonimul_nu_poate_aproba(self):
+        raspuns = self.client.post(
+            reverse("aproba_cerere_cont", args=[self.cerere.id])
+        )
+
+        self.assertEqual(raspuns.status_code, 302)
+        self.assertIn("login", raspuns.url)
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.IN_ASTEPTARE)
+
+    def test_respingerea_nu_creeaza_cont(self):
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(
+            reverse("respinge_cerere_cont", args=[self.cerere.id]),
+            {"motiv": "Nu e cazat aici."}, follow=True,
+        )
+
+        self.assertFalse(ProfilStudent.objects.exists())
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.RESPINSA)
+        self.assertEqual(self.cerere.motiv, "Nu e cazat aici.")
+
+    def test_a_doua_aprobare_nu_mai_face_nimic(self):
+        self._aproba(self.sef_t1)
+        raspuns = self._aproba(self.super_admin)
+
+        self.assertTrue(any("deja rezolvată" in m for m in self._mesaje(raspuns)))
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.procesat_de, "sef1@tuiasi.ro")
+
+
+class CereriInPaginaDeStudenti(BazaCereriCont):
+    """Fiecare admin vede doar cererile care îl privesc."""
+
+    def setUp(self):
+        super().setUp()
+        self.cerere_t1 = CerereCont.objects.create(
+            email="ana@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=self.t1, numar_camera="203",
+        )
+        self.cerere_t2 = CerereCont.objects.create(
+            email="bogdan@student.tuiasi.ro", nume="Ilie", prenume="Bogdan",
+            camin=self.t2, numar_camera="510",
+        )
+
+    def _cereri_vazute(self, cine):
+        self.client.force_login(cine)
+        raspuns = self.client.get(reverse("incarca_studenti"))
+        return {c.email for c in raspuns.context["cereri"]}
+
+    def test_seful_vede_doar_caminul_lui(self):
+        self.assertEqual(self._cereri_vazute(self.sef_t1), {"ana@student.tuiasi.ro"})
+
+    def test_super_adminul_le_vede_pe_toate(self):
+        self.assertEqual(
+            self._cereri_vazute(self.super_admin),
+            {"ana@student.tuiasi.ro", "bogdan@student.tuiasi.ro"},
+        )
+
+    def test_badge_ul_numara_doar_cererile_deschise(self):
+        self.cerere_t2.stare = CerereCont.APROBATA
+        self.cerere_t2.save()
+        self.client.force_login(self.super_admin)
+
+        raspuns = self.client.get(reverse("incarca_studenti"))
+
+        self.assertEqual(raspuns.context["cereri_in_asteptare"], 1)
+
+
+class CamineleOferiteInFormular(BazaCereriCont):
+    """Căminul de probă nu are ce căuta în lista studentului."""
+
+    def setUp(self):
+        super().setUp()
+        # Căminul de probă e creat de migrarea 0012 și ascuns de 0019.
+        self.test = Camin.objects.get(nume="API_TEST")
+        self._sesiune_dupa_google("ana@student.tuiasi.ro")
+
+    def test_migrarea_l_a_ascuns(self):
+        self.assertFalse(self.test.accepta_cereri)
+
+    def test_nu_apare_in_lista(self):
+        raspuns = self.client.get(reverse("cerere_cont"))
+
+        oferite = {c.nume for c in raspuns.context["camine"]}
+        self.assertEqual(oferite, {"T1", "T2"})
+
+    def test_nu_poate_fi_ales_nici_direct(self):
+        raspuns = self._trimite(camin=self.test.id)
+
+        self.assertEqual(CerereCont.objects.count(), 0)
+        self.assertTrue(any("căminul" in m for m in self._mesaje(raspuns)))

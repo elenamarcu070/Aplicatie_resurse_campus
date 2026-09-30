@@ -267,6 +267,7 @@ WHATSAPP_TEMPLATES = {
     "dezactivare_masina_interval": os.getenv("WHATSAPP_CONTENT_SID_INTERVAL"),
     "dezactivare_masina_complet": os.getenv("WHATSAPP_CONTENT_SID_COMPLET"),
     "advertisment_rezervare": os.getenv("WHATSAPP_CONTENT_SID_ADVERTISMENT"),
+    "cerere_cont_noua": os.getenv("WHATSAPP_CONTENT_SID_CERERE"),
 }
 SITE_DOMAIN = os.getenv("SITE_DOMAIN")
 
@@ -288,4 +289,5 @@ FIREBASE_SERVICE_ACCOUNT = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 TEMPLATES[0]["OPTIONS"]["context_processors"] += [
     "booking.context_processors.firebase_config",
     "booking.context_processors.notificari_utilizator",
+    "booking.context_processors.cereri_de_cont",
 ]

@@ -44,6 +44,11 @@ urlpatterns = [
     path('dashboard/admin_camin/studenti/sterge-toti/', views.sterge_toti_studentii_view, name='sterge_toti_studentii'),
     path('dashboard/admin_camin/student/<int:student_id>/update/', views.update_student, name='update_student'),
     path('dashboard/admin_camin/student/<int:student_id>/comuta-activ/', views.comuta_activ_student, name='comuta_activ_student'),
+
+    # Cereri de cont
+    path('cerere-cont/', views.cerere_cont_view, name='cerere_cont'),
+    path('dashboard/admin_camin/cereri/<int:cerere_id>/aproba/', views.aproba_cerere_cont, name='aproba_cerere_cont'),
+    path('dashboard/admin_camin/cereri/<int:cerere_id>/respinge/', views.respinge_cerere_cont, name='respinge_cerere_cont'),
     
 
     path("notificari/citite/", views.marcheaza_notificari_citite, name="marcheaza_notificari_citite"),

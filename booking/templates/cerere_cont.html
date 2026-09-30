@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4 fade-in" style="max-width: 620px;">
+  <div class="p-4 bg-white rounded shadow">
+
+    {% if cerere %}
+    <h4 class="mb-3"><i class="fas fa-hourglass-half text-primary"></i> Cererea ta a fost trimisă</h4>
+    <p class="text-muted">
+      Am trimis-o șefului de cămin <b>{{ cerere.camin.nume }}</b> pe
+      {{ cerere.creat_la|date:"d F Y, H:i" }}.
+    </p>
+    <table class="table table-sm mt-3">
+      <tr><th style="width:40%">Email</th><td>{{ cerere.email }}</td></tr>
+      <tr><th>Nume</th><td>{{ cerere.nume_complet }}</td></tr>
+      <tr><th>Cămin</th><td>{{ cerere.camin.nume }}</td></tr>
+      <tr><th>Camera</th><td>{{ cerere.numar_camera|default:"—" }}</td></tr>
+      {% if cerere.telefon %}<tr><th>Telefon</th><td>{{ cerere.telefon }}</td></tr>{% endif %}
+    </table>
+    <div class="alert alert-info">
+      Când cererea e aprobată, te autentifici din nou cu aceeași adresă și intri direct.
+    </div>
+
+    {% else %}
+    <h4 class="mb-1">Cerere de cont</h4>
+    <p class="text-muted small mb-4">
+      Completează datele tale de cazare. Cererea ajunge la șeful căminului ales,
+      care îți deschide contul.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" value="{{ email }}" disabled>
+        <div class="form-text">
+          Adresa cu care tocmai te-ai autentificat. Contul se va deschide pe ea,
+          deci nu poate fi schimbată aici.
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="nume" class="form-label">Nume</label>
+          <input type="text" class="form-control" id="nume" name="nume"
+                 value="{{ nume }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="prenume" class="form-label">Prenume</label>
+          <input type="text" class="form-control" id="prenume" name="prenume"
+                 value="{{ prenume }}" required>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="camin" class="form-label">Cămin</label>
+        <select class="form-select" id="camin" name="camin" required>
+          <option value="">Alege căminul în care stai…</option>
+          {% for c in camine %}
+          <option value="{{ c.id }}" {% if camin_ales == c.id %}selected{% endif %}>{{ c.nume }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="numar_camera" class="form-label">Număr cameră</label>
+        <input type="text" class="form-control" id="numar_camera" name="numar_camera"
+               value="{{ numar_camera|default:'' }}" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="telefon" class="form-label">Telefon <span class="text-muted">(opțional)</span></label>
+        <div class="input-group">
+          <select class="form-select flex-grow-0" style="width: 120px;" name="tara" id="tara">
+            <option value="ro">🇷🇴 +40</option>
+            <option value="md">🇲🇩 +373</option>
+          </select>
+          <input type="tel" class="form-control" id="telefon" name="telefon"
+                 value="{{ telefon|default:'' }}" placeholder="0712 345 678">
+        </div>
+        <div class="form-text">
+          Pe el primești notificările pe WhatsApp. Îl poți adăuga și mai târziu.
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-paper-plane"></i> Trimite cererea
+      </button>
+    </form>
+    {% endif %}
+
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary mt-4">
+      <i class="fas fa-arrow-left"></i> Înapoi
+    </a>
+  </div>
+</div>
+{% endblock %}
