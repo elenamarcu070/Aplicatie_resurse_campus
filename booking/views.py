@@ -41,6 +41,7 @@ from booking.import_studenti import aplica_plan, citeste_fisier, construieste_pl
 from booking.push import notifica_student, push_este_configurat
 from booking.utils import (
     get_camin_curent,
+    sefi_de_camin,
     normalizeaza_numar,
     notifica_admini_cerere,
     valideaza_numar,
@@ -167,7 +168,13 @@ def callback(request):
 
     # După `logout` sesiunea e alta, goală: scriem în ea de-abia acum.
     request.session["cerere_cont"] = date_cerere
-    return render(request, 'not_allowed.html', {'poate_cere_cont': True})
+    return render(request, 'not_allowed.html', {
+        'poate_cere_cont': True,
+        # `request.user` e deja anonim aici, deci adresa trebuie dată explicit,
+        # altfel propoziția rămâne cu un gol în mijloc.
+        'email_incercat': email,
+        'sefi': sefi_de_camin(),
+    })
 
 
 
@@ -344,10 +351,35 @@ def detalii_camin_admin(request, camin_id):
 
     # ✅ 2. Blocăm modificările de admini pentru non-super-admini
     if request.method == 'POST':
-        if 'email_nou_admin' in request.POST or 'sterge_admin_id' in request.POST:
+        if ('email_nou_admin' in request.POST or 'sterge_admin_id' in request.POST
+                or 'salveaza_admin_id' in request.POST):
             if not is_super_admin(request.user):
                 messages.error(request, "Doar super-adminii pot modifica lista de administratori.")
                 return redirect('detalii_camin_admin', camin_id=camin.id)
+
+        # ✅ Datele de contact arătate studenților pe pagina de acces interzis
+        if 'salveaza_admin_id' in request.POST:
+            # Cautarea e limitata la caminul curent: altfel un id trimis de mana
+            # ar lasa pe cineva sa editeze adminul altui camin.
+            rand = get_object_or_404(
+                AdminCamin, id=request.POST['salveaza_admin_id'], camin=camin
+            )
+            telefon = normalizeaza_numar(
+                request.POST.get('telefon'), request.POST.get('tara')
+            )
+            if telefon:
+                valid, eroare = valideaza_numar(telefon)
+                if not valid:
+                    messages.error(request, eroare)
+                    return redirect('detalii_camin_admin', camin_id=camin.id)
+
+            rand.nume = request.POST.get('nume', '').strip()[:100]
+            rand.telefon = telefon
+            rand.primeste_notificari = request.POST.get('primeste_notificari') == 'on'
+            rand.save(update_fields=['nume', 'telefon', 'primeste_notificari'])
+
+            messages.success(request, f"Datele pentru {rand.email} au fost salvate.")
+            return redirect('detalii_camin_admin', camin_id=camin.id)
 
         # ✅ Adăugare admin
         if 'email_nou_admin' in request.POST:

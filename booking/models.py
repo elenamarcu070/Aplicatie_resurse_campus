@@ -29,8 +29,31 @@ class AdminCamin(models.Model):
     telefon = models.CharField(max_length=20, blank=True, null=True)
     is_super_admin = models.BooleanField(default=False)  # 🔥 nou
 
+    # Numele afișat studenților pe pagina de acces interzis. Dacă e gol, se
+    # deduce din adresa de email.
+    nume = models.CharField(max_length=100, blank=True)
+
+    # Nu toți administratorii unui cămin trebuie anunțați: unii au cont doar ca
+    # să vadă aplicația. Cererile ajung oricum în pagina de studenți, la toți.
+    primeste_notificari = models.BooleanField(
+        default=True,
+        help_text="Primește WhatsApp când un student cere cont în acest cămin",
+    )
+
     def __str__(self):
         return f"{self.email} — {self.camin.nume if self.camin else 'Super Admin'}"
+
+    @property
+    def nume_afisat(self):
+        """Numele scris de mână, sau unul citibil dedus din adresă."""
+        if self.nume:
+            return self.nume
+        local = (self.email or "").split("@")[0]
+        return " ".join(
+            parte.replace("-", " ").title().replace(" ", "-")
+            for parte in local.replace("_", ".").split(".")
+            if parte
+        ) or self.email
 
 
 # ------------------------------------------

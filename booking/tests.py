@@ -22,7 +22,13 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from booking.push import _cont_de_serviciu, notifica_student, trimite_push
-from booking.utils import notifica_admini_cerere, trimite_whatsapp, valideaza_numar
+from booking.utils import (
+    destinatari_cerere_cont,
+    notifica_admini_cerere,
+    sefi_de_camin,
+    trimite_whatsapp,
+    valideaza_numar,
+)
 from booking.models import (
     AdminCamin,
     Camin,
@@ -1924,3 +1930,147 @@ class AnuntareaStudentuluiAprobat(BazaCereriCont):
 
         MockClient.return_value.messages.create.assert_not_called()
         self.assertEqual(Notificare.objects.count(), 0)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class ContacteSefiDeCamin(BazaCereriCont):
+    """Pagina de acces interzis se construiește din baza de date."""
+
+    def setUp(self):
+        super().setUp()
+        AdminCamin.objects.filter(email="sef1@tuiasi.ro").update(
+            nume="Pop Ion", telefon="+40711111111"
+        )
+
+    def test_numele_scris_de_mana_este_folosit(self):
+        sefi = sefi_de_camin()
+
+        self.assertEqual([s.nume_afisat for s in sefi if s.camin == self.t1], ["Pop Ion"])
+
+    def test_numele_se_deduce_din_adresa_cand_lipseste(self):
+        admin = AdminCamin.objects.get(email="sef2@tuiasi.ro")
+
+        self.assertEqual(admin.nume_afisat, "Sef2")
+
+    def test_numele_dedus_desparte_punctele_si_liniutele(self):
+        admin = AdminCamin.objects.create(
+            email="daniel-stefan.samoila@student.tuiasi.ro",
+            camin=self.t1, telefon="+40786713950",
+        )
+
+        self.assertEqual(admin.nume_afisat, "Daniel-Stefan Samoila")
+
+    def test_super_adminii_nu_apar_ca_sefi_de_camin(self):
+        emailuri = {s.email for s in sefi_de_camin()}
+
+        self.assertNotIn("sefa@tuiasi.ro", emailuri)
+
+    def test_cei_fara_telefon_nu_apar(self):
+        AdminCamin.objects.filter(email="sef2@tuiasi.ro").update(telefon="")
+
+        self.assertNotIn("sef2@tuiasi.ro", {s.email for s in sefi_de_camin()})
+
+    def test_pagina_arata_contactele_din_baza_de_date(self):
+        strain = User.objects.create_user(
+            username="strain", email="strain@student.tuiasi.ro"
+        )
+        self.client.force_login(strain)
+
+        raspuns = self.client.get(reverse("callback"))
+
+        self.assertContains(raspuns, "Pop Ion")
+        self.assertContains(raspuns, "wa.me/40711111111")
+        # Adresa incercata apare, desi utilizatorul tocmai a fost deconectat.
+        self.assertContains(raspuns, "strain@student.tuiasi.ro")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class ComutatorulDeNotificari(BazaCereriCont):
+    """Un cămin are un singur șef responsabil; ceilalți doar văd aplicația."""
+
+    def setUp(self):
+        super().setUp()
+        self.observator = self._admin(
+            "profesor@tuiasi.ro", camin=self.t1, telefon="+40799999999"
+        )
+        AdminCamin.objects.filter(email="profesor@tuiasi.ro").update(
+            primeste_notificari=False
+        )
+        self.cerere = CerereCont.objects.create(
+            email="ana@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=self.t1, numar_camera="203",
+        )
+
+    def test_cel_debifat_nu_primeste_mesaj(self):
+        numere = {a.telefon for a in destinatari_cerere_cont(self.t1)}
+
+        self.assertEqual(numere, {"+40711111111", "+40733333333"})
+
+    def test_cel_debifat_nu_apare_nici_pe_pagina_de_contact(self):
+        self.assertNotIn("profesor@tuiasi.ro", {s.email for s in sefi_de_camin()})
+
+    def test_implicit_un_admin_nou_primeste(self):
+        nou = AdminCamin.objects.create(
+            email="nou@tuiasi.ro", camin=self.t1, telefon="+40788888888"
+        )
+
+        self.assertTrue(nou.primeste_notificari)
+        self.assertIn(nou.telefon, {a.telefon for a in destinatari_cerere_cont(self.t1)})
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class EditareaContactelor(BazaCereriCont):
+    """Formularul din pagina căminului, de unde se schimbă datele de contact."""
+
+    def _salveaza(self, cine, **date):
+        self.client.force_login(cine)
+        rand = AdminCamin.objects.get(email="sef1@tuiasi.ro")
+        camp = {
+            "salveaza_admin_id": rand.id,
+            "nume": "Raba Alexandru",
+            "telefon": "0758112351",
+            "tara": "ro",
+            "primeste_notificari": "on",
+        }
+        camp.update(date)
+        return self.client.post(
+            reverse("detalii_camin_admin", args=[self.t1.id]), camp, follow=True
+        )
+
+    def test_super_adminul_salveaza_numele_si_numarul(self):
+        self._salveaza(self.super_admin)
+
+        rand = AdminCamin.objects.get(email="sef1@tuiasi.ro")
+        self.assertEqual(rand.nume, "Raba Alexandru")
+        self.assertEqual(rand.telefon, "+40758112351")
+        self.assertTrue(rand.primeste_notificari)
+
+    def test_debifarea_se_salveaza(self):
+        self._salveaza(self.super_admin, primeste_notificari="")
+
+        self.assertFalse(AdminCamin.objects.get(email="sef1@tuiasi.ro").primeste_notificari)
+
+    def test_numarul_incomplet_este_respins(self):
+        raspuns = self._salveaza(self.super_admin, telefon="075811235")
+
+        self.assertEqual(AdminCamin.objects.get(email="sef1@tuiasi.ro").telefon, "+40711111111")
+        self.assertTrue(any("9 cifre" in m for m in self._mesaje(raspuns)))
+
+    def test_seful_de_camin_nu_poate_modifica(self):
+        raspuns = self._salveaza(self.sef_t1)
+
+        self.assertEqual(AdminCamin.objects.get(email="sef1@tuiasi.ro").nume, "")
+        self.assertTrue(any("super-adminii" in m for m in self._mesaje(raspuns)))
+
+    def test_nu_se_poate_edita_adminul_altui_camin(self):
+        tinta = AdminCamin.objects.get(email="sef2@tuiasi.ro")
+        self.client.force_login(self.super_admin)
+
+        raspuns = self.client.post(
+            reverse("detalii_camin_admin", args=[self.t1.id]),
+            {"salveaza_admin_id": tinta.id, "nume": "Intrus", "telefon": "", "tara": "ro"},
+        )
+
+        self.assertEqual(raspuns.status_code, 404)
+        tinta.refresh_from_db()
+        self.assertEqual(tinta.nume, "")

@@ -143,21 +143,48 @@ def trimite_whatsapp(destinatar, template_name, variabile, profil=None):
 from booking.models import Camin, AdminCamin, NotificareLog, ProfilStudent
 
 
+def _cu_telefon(interogare):
+    return interogare.exclude(telefon__isnull=True).exclude(telefon="")
+
+
 def destinatari_cerere_cont(camin):
     """
-    Cine trebuie să afle că s-a depus o cerere de cont pentru căminul dat:
-    șeful căminului respectiv și super-adminii.
+    Cine trebuie anunțat că s-a depus o cerere de cont pentru căminul dat:
+    administratorii căminului și super-adminii.
 
-    Sunt lăsați deoparte cei fără număr de telefon — nu se poate trimite nimic
-    către ei, iar cererea se vede oricum în pagina de studenți.
+    Sunt lăsați deoparte cei fără telefon — nu se poate trimite nimic către ei —
+    și cei cărora li s-a scos `primeste_notificari`: un cămin are un singur șef
+    responsabil, ceilalți au cont doar ca să vadă aplicația. Cererea apare
+    oricum în pagina de studenți, la toți.
     """
     from django.db.models import Q
 
-    return (
-        AdminCamin.objects.filter(Q(camin=camin) | Q(is_super_admin=True))
-        .exclude(telefon__isnull=True)
-        .exclude(telefon="")
-        .distinct()
+    return _cu_telefon(
+        AdminCamin.objects.filter(
+            Q(camin=camin) | Q(is_super_admin=True), primeste_notificari=True
+        )
+    ).distinct()
+
+
+def sefi_de_camin():
+    """
+    Șefii de afișat studentului pe pagina de acces interzis, câte unul de cămin.
+
+    Se iau din baza de date, nu scriși de mână în șablon: altfel fiecare
+    schimbare de șef la început de an cere o modificare de cod. Super-adminii
+    nu apar — ei nu sunt persoana de contact a unui cămin anume.
+    """
+    return list(
+        _cu_telefon(
+            AdminCamin.objects.filter(
+                camin__isnull=False,
+                camin__accepta_cereri=True,
+                primeste_notificari=True,
+                is_super_admin=False,
+            )
+        )
+        .select_related("camin")
+        .order_by("camin__nume", "id")
     )
 
 

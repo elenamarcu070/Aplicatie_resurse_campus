@@ -48,17 +48,68 @@
                 <h5 class="mb-0">Admini</h5>
             </div>
             <div class="card-body">
+                <p class="text-muted small">
+                    Numele și numărul de aici sunt cele pe care le vede un student
+                    pe pagina „Acces interzis", când adresa lui nu e în liste.
+                </p>
+
                 <ul class="list-group mb-3">
                     {% for admin in admini %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ admin.email }}
+                    <li class="list-group-item">
+                        <div class="fw-semibold mb-2">{{ admin.email }}</div>
+
                         {% if is_super_admin %}
-                        <form method="post" class="m-0" onsubmit="return confirm('Ești sigur că vrei să ștergi acest admin?');">
+                        <form method="post" class="row g-2 align-items-end">
+                            {% csrf_token %}
+                            <input type="hidden" name="salveaza_admin_id" value="{{ admin.id }}">
+
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Nume afișat</label>
+                                <input type="text" name="nume" class="form-control form-control-sm"
+                                       value="{{ admin.nume }}" placeholder="{{ admin.nume_afisat }}">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Telefon</label>
+                                <div class="input-group input-group-sm">
+                                    <select name="tara" class="form-select flex-grow-0" style="width: 108px;">
+                                        <option value="ro">🇷🇴 +40</option>
+                                        <option value="md">🇲🇩 +373</option>
+                                    </select>
+                                    <input type="tel" name="telefon" class="form-control"
+                                           value="{{ admin.telefon|default:'' }}" placeholder="0712 345 678">
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 d-flex align-items-center gap-2">
+                                <div class="form-check mb-0 flex-grow-1">
+                                    <input class="form-check-input" type="checkbox" name="primeste_notificari"
+                                           id="notif-{{ admin.id }}"
+                                           {% if admin.primeste_notificari %}checked{% endif %}>
+                                    <label class="form-check-label small" for="notif-{{ admin.id }}">
+                                        Primește cererile pe WhatsApp
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Salvează</button>
+                            </div>
+                        </form>
+
+                        <form method="post" class="mt-2" onsubmit="return confirm('Ești sigur că vrei să ștergi acest admin?');">
                             {% csrf_token %}
                             <input type="hidden" name="sterge_admin_id" value="{{ admin.id }}">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Șterge</button>
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Șterge adminul</button>
                         </form>
+
+                        {% else %}
+                        <div class="small text-muted">
+                            {{ admin.nume_afisat }}{% if admin.telefon %} — {{ admin.telefon }}{% endif %}
+                        </div>
                         {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">
+                        Căminul nu are niciun administrator. Studenții nu au pe cine
+                        contacta de pe pagina de acces interzis.
                     </li>
                     {% endfor %}
                 </ul>

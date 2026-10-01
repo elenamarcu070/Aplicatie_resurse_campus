@@ -29,9 +29,10 @@ class CaminAdmin(admin.ModelAdmin):
 
 @admin.register(AdminCamin)
 class AdminCaminAdmin(admin.ModelAdmin):
-    list_display = ('email', 'camin')
-    search_fields = ('email',)
-    list_filter = ('camin',)
+    list_display = ('email', 'nume', 'camin', 'telefon', 'primeste_notificari', 'is_super_admin')
+    list_editable = ('primeste_notificari',)
+    search_fields = ('email', 'nume')
+    list_filter = ('camin', 'primeste_notificari', 'is_super_admin')
 
 
 @admin.register(ProfilStudent)
