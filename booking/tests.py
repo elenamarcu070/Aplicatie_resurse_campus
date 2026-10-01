@@ -2087,3 +2087,97 @@ class EditareaContactelor(BazaCereriCont):
         self.assertEqual(raspuns.status_code, 404)
         tinta.refresh_from_db()
         self.assertEqual(tinta.nume, "")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class StudentulDezactivat(BazaCereriCont):
+    """
+    La început de an, cine s-a mutat în alt cămin sau a fost omis de pe liste
+    ajunge dezactivat. Fără o cale proprie, rămâne blocat pe un ecran fix.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(
+            username="ana", email="ana@student.tuiasi.ro",
+            first_name="Ana", last_name="Pop",
+        )
+        self.profil = ProfilStudent.objects.create(
+            utilizator=self.user, camin=self.t2, numar_camera="305", activ=False
+        )
+
+    def test_vede_butonul_de_actualizare(self):
+        self.client.force_login(self.user)
+
+        raspuns = self.client.get(reverse("callback"))
+
+        self.assertContains(raspuns, "nu mai este activ")
+        self.assertContains(raspuns, "Cere actualizarea contului")
+
+    def test_primeste_datele_in_sesiune(self):
+        self.client.force_login(self.user)
+
+        self.client.get(reverse("callback"))
+
+        self.assertEqual(
+            self.client.session["cerere_cont"],
+            {"email": "ana@student.tuiasi.ro", "prenume": "Ana", "nume": "Pop"},
+        )
+
+    def test_formularul_spune_de_unde_vine(self):
+        self._sesiune_dupa_google("ana@student.tuiasi.ro")
+
+        raspuns = self.client.get(reverse("cerere_cont"))
+
+        self.assertContains(raspuns, "Actualizarea contului")
+        self.assertContains(raspuns, "T2")
+        self.assertTrue(raspuns.context["reactivare"])
+
+    def test_contul_activ_tot_nu_poate_cere(self):
+        ProfilStudent.objects.filter(id=self.profil.id).update(activ=True)
+        self._sesiune_dupa_google("ana@student.tuiasi.ro")
+
+        raspuns = self.client.get(reverse("cerere_cont"), follow=True)
+
+        self.assertTrue(any("Ai deja cont" in m for m in self._mesaje(raspuns)))
+
+    def test_aprobarea_il_muta_si_il_reactiveaza(self):
+        self._trimite(email="ana@student.tuiasi.ro", camin=self.t1.id, numar_camera="110")
+        cerere = CerereCont.objects.get()
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(reverse("aproba_cerere_cont", args=[cerere.id]), follow=True)
+
+        self.profil.refresh_from_db()
+        self.assertTrue(self.profil.activ)
+        self.assertEqual(self.profil.camin, self.t1)
+        self.assertEqual(self.profil.numar_camera, "110")
+
+    def test_aprobarea_nu_creeaza_un_al_doilea_profil(self):
+        """Istoricul de rezervări atârnă de profilul vechi; el trebuie refolosit."""
+        self._trimite(email="ana@student.tuiasi.ro", camin=self.t1.id)
+        cerere = CerereCont.objects.get()
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(reverse("aproba_cerere_cont", args=[cerere.id]), follow=True)
+
+        self.assertEqual(
+            ProfilStudent.objects.filter(email="ana@student.tuiasi.ro").count(), 1
+        )
+        self.assertEqual(ProfilStudent.objects.get().id, self.profil.id)
+
+    def test_profilul_legat_de_alt_cont_este_tot_refolosit(self):
+        """
+        Acelasi om poate avea doua randuri de utilizator cu aceeasi adresa:
+        unul creat la autentificare, altul din import. Profilul e unul singur.
+        """
+        User.objects.create_user(username="ana@student.tuiasi.ro",
+                                 email="ana@student.tuiasi.ro")
+        self._trimite(email="ana@student.tuiasi.ro", camin=self.t1.id)
+        cerere = CerereCont.objects.get()
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(reverse("aproba_cerere_cont", args=[cerere.id]), follow=True)
+
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        self.assertEqual(ProfilStudent.objects.get().id, self.profil.id)

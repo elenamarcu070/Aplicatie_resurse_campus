@@ -143,8 +143,22 @@ def callback(request):
     if profil:
         if not profil.activ:
             # Nu stergem nimic: contul si istoricul raman, doar accesul e oprit.
+            # Ii lasam insa aceeasi usa ca unui student necunoscut: la inceput de
+            # an, cei care s-au mutat in alt camin sau nu au prins inca lista
+            # noua ajung aici, iar altfel n-ar avea cum sa semnaleze singuri.
+            date_cerere = {
+                "email": email,
+                "prenume": (user.first_name or profil.prenume or "").strip(),
+                "nume": (user.last_name or profil.nume or "").strip(),
+            }
             logout(request)
-            return render(request, 'not_allowed.html', {'message': MESAJ_CONT_INACTIV})
+            request.session["cerere_cont"] = date_cerere
+            return render(request, 'not_allowed.html', {
+                'message': MESAJ_CONT_INACTIV,
+                'poate_cere_cont': True,
+                'reactivare': True,
+                'sefi': sefi_de_camin(),
+            })
         # dacă există profil, dar nu e legat de userul curent → îl reatașăm
         if profil.utilizator != user:
             profil.utilizator = user
@@ -1435,8 +1449,13 @@ def cerere_cont_view(request):
         messages.info(request, "Autentifică-te întâi cu Google, apoi poți cere un cont.")
         return redirect("home")
 
+    profil_vechi = (
+        ProfilStudent.objects.filter(email__iexact=email)
+        .select_related("camin").order_by("id").first()
+    )
+
     # S-ar putea să fi fost adăugat de admin între timp.
-    if ProfilStudent.objects.filter(email__iexact=email, activ=True).exists():
+    if profil_vechi and profil_vechi.activ:
         request.session.pop("cerere_cont", None)
         messages.success(request, "Ai deja cont. Autentifică-te din nou.")
         return redirect("home")
@@ -1451,6 +1470,10 @@ def cerere_cont_view(request):
         "prenume": date_sesiune.get("prenume", ""),
         "camine": Camin.objects.filter(accepta_cereri=True).order_by("nume"),
         "cerere": in_asteptare,
+        # Un cont dezactivat nu e acelasi lucru cu un student necunoscut:
+        # merita sa stie ca i se cunoaste istoricul si de unde vine.
+        "reactivare": bool(profil_vechi),
+        "camin_vechi": profil_vechi.camin if profil_vechi else None,
     }
 
     if request.method != "POST" or in_asteptare:
@@ -1557,7 +1580,19 @@ def aproba_cerere_cont(request, cerere_id):
         # Căutarea se face după email, nu după username: conturile create la
         # autentificare au username-ul fără domeniu, iar o căutare după
         # username ar crea un al doilea cont pentru același om.
-        utilizator = User.objects.filter(email__iexact=cerere.email).order_by("id").first()
+        #
+        # Profilul existent are întâietate: dacă studentul a mai avut cont —
+        # s-a mutat din alt cămin, sau a fost dezactivat la începutul anului —
+        # trebuie refolosit chiar dacă e legat de alt rând de utilizator.
+        # Altfel i-ar apărea un al doilea profil, iar istoricul de rezervări
+        # ar rămâne pe cel vechi.
+        profil_vechi = (
+            ProfilStudent.objects.filter(email__iexact=cerere.email)
+            .select_related("utilizator").order_by("id").first()
+        )
+        utilizator = profil_vechi.utilizator if profil_vechi else None
+        if utilizator is None:
+            utilizator = User.objects.filter(email__iexact=cerere.email).order_by("id").first()
         if utilizator is None:
             utilizator = User(username=cerere.email)
         utilizator.email = cerere.email

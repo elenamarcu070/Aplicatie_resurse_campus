@@ -102,15 +102,25 @@
   <div class="alert alert-warning mt-3" style="font-size: 1.05rem;">
     {{ message|safe }}
   </div>
-
   {% else %}
   <p class="ai-subtitlu">
     Adresa ta de email nu este autorizată în sistem.
     <span class="ai-adresa d-block mx-auto" style="max-width: fit-content;">{{ email_incercat }}</span>
   </p>
+  {% endif %}
 
   {% if poate_cere_cont %}
   <div class="ai-apel">
+    {% if reactivare %}
+    <div class="ai-apel-titlu">Te-ai mutat în alt cămin, sau ai revenit în cămin?</div>
+    <a href="{% url 'cerere_cont' %}" class="btn btn-primary btn-lg px-4">
+      <i class="fas fa-rotate-right"></i> Cere actualizarea contului
+    </a>
+    <div class="small text-muted mt-3 mb-0">
+      Alegi căminul în care stai acum, iar șeful lui primește cererea pe WhatsApp.
+      Rezervările tale de anul trecut rămân în istoric.
+    </div>
+    {% else %}
     <div class="ai-apel-titlu">Locuiești într-un cămin și nu apari în liste?</div>
     <a href="{% url 'cerere_cont' %}" class="btn btn-primary btn-lg px-4">
       <i class="fas fa-user-plus"></i> Cere un cont
@@ -118,6 +128,7 @@
     <div class="small text-muted mt-3 mb-0">
       Completezi căminul și camera, iar șeful de cămin primește cererea pe WhatsApp.
     </div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -143,11 +154,10 @@
     </div>
     {% endfor %}
   </div>
-  {% else %}
+  {% elif poate_cere_cont %}
   <p class="text-muted mt-4">
     Momentan nu avem un contact de cămin în aplicație.
   </p>
-  {% endif %}
   {% endif %}
 
   <a href="{% url 'home' %}" class="btn btn-outline-secondary mt-4">
