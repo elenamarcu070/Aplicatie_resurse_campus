@@ -1473,7 +1473,14 @@ def cerere_cont_view(request):
         erori.append("Completează numele și prenumele.")
     if not camera:
         erori.append("Completează numărul camerei.")
-    if telefon:
+    # Numarul e obligatoriu: fara el, studentul aprobat n-are cum sa afle.
+    # Notificarea din aplicatie il asteapta, dar nu stie sa se uite acolo.
+    if not telefon:
+        erori.append(
+            "Completează numărul de telefon. Pe el primești mesajul "
+            "când contul tău e aprobat."
+        )
+    else:
         valid, mesaj = valideaza_numar(telefon)
         if not valid:
             erori.append(mesaj)

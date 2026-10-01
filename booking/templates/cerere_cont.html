@@ -18,7 +18,8 @@
       {% if cerere.telefon %}<tr><th>Telefon</th><td>{{ cerere.telefon }}</td></tr>{% endif %}
     </table>
     <div class="alert alert-info">
-      Când cererea e aprobată, te autentifici din nou cu aceeași adresă și intri direct.
+      Primești un mesaj pe WhatsApp la <b>{{ cerere.telefon }}</b> imediat ce cererea
+      e aprobată. Apoi te autentifici din nou cu aceeași adresă și intri direct.
     </div>
 
     {% else %}
@@ -70,17 +71,19 @@
       </div>
 
       <div class="mb-3">
-        <label for="telefon" class="form-label">Telefon <span class="text-muted">(opțional)</span></label>
+        <label for="telefon" class="form-label">Telefon</label>
         <div class="input-group">
           <select class="form-select flex-grow-0" style="width: 120px;" name="tara" id="tara">
             <option value="ro">🇷🇴 +40</option>
             <option value="md">🇲🇩 +373</option>
           </select>
           <input type="tel" class="form-control" id="telefon" name="telefon"
-                 value="{{ telefon|default:'' }}" placeholder="0712 345 678">
+                 value="{{ telefon|default:'' }}" placeholder="0712 345 678" required>
         </div>
         <div class="form-text">
-          Pe el primești notificările pe WhatsApp. Îl poți adăuga și mai târziu.
+          <b>Aici primești mesajul pe WhatsApp când cererea ta e aprobată</b>, așa că
+          trebuie să fie un număr care are WhatsApp. Tot pe el vin apoi și
+          notificările despre rezervări.
         </div>
       </div>
 

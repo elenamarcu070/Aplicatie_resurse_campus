@@ -1560,7 +1560,7 @@ class BazaCereriCont(TestCase):
         date = {
             "nume": "Pop", "prenume": "Ana",
             "camin": self.t1.id, "numar_camera": "203",
-            "telefon": "", "tara": "ro",
+            "telefon": "0712345678", "tara": "ro",
         }
         date.update(suprascrieri)
         return self.client.post(reverse("cerere_cont"), date, follow=True)
@@ -1636,6 +1636,19 @@ class TrimitereaCererii(BazaCereriCont):
         self._trimite(telefon="0712 345 678")
 
         self.assertEqual(CerereCont.objects.get().telefon, "+40712345678")
+
+    def test_fara_numar_nu_se_salveaza_nimic(self):
+        raspuns = self._trimite(telefon="")
+
+        self.assertEqual(CerereCont.objects.count(), 0)
+        self.assertTrue(any("numărul de telefon" in m for m in self._mesaje(raspuns)))
+
+    def test_motivul_pentru_care_numarul_e_cerut_este_explicat(self):
+        self._sesiune_dupa_google("ana@student.tuiasi.ro")
+
+        raspuns = self.client.get(reverse("cerere_cont"))
+
+        self.assertContains(raspuns, "când cererea ta e aprobată")
 
     def test_numarul_incomplet_este_respins(self):
         raspuns = self._trimite(telefon="071234567")
