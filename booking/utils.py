@@ -159,11 +159,25 @@ def destinatari_cerere_cont(camin):
     """
     from django.db.models import Q
 
-    return _cu_telefon(
+    randuri = _cu_telefon(
         AdminCamin.objects.filter(
             Q(camin=camin) | Q(is_super_admin=True), primeste_notificari=True
         )
-    ).distinct()
+    ).distinct().order_by("id")
+
+    # Acelasi om poate avea mai multe randuri de admin — adresa institutionala
+    # si cea personala, sau doua camine — cu acelasi numar de telefon.
+    # `distinct()` le vede ca randuri diferite, iar omul primea acelasi mesaj
+    # de doua ori. Destinatarul e numarul, nu randul.
+    vazute = set()
+    destinatari = []
+    for rand in randuri:
+        numar = (rand.telefon or "").replace(" ", "")
+        if numar in vazute:
+            continue
+        vazute.add(numar)
+        destinatari.append(rand)
+    return destinatari
 
 
 def sefi_de_camin():

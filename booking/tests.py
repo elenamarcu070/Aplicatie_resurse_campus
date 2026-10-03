@@ -2181,3 +2181,44 @@ class StudentulDezactivat(BazaCereriCont):
 
         self.assertEqual(ProfilStudent.objects.count(), 1)
         self.assertEqual(ProfilStudent.objects.get().id, self.profil.id)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False, WHATSAPP_TEMPLATES={"cerere_cont_noua": "HXcerere"})
+class UnSingurMesajPePersoana(BazaCereriCont):
+    """
+    Acelasi om poate avea mai multe randuri de admin cu acelasi numar: adresa
+    institutionala si cea personala, sau doua camine. Mesajul e unul singur.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # Al doilea cont al super-adminei, cu acelasi numar.
+        self._admin("sefa2@tuiasi.ro", camin=None, telefon="+40733333333",
+                    super_admin=True)
+        self.cerere = CerereCont.objects.create(
+            email="ana@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=self.t1, numar_camera="203",
+        )
+
+    def test_numarul_repetat_apare_o_singura_data(self):
+        numere = [a.telefon for a in destinatari_cerere_cont(self.t1)]
+
+        self.assertEqual(sorted(numere), ["+40711111111", "+40733333333"])
+
+    @patch("booking.utils.Client")
+    def test_se_trimite_un_singur_mesaj_pe_numar(self, MockClient):
+        self._raspuns_twilio(MockClient)
+
+        notifica_admini_cerere(self.cerere)
+
+        trimise = [a.kwargs["to"] for a in MockClient.return_value.messages.create.call_args_list]
+        self.assertEqual(len(trimise), len(set(trimise)))
+        self.assertEqual(sorted(trimise), ["whatsapp:+40711111111", "whatsapp:+40733333333"])
+
+    def test_acelasi_om_pe_doua_camine_primeste_tot_o_data(self):
+        """Seful de T1 e sef si la T2, cu acelasi numar, dar cererea e pentru T1."""
+        self._admin("sef1personal@gmail.com", camin=self.t2, telefon="+40711111111")
+
+        numere = [a.telefon for a in destinatari_cerere_cont(self.t1)]
+
+        self.assertEqual(numere.count("+40711111111"), 1)
