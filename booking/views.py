@@ -1276,9 +1276,12 @@ def incarca_studenti_view(request):
                 return redirect('incarca_studenti')
 
             dezactiveaza = request.POST.get('dezactiveaza') == 'on'
+            reasigneaza = request.POST.get('reasigneaza') == 'on'
             try:
                 randuri, _ = citeste_fisier(default_storage.path(cale))
-                rezultat = aplica_plan(randuri, dezactiveaza=dezactiveaza)
+                rezultat = aplica_plan(
+                    randuri, dezactiveaza=dezactiveaza, reasigneaza=reasigneaza
+                )
             except Exception as e:
                 logger.error(f"Eroare la importul de studenti: {e}\n{traceback.format_exc()}")
                 messages.error(request, "Importul nu a putut fi finalizat. Nu s-a modificat nimic.")
@@ -1289,6 +1292,7 @@ def incarca_studenti_view(request):
                 f"Import finalizat: {len(rezultat.de_creat)} adăugați, "
                 f"{len(rezultat.de_actualizat)} actualizați, "
                 f"{len(rezultat.de_reactivat)} reactivați, "
+                f"{len(rezultat.de_reasignat)} cu adresa schimbată, "
                 f"{len(rezultat.de_dezactivat)} dezactivați."
             ))
             return redirect('incarca_studenti')

@@ -175,6 +175,72 @@
                 </div>
                 {% endif %}
 
+                {% if plan.de_reasignat %}
+                <div class="alert alert-info">
+                    <b>{% if plan.de_reasignat|length == 1 %}Un student pare acelaşi om, cu altă adresă de email.{% else %}{{ plan.de_reasignat|length }} par aceiaşi oameni, cu altă adresă de email.{% endif %}</b>
+                    <div class="small mt-1">
+                        Au deja cont pe adresa veche. Dacă bifezi mai jos, adresa se mută
+                        pe contul existent și își păstrează istoricul de rezervări. Dacă nu,
+                        primesc cont nou, iar cel vechi apare la dezactivare.
+                    </div>
+                    <details class="mt-2">
+                        <summary class="fw-semibold">Vezi perechile</summary>
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered mb-0 bg-white">
+                                <thead class="table-light">
+                                    <tr><th>Nume</th><th>Adresa de până acum</th><th>Adresa nouă</th><th>Cămin</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for profil, rand in plan.de_reasignat %}
+                                    <tr>
+                                        <td>{{ rand.nume }} {{ rand.prenume }}</td>
+                                        <td class="text-muted">{{ profil.email }}</td>
+                                        <td><b>{{ rand.email }}</b></td>
+                                        <td>
+                                            {% if profil.camin and profil.camin.nume != rand.camin %}
+                                            {{ profil.camin.nume }} → {{ rand.camin }}
+                                            {% else %}{{ rand.camin }}{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="small text-muted mt-2">
+                            Potrivirea se face doar pe nume complet, și numai când numele apare
+                            o singură dată și în fișier, și în baza de date.
+                        </div>
+                    </details>
+                </div>
+                {% endif %}
+
+                {% if plan.reasignari_blocate %}
+                <div class="alert alert-warning">
+                    <b>{% if plan.reasignari_blocate|length == 1 %}Un student pare acelaşi om, dar nu îl pot uni singur.{% else %}{{ plan.reasignari_blocate|length }} par aceiaşi oameni, dar nu îi pot uni singur.{% endif %}</b>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-bordered mb-0 bg-white">
+                            <thead class="table-light">
+                                <tr><th>Nume</th><th>Adresa veche</th><th>Adresa nouă</th><th>De ce</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for profil, rand, motiv in plan.reasignari_blocate %}
+                                <tr>
+                                    <td>{{ rand.nume }} {{ rand.prenume }}</td>
+                                    <td class="text-muted">{{ profil.email }}</td>
+                                    <td>{{ rand.email }}</td>
+                                    <td class="small">{{ motiv }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="small mt-2">
+                        Importul îi tratează ca persoane noi. Dacă vrei conturile unite,
+                        trebuie decis de la caz la caz care istoric se păstrează.
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if plan.de_actualizat %}
                 <details class="mb-3">
                     <summary class="fw-semibold">Ce se schimbă la cei {{ plan.de_actualizat|length }} studenți actualizați</summary>
@@ -244,6 +310,20 @@
                             <span class="d-block small text-muted">
                                 Nu se șterge nimic: conturile și istoricul rămân, doar nu se mai pot autentifica.
                                 Îi poți reactiva oricând din listă.
+                            </span>
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    {% if plan.de_reasignat %}
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="reasigneaza" id="reasigneaza" checked>
+                        <label class="form-check-label" for="reasigneaza">
+                            Mută adresa nouă pe contul existent, pentru cei
+                            <b>{{ plan.de_reasignat|length }}</b> de mai sus
+                            <span class="d-block small text-muted">
+                                Își păstrează contul și istoricul de rezervări, în loc să
+                                primească unul nou. Nu se șterge nimic.
                             </span>
                         </label>
                     </div>

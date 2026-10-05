@@ -11,6 +11,8 @@ rezervări. Sunt doar marcați inactivi, ceea ce se poate anula oricând.
 """
 
 import re
+import unicodedata
+from collections import Counter
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -24,6 +26,23 @@ COLOANE_OBLIGATORII = ["email", "nume", "prenume", "camin", "camera"]
 # Suficient de permisiv cât să nu respingă adrese valide, dar sa prinda
 # celulele goale si textul care nu e nici pe departe o adresa.
 TIPAR_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+$")
+
+
+def cheie_nume(nume, prenume):
+    """
+    Numele redus la o formă în care se poate compara: fără diacritice, fără
+    spații sau cratime, și cu nume și prenume sortate — listele le dau când
+    într-o ordine, când în cealaltă.
+
+    Serveşte doar la recunoaşterea aceleiaşi persoane când şi-a schimbat
+    adresa de email. Nu înlocuieşte niciodată potrivirea după email.
+    """
+    def curata(text):
+        text = unicodedata.normalize("NFKD", (text or "").lower())
+        text = "".join(c for c in text if not unicodedata.combining(c))
+        return "".join(c for c in text if c.isalnum())
+
+    return tuple(sorted([curata(nume), curata(prenume)]))
 
 
 @dataclass
@@ -50,6 +69,12 @@ class Plan:
     erori: list = field(default_factory=list)
     avertismente: list = field(default_factory=list)
     camine_in_fisier: list = field(default_factory=list)
+
+    # Aceeași persoană, cu altă adresă de email decât anul trecut. Perechi
+    # (profil_existent, rand_nou). Se aplică doar dacă administratorul cere.
+    de_reasignat: list = field(default_factory=list)
+    # Potriviri gasite, dar pe care nu le putem aplica singuri.
+    reasignari_blocate: list = field(default_factory=list)
 
     @property
     def randuri_valide(self):
@@ -195,11 +220,106 @@ def construieste_plan(randuri, erori=None):
             .order_by("camin__nume", "nume", "prenume")
         )
 
+    _cauta_schimbari_de_adresa(plan, emailuri)
     return plan
 
 
+def _cauta_schimbari_de_adresa(plan, emailuri):
+    """
+    Caută, printre rândurile fără cont, oameni care au deja unul pe altă adresă.
+
+    Generațiile de boboci se înscriu cu adresa personală și primesc adresa
+    instituțională abia în anul următor. Fără pasul ăsta, la al doilea import
+    ar primi un cont nou, iar contul vechi — cu tot istoricul de rezervări —
+    ar fi dezactivat în aceeași trecere.
+
+    Potrivirea se face numai pe nume complet normalizat și numai când numele
+    apare **o singură dată** și în fișier, și în baza de date. Doi studenți
+    omonimi nu sunt niciodată împerecheați automat.
+    """
+    if not plan.de_creat:
+        return
+
+    from django.contrib.auth.models import User
+
+    candidati = {}
+    for rand in plan.de_creat:
+        candidati.setdefault(cheie_nume(rand.nume, rand.prenume), []).append(rand)
+
+    # Numele care se repetă în fișier nu pot fi folosite la potrivire.
+    unice_in_fisier = {k: r[0] for k, r in candidati.items() if len(r) == 1}
+    if not unice_in_fisier:
+        return
+
+    existenti = (
+        ProfilStudent.objects.filter(activ=True)
+        .exclude(email__in=emailuri)
+        .select_related("camin", "utilizator")
+    )
+
+    gasite = {}
+    for profil in existenti:
+        gasite.setdefault(cheie_nume(profil.nume, profil.prenume), []).append(profil)
+
+    perechi = [
+        (profiluri[0], unice_in_fisier[k])
+        for k, profiluri in gasite.items()
+        if k in unice_in_fisier and len(profiluri) == 1
+    ]
+    if not perechi:
+        return
+
+    # O adresă nouă care are deja cont înseamnă două conturi pentru același om;
+    # unirea lor nu se poate face fără să alegem ce istoric se păstrează.
+    cu_cont = set(
+        User.objects.filter(
+            email__in=[rand.email for _, rand in perechi]
+        ).values_list("email", flat=True)
+    )
+    cu_cont = {e.lower() for e in cu_cont}
+
+    for profil, rand in perechi:
+        if rand.email in cu_cont:
+            plan.reasignari_blocate.append(
+                (profil, rand, "Adresa nouă are deja un cont separat în aplicație.")
+            )
+        else:
+            plan.de_reasignat.append((profil, rand))
+
+    plan.de_reasignat.sort(key=lambda p: (p[1].nume, p[1].prenume))
+    plan.reasignari_blocate.sort(key=lambda p: (p[1].nume, p[1].prenume))
+
+
+def _aplica_schimbarile_de_adresa(perechi):
+    """Mută adresa nouă pe contul existent. Întoarce ce s-a aplicat."""
+    from django.contrib.auth.models import User
+
+    aplicate = []
+    for profil, rand in perechi:
+        utilizator = profil.utilizator
+        vechi = (utilizator.email or "").lower()
+        utilizator.email = rand.email
+
+        # Username-ul se schimbă doar dacă era chiar adresa veche și dacă cel
+        # nou e liber. E doar un identificator de autentificare — potrivirile
+        # se fac peste tot după email — deci nu merită un conflict.
+        era_adresa = utilizator.username.lower() in (vechi, vechi.split("@")[0])
+        liber = not User.objects.filter(
+            username=rand.email
+        ).exclude(pk=utilizator.pk).exists()
+        if era_adresa and liber:
+            utilizator.username = rand.email
+
+        utilizator.save()
+        # ProfilStudent.save() își ia emailul din utilizator.
+        profil.save()
+        aplicate.append((profil, rand, vechi))
+
+    return aplicate
+
+
 @transaction.atomic
-def aplica_plan(randuri, dezactiveaza=False):
+def aplica_plan(randuri, dezactiveaza=False, reasigneaza=False):
     """
     Scrie în baza de date și întoarce planul efectiv aplicat.
 
@@ -207,6 +327,15 @@ def aplica_plan(randuri, dezactiveaza=False):
     browser și ca cifrele raportate să fie cele chiar aplicate.
     """
     plan = construieste_plan(randuri)
+
+    reasignate = []
+    if reasigneaza and plan.de_reasignat:
+        reasignate = _aplica_schimbarile_de_adresa(plan.de_reasignat)
+        # Planul se reface: după mutarea adresei, oamenii aceia se găsesc după
+        # email, deci nu mai sunt „de creat", iar conturile lor vechi nu mai
+        # sunt candidați la dezactivare.
+        plan = construieste_plan(randuri)
+    plan.de_reasignat = reasignate
 
     camine = {}
     for nume_camin in plan.camine_in_fisier:

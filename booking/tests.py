@@ -2222,3 +2222,132 @@ class UnSingurMesajPePersoana(BazaCereriCont):
         numere = [a.telefon for a in destinatari_cerere_cont(self.t1)]
 
         self.assertEqual(numere.count("+40711111111"), 1)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class SchimbareDeAdresa(BazaImport):
+    """
+    Bobocii se inscriu cu adresa personala si primesc adresa institutionala in
+    anul urmator. Fara recunoasterea lor, al doilea import le-ar da cont nou si
+    l-ar dezactiva pe cel vechi, cu tot istoricul pe el.
+    """
+
+    def _confirma(self, dezactiveaza=False, reasigneaza=False):
+        date = {"actiune": "confirma"}
+        if dezactiveaza:
+            date["dezactiveaza"] = "on"
+        if reasigneaza:
+            date["reasigneaza"] = "on"
+        return self.client.post(reverse("incarca_studenti"), date, follow=True)
+
+    def test_este_recunoscut_dupa_nume(self):
+        self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(email="ana.pop@gmail.com").update(
+            nume="Pop", prenume="Ana"
+        )
+
+        raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.de_reasignat), 1)
+        profil, rand = plan.de_reasignat[0]
+        self.assertEqual(profil.email, "ana.pop@gmail.com")
+        self.assertEqual(rand.email, "ana.pop@student.tuiasi.ro")
+
+    def test_bifa_muta_adresa_si_pastreaza_contul(self):
+        vechi = self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
+
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(dezactiveaza=True, reasigneaza=True)
+
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        profil = ProfilStudent.objects.get()
+        self.assertEqual(profil.id, vechi.id)
+        self.assertEqual(profil.email, "ana.pop@student.tuiasi.ro")
+        self.assertEqual(profil.numar_camera, "203")
+        self.assertTrue(profil.activ)
+
+    def test_fara_bifa_ramane_comportamentul_vechi(self):
+        vechi = self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
+
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(dezactiveaza=True)
+
+        self.assertEqual(ProfilStudent.objects.count(), 2)
+        vechi.refresh_from_db()
+        self.assertFalse(vechi.activ)
+
+    def test_diacriticele_si_ordinea_nu_incurca(self):
+        vechi = self._student("ion@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=vechi.id).update(
+            nume="Țăranu", prenume="Ion-Andrei"
+        )
+
+        raspuns = self._incarca([["ion@student.tuiasi.ro", "Ion Andrei", "Taranu", "T1", "11"]])
+
+        self.assertEqual(len(raspuns.context["plan"].de_reasignat), 1)
+
+    def test_omonimii_nu_sunt_impereceati(self):
+        """Doi studenți cu același nume nu pot fi deosebiți, deci nu se ating."""
+        for email in ("pop1@gmail.com", "pop2@gmail.com"):
+            p = self._student(email, self.t1)
+            ProfilStudent.objects.filter(id=p.id).update(nume="Pop", prenume="Ana")
+
+        raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        self.assertEqual(raspuns.context["plan"].de_reasignat, [])
+        self.assertEqual(len(raspuns.context["plan"].de_creat), 1)
+
+    def test_acelasi_nume_de_doua_ori_in_fisier_nu_se_potriveste(self):
+        p = self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=p.id).update(nume="Pop", prenume="Ana")
+
+        raspuns = self._incarca([
+            ["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"],
+            ["ana.pop2@student.tuiasi.ro", "Pop", "Ana", "T1", "204"],
+        ])
+
+        self.assertEqual(raspuns.context["plan"].de_reasignat, [])
+
+    def test_adresa_noua_cu_cont_propriu_este_semnalata_nu_aplicata(self):
+        p = self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=p.id).update(nume="Pop", prenume="Ana")
+        User.objects.create_user(username="altcineva", email="ana.pop@student.tuiasi.ro")
+
+        raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(plan.de_reasignat, [])
+        self.assertEqual(len(plan.reasignari_blocate), 1)
+        self.assertIn("deja un cont", plan.reasignari_blocate[0][2])
+
+    def test_studentul_mutat_in_alt_camin_isi_pastreaza_contul(self):
+        vechi = self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
+
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T2", "305"]])
+        self._confirma(dezactiveaza=True, reasigneaza=True)
+
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        profil = ProfilStudent.objects.get()
+        self.assertEqual(profil.id, vechi.id)
+        self.assertEqual(profil.camin, self.t2)
+
+    def test_rezervarile_raman_pe_acelasi_cont(self):
+        vechi = self._student("ana.pop@gmail.com", self.t1)
+        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
+        masina = Masina.objects.create(camin=self.t1, nume="M1")
+        Rezervare.objects.create(
+            utilizator=vechi.utilizator, masina=masina,
+            data_rezervare=LUNI, ora_start=time(8, 0), ora_end=time(10, 0),
+        )
+
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._confirma(reasigneaza=True)
+
+        profil = ProfilStudent.objects.get()
+        self.assertEqual(
+            Rezervare.objects.filter(utilizator=profil.utilizator).count(), 1
+        )
