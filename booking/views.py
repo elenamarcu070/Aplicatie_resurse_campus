@@ -1229,8 +1229,42 @@ def programari_admin_camin_view(request):
 def _curata_import(request):
     """Șterge fișierul rămas de la un import început și neterminat."""
     cale = request.session.pop("import_studenti_cale", None)
+    request.session.pop("import_reasignari", None)
     if cale and default_storage.exists(cale):
         default_storage.delete(cale)
+
+
+def _decide_potriviri(request, plan):
+    """
+    Înregistrează în sesiune ce perechi a acceptat administratorul.
+
+    Deciziile stau în sesiune, nu în formular: altfel cineva ar putea trimite
+    o pereche inventată și ar lega adresa unui student de contul altuia.
+    Fiecare pereche trimisă e căutată printre cele chiar propuse de plan.
+    """
+    actiune = request.POST.get("actiune")
+    acceptate = dict(request.session.get("import_reasignari") or {})
+
+    propuse = {
+        p.rand.email: p
+        for p in list(plan.de_reasignat) + [b for b in plan.reasignari_blocate if b.se_poate_uni]
+    }
+
+    if actiune == "accepta_toate":
+        for pereche in plan.de_reasignat:
+            acceptate[pereche.rand.email] = pereche.profil.id
+    elif actiune == "renunta_la_toate":
+        acceptate = {}
+    elif actiune == "accepta":
+        email = request.POST.get("pereche", "").strip().lower()
+        pereche = propuse.get(email)
+        if pereche:
+            acceptate[email] = pereche.profil.id
+    elif actiune == "respinge":
+        acceptate.pop(request.POST.get("pereche", "").strip().lower(), None)
+
+    request.session["import_reasignari"] = acceptate
+    return acceptate
 
 
 @login_required
@@ -1268,6 +1302,26 @@ def incarca_studenti_view(request):
             messages.info(request, "Importul a fost anulat. Nu s-a modificat nimic.")
             return redirect('incarca_studenti')
 
+        # Deciziile despre potriviri nu scriu nimic: doar recalculează planul.
+        if actiune in ('accepta', 'respinge', 'accepta_toate', 'renunta_la_toate'):
+            cale = request.session.get("import_studenti_cale")
+            if not cale or not default_storage.exists(cale):
+                _curata_import(request)
+                messages.error(request, "Fișierul nu mai este disponibil. Încarcă-l din nou.")
+                return redirect('incarca_studenti')
+            try:
+                randuri, erori = citeste_fisier(default_storage.path(cale))
+                plan = construieste_plan(
+                    randuri, erori=erori,
+                    reasignari=request.session.get("import_reasignari"),
+                )
+                acceptate = _decide_potriviri(request, plan)
+                plan = construieste_plan(randuri, erori=erori, reasignari=acceptate)
+            except Exception as e:
+                logger.error(f"Eroare la recalcularea planului de import: {e}")
+                messages.error(request, "Nu am putut recalcula previzualizarea.")
+                return redirect('incarca_studenti')
+
         if actiune == 'confirma':
             cale = request.session.get("import_studenti_cale")
             if not cale or not default_storage.exists(cale):
@@ -1276,11 +1330,11 @@ def incarca_studenti_view(request):
                 return redirect('incarca_studenti')
 
             dezactiveaza = request.POST.get('dezactiveaza') == 'on'
-            reasigneaza = request.POST.get('reasigneaza') == 'on'
             try:
                 randuri, _ = citeste_fisier(default_storage.path(cale))
                 rezultat = aplica_plan(
-                    randuri, dezactiveaza=dezactiveaza, reasigneaza=reasigneaza
+                    randuri, dezactiveaza=dezactiveaza,
+                    reasignari=request.session.get("import_reasignari"),
                 )
             except Exception as e:
                 logger.error(f"Eroare la importul de studenti: {e}\n{traceback.format_exc()}")
@@ -1292,7 +1346,7 @@ def incarca_studenti_view(request):
                 f"Import finalizat: {len(rezultat.de_creat)} adăugați, "
                 f"{len(rezultat.de_actualizat)} actualizați, "
                 f"{len(rezultat.de_reactivat)} reactivați, "
-                f"{len(rezultat.de_reasignat)} cu adresa schimbată, "
+                f"{len(rezultat.reasignari_acceptate)} cu adresa schimbată, "
                 f"{len(rezultat.de_dezactivat)} dezactivați."
             ))
             return redirect('incarca_studenti')
@@ -1303,7 +1357,7 @@ def incarca_studenti_view(request):
                 messages.error(request, "Fișierul trebuie să fie în format Excel (.xlsx sau .xls).")
                 return redirect('incarca_studenti')
 
-            _curata_import(request)
+            _curata_import(request)  # sterge si deciziile de la fisierul anterior
             cale = default_storage.save(f"temp/{fisier.name}", fisier)
             try:
                 randuri, erori = citeste_fisier(default_storage.path(cale))

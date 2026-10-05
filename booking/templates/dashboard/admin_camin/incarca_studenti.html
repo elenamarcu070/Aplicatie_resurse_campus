@@ -175,31 +175,87 @@
                 </div>
                 {% endif %}
 
-                {% if plan.de_reasignat %}
-                <div class="alert alert-info">
-                    <b>{% if plan.de_reasignat|length == 1 %}Un student pare acelaşi om, cu altă adresă de email.{% else %}{{ plan.de_reasignat|length }} par aceiaşi oameni, cu altă adresă de email.{% endif %}</b>
-                    <div class="small mt-1">
-                        Au deja cont pe adresa veche. Dacă bifezi mai jos, adresa se mută
-                        pe contul existent și își păstrează istoricul de rezervări. Dacă nu,
-                        primesc cont nou, iar cel vechi apare la dezactivare.
-                    </div>
+                {% if plan.reasignari_acceptate %}
+                <div class="alert alert-success">
+                    <b>{% if plan.reasignari_acceptate|length == 1 %}O potrivire acceptată.{% else %}{{ plan.reasignari_acceptate|length }} potriviri acceptate.{% endif %}</b>
+                    Cifrele de sus le includ deja. Încă nu s-a scris nimic.
                     <details class="mt-2">
-                        <summary class="fw-semibold">Vezi perechile</summary>
+                        <summary class="fw-semibold">Vezi-le sau renunță</summary>
                         <div class="table-responsive mt-2">
                             <table class="table table-sm table-bordered mb-0 bg-white">
                                 <thead class="table-light">
-                                    <tr><th>Nume</th><th>Adresa de până acum</th><th>Adresa nouă</th><th>Cămin</th></tr>
+                                    <tr><th>Nume</th><th>Adresa de până acum</th><th>Adresa nouă</th><th></th></tr>
                                 </thead>
                                 <tbody>
-                                    {% for profil, rand in plan.de_reasignat %}
+                                    {% for profil, rand in plan.reasignari_acceptate %}
                                     <tr>
                                         <td>{{ rand.nume }} {{ rand.prenume }}</td>
                                         <td class="text-muted">{{ profil.email }}</td>
                                         <td><b>{{ rand.email }}</b></td>
                                         <td>
-                                            {% if profil.camin and profil.camin.nume != rand.camin %}
-                                            {{ profil.camin.nume }} → {{ rand.camin }}
-                                            {% else %}{{ rand.camin }}{% endif %}
+                                            <button type="submit" form="formPotriviri" name="actiune"
+                                                    value="respinge" class="btn btn-sm btn-outline-secondary"
+                                                    onclick="document.getElementById('perecheAleasa').value='{{ rand.email|escapejs }}'">
+                                                Renunț
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="submit" form="formPotriviri" name="actiune" value="renunta_la_toate"
+                                class="btn btn-sm btn-outline-secondary mt-2">
+                            Renunț la toate
+                        </button>
+                    </details>
+                </div>
+                {% endif %}
+
+                <form method="post" id="formPotriviri">
+                    {% csrf_token %}
+                    <input type="hidden" name="pereche" id="perecheAleasa" value="">
+                </form>
+
+                {% if plan.de_reasignat %}
+                <div class="alert alert-info">
+                    <b>{% if plan.de_reasignat|length == 1 %}Un student pare acelaşi om, cu altă adresă de email.{% else %}{{ plan.de_reasignat|length }} par aceiaşi oameni, cu altă adresă de email.{% endif %}</b>
+                    <div class="small mt-1">
+                        Au deja cont pe adresa veche. Dacă accepți, adresa se mută pe contul
+                        existent și își păstrează istoricul de rezervări. Dacă nu, primesc cont
+                        nou, iar cel vechi apare la dezactivare.
+                    </div>
+
+                    <button type="submit" form="formPotriviri" name="actiune" value="accepta_toate"
+                            class="btn btn-primary btn-sm mt-2">
+                        <i class="fas fa-check-double"></i>
+                        Acceptă toate cele {{ plan.de_reasignat|length }}
+                    </button>
+
+                    <details class="mt-3">
+                        <summary class="fw-semibold">Vezi perechile una câte una</summary>
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered mb-0 bg-white">
+                                <thead class="table-light">
+                                    <tr><th>Nume</th><th>Adresa de până acum</th><th>Adresa nouă</th><th>Cămin</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for pereche in plan.de_reasignat %}
+                                    <tr>
+                                        <td>{{ pereche.rand.nume }} {{ pereche.rand.prenume }}</td>
+                                        <td class="text-muted">{{ pereche.profil.email }}</td>
+                                        <td><b>{{ pereche.rand.email }}</b></td>
+                                        <td>
+                                            {% if pereche.profil.camin and pereche.profil.camin.nume != pereche.rand.camin %}
+                                            {{ pereche.profil.camin.nume }} → {{ pereche.rand.camin }}
+                                            {% else %}{{ pereche.rand.camin }}{% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="submit" form="formPotriviri" name="actiune"
+                                                    value="accepta" class="btn btn-sm btn-success"
+                                                    onclick="document.getElementById('perecheAleasa').value='{{ pereche.rand.email|escapejs }}'">
+                                                Acceptă
+                                            </button>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -216,34 +272,47 @@
 
                 {% if plan.reasignari_blocate %}
                 <div class="alert alert-warning">
-                    <b>{% if plan.reasignari_blocate|length == 1 %}Un student pare acelaşi om, dar nu îl pot uni singur.{% else %}{{ plan.reasignari_blocate|length }} par aceiaşi oameni, dar nu îi pot uni singur.{% endif %}</b>
+                    <b>{% if plan.reasignari_blocate|length == 1 %}Unul are nevoie de o privire din partea ta.{% else %}{{ plan.reasignari_blocate|length }} au nevoie de o privire din partea ta.{% endif %}</b>
+                    <div class="small mt-1">
+                        Par aceiași oameni, dar pe adresa nouă există deja un cont.
+                    </div>
                     <div class="table-responsive mt-2">
                         <table class="table table-sm table-bordered mb-0 bg-white">
                             <thead class="table-light">
-                                <tr><th>Nume</th><th>Adresa veche</th><th>Adresa nouă</th><th>De ce</th></tr>
+                                <tr><th>Nume</th><th>Adresa veche</th><th>Adresa nouă</th><th>Situația</th><th></th></tr>
                             </thead>
                             <tbody>
-                                {% for profil, rand, motiv in plan.reasignari_blocate %}
+                                {% for pereche in plan.reasignari_blocate %}
                                 <tr>
-                                    <td>{{ rand.nume }} {{ rand.prenume }}</td>
-                                    <td class="text-muted">{{ profil.email }}</td>
-                                    <td>{{ rand.email }}</td>
-                                    <td class="small">{{ motiv }}</td>
+                                    <td>{{ pereche.rand.nume }} {{ pereche.rand.prenume }}</td>
+                                    <td class="text-muted">{{ pereche.profil.email }}</td>
+                                    <td>{{ pereche.rand.email }}</td>
+                                    <td class="small">{{ pereche.motiv }}</td>
+                                    <td>
+                                        {% if pereche.se_poate_uni %}
+                                        <button type="submit" form="formPotriviri" name="actiune"
+                                                value="accepta" class="btn btn-sm btn-warning"
+                                                onclick="document.getElementById('perecheAleasa').value='{{ pereche.rand.email|escapejs }}'">
+                                            E același om
+                                        </button>
+                                        {% else %}
+                                        <span class="small text-muted">de rezolvat manual</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                     <div class="small mt-2">
-                        Importul îi tratează ca persoane noi. Dacă vrei conturile unite,
-                        trebuie decis de la caz la caz care istoric se păstrează.
+                        Cele neacceptate sunt tratate ca persoane noi.
                     </div>
                 </div>
                 {% endif %}
 
                 {% if plan.de_actualizat %}
                 <details class="mb-3">
-                    <summary class="fw-semibold">Ce se schimbă la cei {{ plan.de_actualizat|length }} studenți actualizați</summary>
+                    <summary class="fw-semibold">{% if plan.de_actualizat|length == 1 %}Ce se schimbă la studentul actualizat{% else %}Ce se schimbă la cei {{ plan.de_actualizat|length }} studenți actualizați{% endif %}</summary>
                     <div class="table-responsive mt-2">
                         <table class="table table-sm table-bordered mb-0">
                             <thead class="table-light">
@@ -310,20 +379,6 @@
                             <span class="d-block small text-muted">
                                 Nu se șterge nimic: conturile și istoricul rămân, doar nu se mai pot autentifica.
                                 Îi poți reactiva oricând din listă.
-                            </span>
-                        </label>
-                    </div>
-                    {% endif %}
-
-                    {% if plan.de_reasignat %}
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="reasigneaza" id="reasigneaza" checked>
-                        <label class="form-check-label" for="reasigneaza">
-                            Mută adresa nouă pe contul existent, pentru cei
-                            <b>{{ plan.de_reasignat|length }}</b> de mai sus
-                            <span class="d-block small text-muted">
-                                Își păstrează contul și istoricul de rezervări, în loc să
-                                primească unul nou. Nu se șterge nimic.
                             </span>
                         </label>
                     </div>

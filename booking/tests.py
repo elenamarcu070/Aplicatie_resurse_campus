@@ -2230,36 +2230,71 @@ class SchimbareDeAdresa(BazaImport):
     Bobocii se inscriu cu adresa personala si primesc adresa institutionala in
     anul urmator. Fara recunoasterea lor, al doilea import le-ar da cont nou si
     l-ar dezactiva pe cel vechi, cu tot istoricul pe el.
+
+    Nimic nu se aplica de la sine: perechile sunt propuneri, iar cifrele din
+    previzualizare se recalculeaza dupa fiecare decizie.
     """
 
-    def _confirma(self, dezactiveaza=False, reasigneaza=False):
+    def _vechi(self, email="ana.pop@gmail.com", camin=None, nume="Pop", prenume="Ana"):
+        profil = self._student(email, camin or self.t1)
+        ProfilStudent.objects.filter(id=profil.id).update(nume=nume, prenume=prenume)
+        return ProfilStudent.objects.get(id=profil.id)
+
+    def _actiune(self, actiune, pereche=None):
+        date = {"actiune": actiune}
+        if pereche:
+            date["pereche"] = pereche
+        return self.client.post(reverse("incarca_studenti"), date, follow=True)
+
+    def _confirma(self, dezactiveaza=False):
         date = {"actiune": "confirma"}
         if dezactiveaza:
             date["dezactiveaza"] = "on"
-        if reasigneaza:
-            date["reasigneaza"] = "on"
         return self.client.post(reverse("incarca_studenti"), date, follow=True)
 
-    def test_este_recunoscut_dupa_nume(self):
-        self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(email="ana.pop@gmail.com").update(
-            nume="Pop", prenume="Ana"
-        )
+    def test_este_propus_dupa_nume(self):
+        self._vechi()
 
         raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
 
         plan = raspuns.context["plan"]
         self.assertEqual(len(plan.de_reasignat), 1)
-        profil, rand = plan.de_reasignat[0]
-        self.assertEqual(profil.email, "ana.pop@gmail.com")
-        self.assertEqual(rand.email, "ana.pop@student.tuiasi.ro")
+        self.assertEqual(plan.de_reasignat[0].profil.email, "ana.pop@gmail.com")
+        self.assertEqual(plan.de_reasignat[0].rand.email, "ana.pop@student.tuiasi.ro")
+        self.assertEqual(plan.reasignari_acceptate, [])
 
-    def test_bifa_muta_adresa_si_pastreaza_contul(self):
-        vechi = self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
-
+    def test_acceptarea_recalculeaza_cifrele_fara_sa_scrie(self):
+        vechi = self._vechi()
         self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
-        self._confirma(dezactiveaza=True, reasigneaza=True)
+
+        raspuns = self._actiune("accepta_toate")
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.reasignari_acceptate), 1)
+        self.assertEqual(plan.de_creat, [])
+        self.assertEqual(plan.de_dezactivat, [])
+        self.assertEqual(len(plan.de_actualizat), 1)
+        vechi.refresh_from_db()
+        self.assertEqual(vechi.email, "ana.pop@gmail.com")
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+
+    def test_modificarea_de_email_apare_in_plan(self):
+        self._vechi()
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        raspuns = self._actiune("accepta_toate")
+
+        _, modificari = raspuns.context["plan"].de_actualizat[0]
+        self.assertEqual(
+            modificari["email"], ("ana.pop@gmail.com", "ana.pop@student.tuiasi.ro")
+        )
+
+    def test_confirmarea_dupa_acceptare_pastreaza_contul(self):
+        vechi = self._vechi()
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._actiune("accepta_toate")
+
+        self._confirma(dezactiveaza=True)
 
         self.assertEqual(ProfilStudent.objects.count(), 1)
         profil = ProfilStudent.objects.get()
@@ -2268,32 +2303,66 @@ class SchimbareDeAdresa(BazaImport):
         self.assertEqual(profil.numar_camera, "203")
         self.assertTrue(profil.activ)
 
-    def test_fara_bifa_ramane_comportamentul_vechi(self):
-        vechi = self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
-
+    def test_fara_acceptare_ramane_comportamentul_vechi(self):
+        vechi = self._vechi()
         self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
         self._confirma(dezactiveaza=True)
 
         self.assertEqual(ProfilStudent.objects.count(), 2)
         vechi.refresh_from_db()
         self.assertFalse(vechi.activ)
 
+    def test_renuntarea_readuce_perechea_intre_propuneri(self):
+        self._vechi()
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._actiune("accepta_toate")
+
+        raspuns = self._actiune("respinge", pereche="ana.pop@student.tuiasi.ro")
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(plan.reasignari_acceptate, [])
+        self.assertEqual(len(plan.de_reasignat), 1)
+        self.assertEqual(len(plan.de_creat), 1)
+
+    def test_acceptarea_unei_singure_perechi(self):
+        self._vechi("ana.pop@gmail.com", nume="Pop", prenume="Ana")
+        self._vechi("ion.v@gmail.com", nume="Vasile", prenume="Ion")
+        self._incarca([
+            ["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"],
+            ["ion.vasile@student.tuiasi.ro", "Vasile", "Ion", "T1", "204"],
+        ])
+
+        raspuns = self._actiune("accepta", pereche="ana.pop@student.tuiasi.ro")
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.reasignari_acceptate), 1)
+        self.assertEqual(len(plan.de_reasignat), 1)
+        self.assertEqual(len(plan.de_creat), 1)
+
+    def test_o_pereche_nepropusa_este_ignorata(self):
+        """Deciziile stau in sesiune, dar perechea trimisa e verificata."""
+        victima = self._vechi("victima@gmail.com", nume="Ionescu", prenume="Maria")
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        raspuns = self._actiune("accepta", pereche="ana.pop@student.tuiasi.ro")
+
+        self.assertEqual(raspuns.context["plan"].reasignari_acceptate, [])
+        self._confirma()
+        victima.refresh_from_db()
+        self.assertEqual(victima.email, "victima@gmail.com")
+
     def test_diacriticele_si_ordinea_nu_incurca(self):
-        vechi = self._student("ion@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=vechi.id).update(
-            nume="Țăranu", prenume="Ion-Andrei"
-        )
+        self._vechi("ion@gmail.com", nume="Țăranu", prenume="Ion-Andrei")
 
         raspuns = self._incarca([["ion@student.tuiasi.ro", "Ion Andrei", "Taranu", "T1", "11"]])
 
         self.assertEqual(len(raspuns.context["plan"].de_reasignat), 1)
 
-    def test_omonimii_nu_sunt_impereceati(self):
+    def test_omonimii_nu_sunt_propusi(self):
         """Doi studenți cu același nume nu pot fi deosebiți, deci nu se ating."""
-        for email in ("pop1@gmail.com", "pop2@gmail.com"):
-            p = self._student(email, self.t1)
-            ProfilStudent.objects.filter(id=p.id).update(nume="Pop", prenume="Ana")
+        self._vechi("pop1@gmail.com")
+        self._vechi("pop2@gmail.com")
 
         raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
 
@@ -2301,8 +2370,7 @@ class SchimbareDeAdresa(BazaImport):
         self.assertEqual(len(raspuns.context["plan"].de_creat), 1)
 
     def test_acelasi_nume_de_doua_ori_in_fisier_nu_se_potriveste(self):
-        p = self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=p.id).update(nume="Pop", prenume="Ana")
+        self._vechi()
 
         raspuns = self._incarca([
             ["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"],
@@ -2311,24 +2379,55 @@ class SchimbareDeAdresa(BazaImport):
 
         self.assertEqual(raspuns.context["plan"].de_reasignat, [])
 
-    def test_adresa_noua_cu_cont_propriu_este_semnalata_nu_aplicata(self):
-        p = self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=p.id).update(nume="Pop", prenume="Ana")
-        User.objects.create_user(username="altcineva", email="ana.pop@student.tuiasi.ro")
+    def test_contul_gol_de_pe_adresa_noua_poate_fi_unit(self):
+        self._vechi()
+        User.objects.create_user(username="urma", email="ana.pop@student.tuiasi.ro")
 
         raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
 
         plan = raspuns.context["plan"]
         self.assertEqual(plan.de_reasignat, [])
         self.assertEqual(len(plan.reasignari_blocate), 1)
-        self.assertIn("deja un cont", plan.reasignari_blocate[0][2])
+        self.assertTrue(plan.reasignari_blocate[0].se_poate_uni)
+        self.assertIn("cont gol", plan.reasignari_blocate[0].motiv)
+
+    def test_unirea_contului_gol_il_sterge(self):
+        vechi = self._vechi()
+        User.objects.create_user(username="urma", email="ana.pop@student.tuiasi.ro")
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        self._actiune("accepta", pereche="ana.pop@student.tuiasi.ro")
+        self._confirma()
+
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        self.assertEqual(ProfilStudent.objects.get().id, vechi.id)
+        self.assertEqual(
+            User.objects.filter(email="ana.pop@student.tuiasi.ro").count(), 1
+        )
+
+    def test_contul_cu_rezervari_nu_poate_fi_unit(self):
+        self._vechi()
+        strain = User.objects.create_user(
+            username="urma", email="ana.pop@student.tuiasi.ro"
+        )
+        masina = Masina.objects.create(camin=self.t1, nume="M1")
+        Rezervare.objects.create(
+            utilizator=strain, masina=masina, data_rezervare=LUNI,
+            ora_start=time(8, 0), ora_end=time(10, 0),
+        )
+
+        raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        plan = raspuns.context["plan"]
+        self.assertEqual(len(plan.reasignari_blocate), 1)
+        self.assertFalse(plan.reasignari_blocate[0].se_poate_uni)
 
     def test_studentul_mutat_in_alt_camin_isi_pastreaza_contul(self):
-        vechi = self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
-
+        vechi = self._vechi()
         self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T2", "305"]])
-        self._confirma(dezactiveaza=True, reasigneaza=True)
+        self._actiune("accepta_toate")
+
+        self._confirma(dezactiveaza=True)
 
         self.assertEqual(ProfilStudent.objects.count(), 1)
         profil = ProfilStudent.objects.get()
@@ -2336,18 +2435,28 @@ class SchimbareDeAdresa(BazaImport):
         self.assertEqual(profil.camin, self.t2)
 
     def test_rezervarile_raman_pe_acelasi_cont(self):
-        vechi = self._student("ana.pop@gmail.com", self.t1)
-        ProfilStudent.objects.filter(id=vechi.id).update(nume="Pop", prenume="Ana")
+        vechi = self._vechi()
         masina = Masina.objects.create(camin=self.t1, nume="M1")
         Rezervare.objects.create(
             utilizator=vechi.utilizator, masina=masina,
             data_rezervare=LUNI, ora_start=time(8, 0), ora_end=time(10, 0),
         )
-
         self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
-        self._confirma(reasigneaza=True)
+        self._actiune("accepta_toate")
+
+        self._confirma()
 
         profil = ProfilStudent.objects.get()
         self.assertEqual(
             Rezervare.objects.filter(utilizator=profil.utilizator).count(), 1
         )
+
+    def test_un_fisier_nou_sterge_deciziile_vechi(self):
+        self._vechi()
+        self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+        self._actiune("accepta_toate")
+
+        raspuns = self._incarca([["ana.pop@student.tuiasi.ro", "Pop", "Ana", "T1", "203"]])
+
+        self.assertEqual(raspuns.context["plan"].reasignari_acceptate, [])
+        self.assertEqual(len(raspuns.context["plan"].de_reasignat), 1)
