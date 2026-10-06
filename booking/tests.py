@@ -24,6 +24,8 @@ from django.urls import reverse
 from booking.push import _cont_de_serviciu, notifica_student, trimite_push
 from booking.utils import (
     destinatari_cerere_cont,
+    gaseste_cont_asemanator,
+    masca_email,
     notifica_admini_cerere,
     sefi_de_camin,
     trimite_whatsapp,
@@ -2460,3 +2462,191 @@ class SchimbareDeAdresa(BazaImport):
 
         self.assertEqual(raspuns.context["plan"].reasignari_acceptate, [])
         self.assertEqual(len(raspuns.context["plan"].de_reasignat), 1)
+
+
+class MascareaAdresei(TestCase):
+    """Adresa se arată destul cât s-o recunoști, nu cât s-o afli."""
+
+    def test_pastreaza_inceputul_si_domeniul(self):
+        mascat = masca_email("ana.pop@gmail.com")
+
+        self.assertTrue(mascat.startswith("an"))
+        self.assertTrue(mascat.endswith("@gmail.com"))
+        self.assertNotIn("pop", mascat)
+
+    def test_adresa_scurta_nu_dezvaluie_mai_mult(self):
+        self.assertTrue(masca_email("ab@x.ro").startswith("a•"))
+
+    def test_text_fara_arond(self):
+        self.assertEqual(masca_email("nuesteadresa"), "")
+        self.assertEqual(masca_email(""), "")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class ContulDejaExistent(BazaCereriCont):
+    """
+    Bobocii inscrisi cu adresa personala incearca, in anul doi, cu cea
+    institutionala. Pana acum depuneau o cerere de care nimeni nu avea nevoie,
+    iar adminul trebuia sa caute de mana daca omul are deja cont.
+    """
+
+    def _student(self, email, camin=None, nume="Pop", prenume="Ana", activ=True):
+        user = User.objects.create_user(
+            username=email, email=email, first_name=prenume, last_name=nume
+        )
+        return ProfilStudent.objects.create(
+            utilizator=user, camin=camin or self.t1, numar_camera="101", activ=activ
+        )
+
+    def _incearca(self, email, prenume="Ana", nume="Pop"):
+        user = User.objects.create_user(
+            username=email, email=email, first_name=prenume, last_name=nume
+        )
+        self.client.force_login(user)
+        return self.client.get(reverse("callback"))
+
+    def test_gaseste_dupa_aceeasi_parte_dinaintea_arondului(self):
+        vechi = self._student("ana.pop@gmail.com")
+
+        profil, motiv = gaseste_cont_asemanator("ana.pop@student.tuiasi.ro", "", "")
+
+        self.assertEqual(profil.id, vechi.id)
+        self.assertEqual(motiv, "local")
+
+    def test_gaseste_dupa_nume_cu_diacritice_si_ordine_inversa(self):
+        vechi = self._student("ionut2004@yahoo.com", nume="Țăranu", prenume="Ion-Andrei")
+
+        profil, motiv = gaseste_cont_asemanator(
+            "ion-andrei.taranu@student.tuiasi.ro", "Taranu", "Ion Andrei"
+        )
+
+        self.assertEqual(profil.id, vechi.id)
+        self.assertEqual(motiv, "nume")
+
+    def test_omonimii_nu_dau_nicio_potrivire(self):
+        self._student("pop1@gmail.com")
+        self._student("pop2@gmail.com")
+
+        profil, _ = gaseste_cont_asemanator("ana.pop@student.tuiasi.ro", "Ana", "Pop")
+
+        self.assertIsNone(profil)
+
+    def test_contul_inactiv_nu_este_propus(self):
+        self._student("ana.pop@gmail.com", activ=False)
+
+        profil, _ = gaseste_cont_asemanator("ana.pop@student.tuiasi.ro", "Ana", "Pop")
+
+        self.assertIsNone(profil)
+
+    def test_pagina_il_trimite_la_adresa_veche(self):
+        self._student("ana.pop@gmail.com")
+
+        raspuns = self._incearca("ana.pop@student.tuiasi.ro")
+
+        self.assertContains(raspuns, "ai deja cont")
+        self.assertContains(raspuns, "@gmail.com")
+        # Adresa e mascată: potrivirea după nume poate nimeri un omonim.
+        self.assertNotContains(raspuns, "ana.pop@gmail.com")
+
+    def test_cererea_ramane_disponibila_ca_a_doua_optiune(self):
+        self._student("ana.pop@gmail.com")
+
+        raspuns = self._incearca("ana.pop@student.tuiasi.ro")
+
+        self.assertContains(raspuns, "Cere un cont")
+        self.assertContains(raspuns, "Nu e contul tău")
+
+    def test_fara_potrivire_pagina_arata_ca_inainte(self):
+        raspuns = self._incearca("necunoscut@student.tuiasi.ro", "Ion", "Necunoscut")
+
+        self.assertNotContains(raspuns, "ai deja cont")
+        self.assertContains(raspuns, "Locuiești într-un cămin")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AprobareCuMutareaAdresei(BazaCereriCont):
+    """Adminul vede în listă că studentul are deja cont, și mută adresa."""
+
+    def setUp(self):
+        super().setUp()
+        user = User.objects.create_user(
+            username="ana.pop@gmail.com", email="ana.pop@gmail.com",
+            first_name="Ana", last_name="Pop",
+        )
+        self.vechi = ProfilStudent.objects.create(
+            utilizator=user, camin=self.t1, numar_camera="101", activ=True
+        )
+        ProfilStudent.objects.filter(id=self.vechi.id).update(nume="Pop", prenume="Ana")
+        self.vechi.refresh_from_db()
+        self.cerere = CerereCont.objects.create(
+            email="ana.pop@student.tuiasi.ro", nume="Pop", prenume="Ana",
+            camin=self.t1, numar_camera="203", telefon="+40712345678",
+        )
+
+    def test_cererea_e_marcata_in_lista(self):
+        self.client.force_login(self.super_admin)
+
+        raspuns = self.client.get(reverse("incarca_studenti"))
+
+        cerere = raspuns.context["cereri"][0]
+        self.assertEqual(cerere.posibil_existent.id, self.vechi.id)
+        self.assertContains(raspuns, "Pare să aibă deja cont")
+
+    def test_mutarea_pastreaza_contul_si_istoricul(self):
+        masina = Masina.objects.create(camin=self.t1, nume="M1")
+        Rezervare.objects.create(
+            utilizator=self.vechi.utilizator, masina=masina,
+            data_rezervare=date(2026, 3, 2), ora_start=time(8, 0), ora_end=time(10, 0),
+        )
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(
+            reverse("aproba_cerere_cont", args=[self.cerere.id]),
+            {"muta_adresa": "1"}, follow=True,
+        )
+
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+        profil = ProfilStudent.objects.get()
+        self.assertEqual(profil.id, self.vechi.id)
+        self.assertEqual(profil.email, "ana.pop@student.tuiasi.ro")
+        self.assertEqual(profil.numar_camera, "203")
+        self.assertEqual(
+            Rezervare.objects.filter(utilizator=profil.utilizator).count(), 1
+        )
+
+    def test_contul_gol_de_pe_adresa_ceruta_este_sters(self):
+        User.objects.create_user(username="urma", email="ana.pop@student.tuiasi.ro")
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(
+            reverse("aproba_cerere_cont", args=[self.cerere.id]),
+            {"muta_adresa": "1"}, follow=True,
+        )
+
+        self.assertEqual(
+            User.objects.filter(email="ana.pop@student.tuiasi.ro").count(), 1
+        )
+        self.assertEqual(ProfilStudent.objects.count(), 1)
+
+    def test_fara_mutare_se_creeaza_cont_nou(self):
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(reverse("aproba_cerere_cont", args=[self.cerere.id]), follow=True)
+
+        self.assertEqual(ProfilStudent.objects.count(), 2)
+        self.vechi.refresh_from_db()
+        self.assertEqual(self.vechi.email, "ana.pop@gmail.com")
+
+    def test_mutarea_fara_potrivire_nu_face_nimic(self):
+        """Ținta se recalculează pe server; un `muta_adresa` trimis de mână nu ajunge."""
+        self.vechi.delete()
+        self.client.force_login(self.sef_t1)
+
+        raspuns = self.client.post(
+            reverse("aproba_cerere_cont", args=[self.cerere.id]),
+            {"muta_adresa": "1"}, follow=True,
+        )
+
+        self.cerere.refresh_from_db()
+        self.assertEqual(self.cerere.stare, CerereCont.IN_ASTEPTARE)
+        self.assertTrue(any("Nu am mai găsit" in m for m in self._mesaje(raspuns)))

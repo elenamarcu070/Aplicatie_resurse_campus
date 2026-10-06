@@ -235,6 +235,61 @@ def notifica_admini_cerere(cerere):
         )
     return trimise
 
+def masca_email(email):
+    """
+    `an•••••@gmail.com` — destul cât omul să-și recunoască propria adresă,
+    nu cât să afle altcineva adresa unui coleg cu nume asemănător.
+    """
+    local, separator, domeniu = (email or "").partition("@")
+    if not separator:
+        return ""
+    vizibil = local[:2] if len(local) > 3 else local[:1]
+    return f"{vizibil}{'•' * max(3, len(local) - len(vizibil))}@{domeniu}"
+
+
+def gaseste_cont_asemanator(email, prenume="", nume=""):
+    """
+    Caută un cont activ care pare să fie al aceleiași persoane, pe altă adresă.
+
+    Bobocii se înscriu cu adresa personală și primesc adresa instituțională
+    în anul următor. Când încearcă să intre cu cea nouă, aplicația nu-i
+    cunoaște și ei depun o cerere — deși au deja cont. Așa îi putem trimite
+    înapoi la adresa lor, în loc să ajungă pe un drum ocolit.
+
+    Întoarce (profil, motiv) sau (None, ""). Nu întoarce nimic când sunt mai
+    mulți candidați: o potrivire nesigură e mai rea decât niciuna.
+    """
+    from booking.import_studenti import cheie_nume
+
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return None, ""
+
+    local = email.split("@")[0]
+    activi = ProfilStudent.objects.filter(activ=True).exclude(email__iexact=email)
+
+    # 1. Aceeași parte dinaintea lui @, alt domeniu: ana.pop@gmail.com și
+    #    ana.pop@student.tuiasi.ro. Semnalul cel mai clar.
+    dupa_local = list(activi.filter(email__istartswith=f"{local}@")[:2])
+    if len(dupa_local) == 1:
+        return dupa_local[0], "local"
+
+    # 2. Același nume complet, scris oricum. Numai dacă e unic: doi omonimi
+    #    nu pot fi deosebiți, iar o potrivire greșită ar arăta adresa altuia.
+    if not (prenume or nume):
+        return None, ""
+
+    cautat = cheie_nume(nume, prenume)
+    potriviri = [
+        p for p in activi.only("id", "email", "nume", "prenume", "camin")
+        if cheie_nume(p.nume, p.prenume) == cautat
+    ]
+    if len(potriviri) == 1:
+        return potriviri[0], "nume"
+
+    return None, ""
+
+
 def get_camin_curent(request):
     """
     Returnează căminul asociat utilizatorului logat:

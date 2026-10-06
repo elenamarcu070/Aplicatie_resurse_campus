@@ -22,20 +22,47 @@
               <table class="table table-sm table-bordered align-middle mb-0">
                 <thead class="table-light">
                   <tr>
-                    <th>Nume</th><th>Email</th><th>Cămin</th><th>Camera</th>
-                    <th>Telefon</th><th>Trimisă</th><th style="width:230px;">Decizie</th>
+                    <th>Nume</th><th>Email cerut</th><th>Cămin</th><th>Camera</th>
+                    <th>Telefon</th><th>Trimisă</th><th style="width:260px;">Decizie</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for c in cereri %}
-                  <tr>
-                    <td>{{ c.nume_complet }}</td>
+                  <tr{% if c.posibil_existent %} class="table-warning"{% endif %}>
+                    <td>
+                      {{ c.nume_complet }}
+                      {% if c.posibil_existent %}
+                      <div class="small text-danger mt-1">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        Pare să aibă deja cont, pe
+                        <b>{{ c.posibil_existent.email }}</b>
+                        ({{ c.posibil_existent.camin.nume|default:"fără cămin" }}).
+                      </div>
+                      {% endif %}
+                    </td>
                     <td>{{ c.email }}</td>
                     <td><span class="badge bg-secondary">{{ c.camin.nume }}</span></td>
                     <td>{{ c.numar_camera|default:"—" }}</td>
                     <td>{{ c.telefon|default:"—" }}</td>
                     <td class="small text-muted">{{ c.creat_la|date:"d M, H:i" }}</td>
                     <td>
+                      {% if c.posibil_existent %}
+                      <form method="post" action="{% url 'aproba_cerere_cont' c.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="muta_adresa" value="1">
+                        <button type="submit" class="btn btn-sm btn-success"
+                                onclick="return confirm('Muți adresa {{ c.email|escapejs }} pe contul existent al lui {{ c.nume_complet|escapejs }}? Rezervările și istoricul rămân.');">
+                          <i class="fas fa-right-left"></i> Mută adresa pe contul vechi
+                        </button>
+                      </form>
+                      <form method="post" action="{% url 'aproba_cerere_cont' c.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-success"
+                                onclick="return confirm('Chiar e altcineva? Se creează un cont nou, separat de cel existent.');">
+                          E altcineva — cont nou
+                        </button>
+                      </form>
+                      {% else %}
                       <form method="post" action="{% url 'aproba_cerere_cont' c.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-success"
@@ -43,6 +70,7 @@
                           <i class="fas fa-check"></i> Aprobă
                         </button>
                       </form>
+                      {% endif %}
                       <form method="post" action="{% url 'respinge_cerere_cont' c.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger"

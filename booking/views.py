@@ -40,7 +40,9 @@ from booking.models import (
 from booking.import_studenti import aplica_plan, citeste_fisier, construieste_plan
 from booking.push import notifica_student, push_este_configurat
 from booking.utils import (
+    gaseste_cont_asemanator,
     get_camin_curent,
+    masca_email,
     sefi_de_camin,
     normalizeaza_numar,
     notifica_admini_cerere,
@@ -180,6 +182,13 @@ def callback(request):
     except Exception:
         logger.warning(f"Nu am putut sterge contul neautorizat {email}.")
 
+    # Dacă are deja cont pe altă adresă — tipic bobocii, înscriși cu adresa
+    # personală și ajunși între timp la cea instituțională — îi spunem asta
+    # înainte să depună o cerere de care nimeni nu are nevoie.
+    asemanator, motiv = gaseste_cont_asemanator(
+        email, date_cerere["prenume"], date_cerere["nume"]
+    )
+
     # După `logout` sesiunea e alta, goală: scriem în ea de-abia acum.
     request.session["cerere_cont"] = date_cerere
     return render(request, 'not_allowed.html', {
@@ -188,6 +197,10 @@ def callback(request):
         # altfel propoziția rămâne cu un gol în mijloc.
         'email_incercat': email,
         'sefi': sefi_de_camin(),
+        # Adresa e mascată: potrivirea după nume poate nimeri un omonim, iar
+        # atunci am arăta adresa unui coleg.
+        'cont_asemanator': masca_email(asemanator.email) if asemanator else None,
+        'potrivire_sigura': motiv == "local",
     })
 
 
@@ -1391,13 +1404,18 @@ def incarca_studenti_view(request):
     if not admin_camin.is_super_admin:
         cereri = cereri.filter(camin=admin_camin.camin)
 
+    cereri_deschise = list(cereri.filter(stare=CerereCont.IN_ASTEPTARE))
+    for c in cereri_deschise:
+        # Ca administratorul să nu mai caute de mână dacă studentul are deja cont.
+        c.posibil_existent, _ = gaseste_cont_asemanator(c.email, c.prenume, c.nume)
+
     return render(request, 'dashboard/admin_camin/incarca_studenti.html', {
         'plan': plan,
         'camin': camin,
         'studenti': studenti,
         'camine': camine,
         'is_super_admin': admin_camin.is_super_admin,
-        'cereri': cereri.filter(stare=CerereCont.IN_ASTEPTARE),
+        'cereri': cereri_deschise,
         'cereri_rezolvate': cereri.exclude(stare=CerereCont.IN_ASTEPTARE)[:15],
     })
 
@@ -1634,6 +1652,20 @@ def aproba_cerere_cont(request, cerere_id):
     if oprire:
         return oprire
 
+    # Administratorul poate cere mutarea adresei pe contul vechi, în loc să se
+    # creeze unul nou. Ținta nu vine din formular, ci se recalculează aici:
+    # altfel un id trimis de mână ar lega adresa unui student de contul altuia.
+    muta_adresa = request.POST.get("muta_adresa") == "1"
+    asemanator = None
+    if muta_adresa:
+        asemanator, _ = gaseste_cont_asemanator(cerere.email, cerere.prenume, cerere.nume)
+        if asemanator is None:
+            messages.error(request, (
+                "Nu am mai găsit contul vechi — poate s-a schimbat între timp. "
+                "Reîncarcă pagina și încearcă din nou."
+            ))
+            return redirect("incarca_studenti")
+
     with transaction.atomic():
         # Căutarea se face după email, nu după username: conturile create la
         # autentificare au username-ul fără domeniu, iar o căutare după
@@ -1648,11 +1680,27 @@ def aproba_cerere_cont(request, cerere_id):
             ProfilStudent.objects.filter(email__iexact=cerere.email)
             .select_related("utilizator").order_by("id").first()
         )
+        if asemanator is not None and profil_vechi is None:
+            profil_vechi = asemanator
+
         utilizator = profil_vechi.utilizator if profil_vechi else None
         if utilizator is None:
             utilizator = User.objects.filter(email__iexact=cerere.email).order_by("id").first()
         if utilizator is None:
             utilizator = User(username=cerere.email)
+
+        if asemanator is not None:
+            # Pe adresa cerută poate exista un cont gol, rămas de la o încercare
+            # de autentificare. Două conturi cu aceeași adresă ar face aplicația
+            # să nu mai știe pe care să-l folosească.
+            for strain in User.objects.filter(
+                email__iexact=cerere.email
+            ).exclude(pk=utilizator.pk):
+                gol = (not ProfilStudent.objects.filter(utilizator=strain).exists()
+                       and not Rezervare.objects.filter(utilizator=strain).exists())
+                if gol:
+                    strain.delete()
+
         utilizator.email = cerere.email
         utilizator.first_name = cerere.prenume
         utilizator.last_name = cerere.nume
@@ -1668,7 +1716,12 @@ def aproba_cerere_cont(request, cerere_id):
         )
         if cerere.telefon:
             profil.telefon = cerere.telefon
-            profil.save(update_fields=["telefon"])
+
+        # Salvare întreagă, nu pe câmpuri: `update_or_create` scrie doar ce e în
+        # `defaults`, iar emailul profilului se ia din utilizator în `save()`.
+        # Fără asta, la mutarea adresei profilul rămânea cu cea veche și
+        # studentul tot nu era găsit la autentificare.
+        profil.save()
 
         cerere.stare = CerereCont.APROBATA
         cerere.procesat_la = timezone.now()
@@ -1696,11 +1749,17 @@ def aproba_cerere_cont(request, cerere_id):
         link="/dashboard/student/",
     )
 
-    messages.success(
-        request,
-        f"{cerere.nume_complet} are acum cont în {cerere.camin.nume}, camera "
-        f"{cerere.numar_camera or '—'}.",
-    )
+    if asemanator is not None:
+        messages.success(request, (
+            f"{cerere.nume_complet} foloseşte de acum {cerere.email}, pe contul lui "
+            "de până acum. Rezervările şi istoricul au rămas la locul lor."
+        ))
+    else:
+        messages.success(
+            request,
+            f"{cerere.nume_complet} are acum cont în {cerere.camin.nume}, camera "
+            f"{cerere.numar_camera or '—'}.",
+        )
     return redirect("incarca_studenti")
 
 
