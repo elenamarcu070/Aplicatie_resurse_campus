@@ -973,14 +973,16 @@ class AccesLaImport(BazaImport):
         self.assertEqual(raspuns.status_code, 302)
         self.assertIn("login", raspuns.url)
 
-    def test_studentul_nu_are_acces(self):
+    def test_studentul_este_dus_la_pagina_lui(self):
+        """Nu e pagina lui, dar nici nu greșește cu nimic: nu-l lăsăm în fundătură."""
         profil = self._student("ana@student.tuiasi.ro", self.t1)
         self.client.force_login(profil.utilizator)
 
         raspuns = self.client.get(reverse("incarca_studenti"))
 
-        self.assertContains(raspuns, "administratorilor")
-        self.assertEqual(raspuns.status_code, 200)
+        self.assertRedirects(
+            raspuns, reverse("dashboard_student"), fetch_redirect_response=False
+        )
 
     def test_studentul_nu_poate_dezactiva_pe_altcineva(self):
         tinta = self._student("victima@student.tuiasi.ro", self.t1)
@@ -2762,3 +2764,60 @@ class NumeleDeLaGoogle(TestCase):
 
         self.assertEqual(User.objects.filter(email="ana.pop@student.tuiasi.ro").count(), 1)
         self.assertEqual(fals.conectat.username, "ana")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class PaginaGresitaPentruRol(BazaCereriCont):
+    """
+    Cine nimereste pe pagina altui rol — din istoric, dintr-un bookmark sau din
+    butonul inapoi — e dus la pagina lui, nu lasat intr-o fundatura.
+    """
+
+    def test_adminul_pe_pagina_de_student_este_redirectat(self):
+        self.client.force_login(self.sef_t1)
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertRedirects(
+            raspuns, reverse("dashboard_admin_camin"), fetch_redirect_response=False
+        )
+
+    def test_studentul_pe_pagina_de_admin_este_redirectat(self):
+        user = User.objects.create_user(
+            username="ana@student.tuiasi.ro", email="ana@student.tuiasi.ro"
+        )
+        ProfilStudent.objects.create(utilizator=user, camin=self.t1, activ=True)
+        self.client.force_login(user)
+
+        raspuns = self.client.get(reverse("dashboard_admin_camin"))
+
+        self.assertRedirects(
+            raspuns, reverse("dashboard_student"), fetch_redirect_response=False
+        )
+
+    def test_cineva_care_nu_e_nici_una_nici_alta_vede_explicatia(self):
+        strain = User.objects.create_user(username="strain", email="strain@x.ro")
+        self.client.force_login(strain)
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertEqual(raspuns.status_code, 200)
+        self.assertContains(raspuns, "doar studenților")
+
+    def test_refuzul_nu_ramane_in_cache(self):
+        """Altfel pagina reapare la intoarcere, chiar dupa ce drepturile s-au schimbat."""
+        strain = User.objects.create_user(username="strain", email="strain@x.ro")
+        self.client.force_login(strain)
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertIn("no-store", raspuns["Cache-Control"])
+
+    def test_studentul_inactiv_vede_tot_mesajul_lui(self):
+        user = User.objects.create_user(username="vechi", email="vechi@x.ro")
+        ProfilStudent.objects.create(utilizator=user, camin=self.t1, activ=False)
+        self.client.force_login(user)
+
+        raspuns = self.client.get(reverse("dashboard_student"))
+
+        self.assertContains(raspuns, "nu mai este activ")

@@ -82,14 +82,32 @@ def login_redirect_google(request):
 # Decoratori pentru roluri
 # =========================
 
+def acces_interzis(request, mesaj, **context):
+    """
+    Pagina de acces interzis, cu interdicție de păstrare în cache.
+
+    Fără `no-store`, un răspuns de 200 poate rămâne în browser și reapare la
+    întoarcerea pe aceeași adresă, chiar după ce între timp drepturile s-au
+    schimbat — de unde impresia că aplicația refuză „din când în când".
+    """
+    raspuns = render(request, 'not_allowed.html', dict(context, message=mesaj))
+    raspuns["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return raspuns
+
+
 def only_students(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         profil = ProfilStudent.objects.filter(utilizator=request.user).first()
         if not profil:
-            return render(request, 'not_allowed.html', {'message': 'Acces permis doar studenților.'})
+            # Un administrator ajuns aici — din istoric, dintr-un bookmark sau
+            # din butonul înapoi — nu greșește cu nimic: pur și simplu nu e
+            # pagina lui. Îl ducem la a lui, în loc să-l lăsăm în fundătură.
+            if AdminCamin.objects.filter(email=request.user.email).exists():
+                return redirect('dashboard_admin_camin')
+            return acces_interzis(request, 'Acces permis doar studenților.')
         if not profil.activ:
-            return render(request, 'not_allowed.html', {'message': MESAJ_CONT_INACTIV})
+            return acces_interzis(request, MESAJ_CONT_INACTIV)
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -97,7 +115,14 @@ def only_admins(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not AdminCamin.objects.filter(email=request.user.email).exists():
-            return render(request, 'not_allowed.html', {'message': 'Acces permis doar administratorilor de cămin.'})
+            profil = ProfilStudent.objects.filter(
+                utilizator=request.user, activ=True
+            ).first()
+            if profil:
+                return redirect('dashboard_student')
+            return acces_interzis(
+                request, 'Acces permis doar administratorilor de cămin.'
+            )
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -105,7 +130,7 @@ def only_super_admins(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not is_super_admin(request.user):
-            return render(request, 'not_allowed.html', {'message': 'Acces permis doar super-adminilor.'})
+            return acces_interzis(request, 'Acces permis doar super-adminilor.')
         return view_func(request, *args, **kwargs)
     return wrapper
 
