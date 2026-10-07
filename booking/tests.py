@@ -2702,3 +2702,63 @@ class ProfilurileFaraCamin(BazaImport):
 
         self.assertContains(raspuns, "— fără cămin —")
         self.assertContains(raspuns, "fără cămin")
+
+
+class NumeleDeLaGoogle(TestCase):
+    """
+    Contul creat la prima autentificare trebuie sa poarte numele venit de la
+    Google. Fara el, formularul de cerere porneste gol, iar recunoasterea
+    studentului care are deja cont pe alta adresa nu are pe ce se sprijini:
+    ea se face chiar dupa numele complet.
+    """
+
+    class _SocialLoginFals:
+        def __init__(self, user):
+            self.user = user
+            self.conectat = None
+
+        def connect(self, request, user):
+            self.conectat = user
+
+    def _autentifica(self, email, prenume, nume):
+        from booking.adapters import MySocialAccountAdapter
+
+        venit_de_la_google = User(email=email, first_name=prenume, last_name=nume)
+        fals = self._SocialLoginFals(venit_de_la_google)
+        MySocialAccountAdapter().pre_social_login(None, fals)
+        return fals
+
+    def test_contul_nou_primeste_numele(self):
+        self._autentifica("ana.pop@student.tuiasi.ro", "Ana", "Pop")
+
+        user = User.objects.get(email="ana.pop@student.tuiasi.ro")
+        self.assertEqual(user.first_name, "Ana")
+        self.assertEqual(user.last_name, "Pop")
+
+    def test_contul_vechi_fara_nume_il_primeste_acum(self):
+        User.objects.create_user(username="ana", email="ana.pop@student.tuiasi.ro")
+
+        self._autentifica("ana.pop@student.tuiasi.ro", "Ana", "Pop")
+
+        user = User.objects.get(email="ana.pop@student.tuiasi.ro")
+        self.assertEqual(user.first_name, "Ana")
+
+    def test_numele_pus_de_admin_nu_este_suprascris(self):
+        User.objects.create_user(
+            username="ana", email="ana.pop@student.tuiasi.ro",
+            first_name="Ana-Maria", last_name="Pop",
+        )
+
+        self._autentifica("ana.pop@student.tuiasi.ro", "Ana", "Pop")
+
+        self.assertEqual(
+            User.objects.get(email="ana.pop@student.tuiasi.ro").first_name, "Ana-Maria"
+        )
+
+    def test_contul_existent_este_refolosit_nu_duplicat(self):
+        User.objects.create_user(username="ana", email="ana.pop@student.tuiasi.ro")
+
+        fals = self._autentifica("ana.pop@student.tuiasi.ro", "Ana", "Pop")
+
+        self.assertEqual(User.objects.filter(email="ana.pop@student.tuiasi.ro").count(), 1)
+        self.assertEqual(fals.conectat.username, "ana")

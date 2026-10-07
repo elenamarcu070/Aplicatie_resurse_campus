@@ -66,17 +66,36 @@ class MySocialAccountAdapter(DefaultSocialAccountAdapter):
             return
 
         User = get_user_model()
+        prenume = (getattr(sociallogin.user, "first_name", "") or "").strip()
+        nume = (getattr(sociallogin.user, "last_name", "") or "").strip()
 
         try:
             user = User.objects.get(email__iexact=email)
+            # Conturile vechi au fost create fără nume; îl completăm acum, dar
+            # nu suprascriem unul pus de administrator în listele căminului.
+            campuri = []
+            if prenume and not user.first_name:
+                user.first_name = prenume
+                campuri.append("first_name")
+            if nume and not user.last_name:
+                user.last_name = nume
+                campuri.append("last_name")
+            if campuri:
+                user.save(update_fields=campuri)
             sociallogin.connect(request, user)
             return
         except User.DoesNotExist:
-            # Dacă email-ul nu e găsit, creează un User nou (dar nu îl bagi în ProfilStudent dacă nu există)
+            # Dacă email-ul nu e găsit, creează un User nou (dar nu îl bagi în
+            # ProfilStudent dacă nu există). Numele vine de la Google: fără el,
+            # formularul de cerere de cont ar porni gol, iar recunoașterea
+            # studentului care are deja cont pe altă adresă n-ar avea cu ce
+            # lucra — ea se sprijină chiar pe numele complet.
             username_base = email.split("@")[0]
             user = User.objects.create(
                 email=email,
                 username=username_base,
+                first_name=prenume,
+                last_name=nume,
             )
             user.set_unusable_password()
             user.is_active = True
