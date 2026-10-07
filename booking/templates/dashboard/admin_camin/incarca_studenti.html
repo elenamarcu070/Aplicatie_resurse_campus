@@ -45,7 +45,14 @@
                         <i class="fas fa-triangle-exclamation"></i>
                         Pare să aibă deja cont, pe
                         <b>{{ c.posibil_existent.email }}</b>
-                        ({{ c.posibil_existent.camin.nume|default:"fără cămin" }}).
+                        ({{ c.posibil_existent.camin.nume|default:"fără cămin" }},
+                        camera {{ c.posibil_existent.numar_camera|default:"—" }}).
+                        {% if c.motiv_potrivire == "camera" %}
+                        <span class="d-block text-muted">
+                          Sunt mai mulți studenți cu acest nume; l-am recunoscut
+                          după cămin și cameră. Verifică înainte să muți adresa.
+                        </span>
+                        {% endif %}
                       </div>
                       {% endif %}
                     </td>

@@ -1441,7 +1441,11 @@ def incarca_studenti_view(request):
     cereri_deschise = list(cereri.filter(stare=CerereCont.IN_ASTEPTARE))
     for c in cereri_deschise:
         # Ca administratorul să nu mai caute de mână dacă studentul are deja cont.
-        c.posibil_existent, _ = gaseste_cont_asemanator(c.email, c.prenume, c.nume)
+        # Aici știm și căminul și camera cerute, deci putem departaja omonimii
+        # — spre deosebire de pagina pe care o vede studentul.
+        c.posibil_existent, c.motiv_potrivire = gaseste_cont_asemanator(
+            c.email, c.prenume, c.nume, camin=c.camin, camera=c.numar_camera
+        )
 
     return render(request, 'dashboard/admin_camin/incarca_studenti.html', {
         'plan': plan,
@@ -1693,7 +1697,10 @@ def aproba_cerere_cont(request, cerere_id):
     muta_adresa = request.POST.get("muta_adresa") == "1"
     asemanator = None
     if muta_adresa:
-        asemanator, _ = gaseste_cont_asemanator(cerere.email, cerere.prenume, cerere.nume)
+        asemanator, _ = gaseste_cont_asemanator(
+            cerere.email, cerere.prenume, cerere.nume,
+            camin=cerere.camin, camera=cerere.numar_camera,
+        )
         if asemanator is None:
             messages.error(request, (
                 "Nu am mai găsit contul vechi — poate s-a schimbat între timp. "

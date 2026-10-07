@@ -2821,3 +2821,87 @@ class PaginaGresitaPentruRol(BazaCereriCont):
         raspuns = self.client.get(reverse("dashboard_student"))
 
         self.assertContains(raspuns, "nu mai este activ")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class OmonimiiDepartajatiDupaCamera(BazaCereriCont):
+    """
+    Doi studenti cu acelasi nume nu pot fi deosebiti dupa nume. Dar cererea
+    spune si caminul si camera, iar doi omonimi in aceeasi camera nu prea se
+    intampla. La autentificare nu stim camera, deci acolo ramanem tacuti:
+    acolo mesajul ajunge la student, nu la administrator.
+    """
+
+    def _student(self, email, camin, camera, nume="Enea", prenume="Andrei"):
+        user = User.objects.create_user(
+            username=email, email=email, first_name=prenume, last_name=nume
+        )
+        profil = ProfilStudent.objects.create(
+            utilizator=user, camin=camin, numar_camera=camera, activ=True
+        )
+        ProfilStudent.objects.filter(id=profil.id).update(nume=nume, prenume=prenume)
+        return ProfilStudent.objects.get(id=profil.id)
+
+    def setUp(self):
+        super().setUp()
+        self.altul = self._student("codrin-andrei.enea@tuiasi.ro", self.t2, "422")
+        self.cautatul = self._student("andrei.enea2@tuiasi.ro", self.t1, "34B")
+
+    def test_fara_camera_omonimii_raman_nedepartajati(self):
+        profil, _ = gaseste_cont_asemanator("eneaandrei190@gmail.com", "Andrei", "Enea")
+
+        self.assertIsNone(profil)
+
+    def test_caminul_si_camera_il_deosebesc(self):
+        profil, motiv = gaseste_cont_asemanator(
+            "eneaandrei190@gmail.com", "Andrei", "Enea", camin=self.t1, camera="34B"
+        )
+
+        self.assertEqual(profil.id, self.cautatul.id)
+        self.assertEqual(motiv, "camera")
+
+    def test_camera_scrisa_altfel_tot_se_potriveste(self):
+        profil, _ = gaseste_cont_asemanator(
+            "eneaandrei190@gmail.com", "Andrei", "Enea", camin=self.t1, camera=" 34b "
+        )
+
+        self.assertEqual(profil.id, self.cautatul.id)
+
+    def test_camera_care_nu_se_potriveste_nu_da_nimic(self):
+        profil, _ = gaseste_cont_asemanator(
+            "eneaandrei190@gmail.com", "Andrei", "Enea", camin=self.t1, camera="999"
+        )
+
+        self.assertIsNone(profil)
+
+    def test_cererea_apare_marcata_in_lista(self):
+        cerere = CerereCont.objects.create(
+            email="eneaandrei190@gmail.com", nume="Enea", prenume="Andrei",
+            camin=self.t1, numar_camera="34B",
+        )
+        self.client.force_login(self.super_admin)
+
+        raspuns = self.client.get(reverse("incarca_studenti"))
+
+        gasita = raspuns.context["cereri"][0]
+        self.assertEqual(gasita.id, cerere.id)
+        self.assertEqual(gasita.posibil_existent.id, self.cautatul.id)
+        self.assertContains(raspuns, "l-am recunoscut")
+
+    def test_mutarea_nimereste_contul_potrivit(self):
+        cerere = CerereCont.objects.create(
+            email="eneaandrei190@gmail.com", nume="Enea", prenume="Andrei",
+            camin=self.t1, numar_camera="34B",
+        )
+        self.client.force_login(self.sef_t1)
+
+        self.client.post(
+            reverse("aproba_cerere_cont", args=[cerere.id]),
+            {"muta_adresa": "1"}, follow=True,
+        )
+
+        self.cautatul.refresh_from_db()
+        self.altul.refresh_from_db()
+        self.assertEqual(self.cautatul.email, "eneaandrei190@gmail.com")
+        self.assertEqual(self.altul.email, "codrin-andrei.enea@tuiasi.ro")
+        self.assertEqual(ProfilStudent.objects.count(), 2)

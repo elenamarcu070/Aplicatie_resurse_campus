@@ -247,7 +247,7 @@ def masca_email(email):
     return f"{vizibil}{'•' * max(3, len(local) - len(vizibil))}@{domeniu}"
 
 
-def gaseste_cont_asemanator(email, prenume="", nume=""):
+def gaseste_cont_asemanator(email, prenume="", nume="", camin=None, camera=""):
     """
     Caută un cont activ care pare să fie al aceleiași persoane, pe altă adresă.
 
@@ -256,7 +256,14 @@ def gaseste_cont_asemanator(email, prenume="", nume=""):
     cunoaște și ei depun o cerere — deși au deja cont. Așa îi putem trimite
     înapoi la adresa lor, în loc să ajungă pe un drum ocolit.
 
-    Întoarce (profil, motiv) sau (None, ""). Nu întoarce nimic când sunt mai
+    `camin` și `camera` se dau doar când se știu — adică din cererea de cont,
+    nu de la o autentificare. Ele departajează omonimii: doi studenți cu
+    același nume în aceeași cameră nu prea se întâmplă. La autentificare nu
+    avem datele astea, deci acolo omonimii rămân nedepartajați și nu se arată
+    nimic: acolo mesajul ajunge la student, iar o potrivire greșită i-ar arăta
+    adresa altcuiva.
+
+    Întoarce (profil, motiv) sau (None, ""). Nu întoarce nimic când rămân mai
     mulți candidați: o potrivire nesigură e mai rea decât niciuna.
     """
     from booking.import_studenti import cheie_nume
@@ -281,11 +288,21 @@ def gaseste_cont_asemanator(email, prenume="", nume=""):
 
     cautat = cheie_nume(nume, prenume)
     potriviri = [
-        p for p in activi.only("id", "email", "nume", "prenume", "camin")
+        p for p in activi.select_related("camin")
         if cheie_nume(p.nume, p.prenume) == cautat
     ]
     if len(potriviri) == 1:
         return potriviri[0], "nume"
+
+    # Omonimi: încercăm să-i departajăm după unde stau, dacă știm.
+    if len(potriviri) > 1 and camin and camera:
+        camera = str(camera).strip().lower()
+        dupa_locuinta = [
+            p for p in potriviri
+            if p.camin_id == camin.id and (p.numar_camera or "").strip().lower() == camera
+        ]
+        if len(dupa_locuinta) == 1:
+            return dupa_locuinta[0], "camera"
 
     return None, ""
 
