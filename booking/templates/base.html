@@ -270,6 +270,9 @@
               {{ c.nume }}
             </option>
             {% endfor %}
+            <option value="fara" {% if fara_camin_selectat %}selected{% endif %}>
+              — fără cămin —
+            </option>
           </select>
         </form>
       </li>

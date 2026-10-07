@@ -23,7 +23,11 @@ def rol_utilizator(request):
 
                 camin_id = request.session.get("camin_selectat")
 
-                if camin_id:
+                if camin_id == "fara":
+                    # Super-adminul s-a uitat anume la profilurile fără cămin.
+                    camin_selectat = None
+                    context['fara_camin_selectat'] = True
+                elif camin_id:
                     camin_selectat = camine.filter(id=camin_id).first()
                 else:
                     camin_selectat = camine.first()
@@ -31,7 +35,10 @@ def rol_utilizator(request):
                         request.session["camin_selectat"] = camin_selectat.id
 
                 context['camin_selectat'] = camin_selectat
-                context['nume_camin'] = camin_selectat.nume if camin_selectat else "Super Admin"
+                if camin_id == "fara":
+                    context['nume_camin'] = "fără cămin"
+                else:
+                    context['nume_camin'] = camin_selectat.nume if camin_selectat else "Super Admin"
 
             else:
                 context['is_super_admin'] = False

@@ -67,6 +67,9 @@ def inapoi_la(request, implicit):
     return redirect(implicit)
 
 
+# Valoarea din selectorul de cămine pentru profilurile care n-au niciunul.
+FARA_CAMIN = "fara"
+
 MESAJ_CONT_INACTIV = (
     "Contul tău nu mai este activ. Dacă locuiești în continuare în cămin, "
     "contactează administratorul căminului."
@@ -1386,8 +1389,14 @@ def incarca_studenti_view(request):
             request.session["import_studenti_cale"] = cale
 
     # 🧩 Adminii de cămin văd doar lista studenților lor
+    fara_camin = request.session.get("camin_selectat") == FARA_CAMIN
     if admin_camin.is_super_admin:
-        if camin:
+        if fara_camin:
+            # Profiluri rămase fără cămin — din liste vechi sau conturi de
+            # probă. Nu apar în niciun cămin, deci altfel nu le-ar vedea
+            # nimeni și nu le-ar putea dezactiva nimeni.
+            studenti = ProfilStudent.objects.filter(camin__isnull=True)
+        elif camin:
             studenti = ProfilStudent.objects.filter(camin=camin)
         else:
             studenti = ProfilStudent.objects.all()
@@ -1415,6 +1424,7 @@ def incarca_studenti_view(request):
         'studenti': studenti,
         'camine': camine,
         'is_super_admin': admin_camin.is_super_admin,
+        'fara_camin': fara_camin,
         'cereri': cereri_deschise,
         'cereri_rezolvate': cereri.exclude(stare=CerereCont.IN_ASTEPTARE)[:15],
     })

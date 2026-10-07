@@ -2650,3 +2650,55 @@ class AprobareCuMutareaAdresei(BazaCereriCont):
         self.cerere.refresh_from_db()
         self.assertEqual(self.cerere.stare, CerereCont.IN_ASTEPTARE)
         self.assertTrue(any("Nu am mai găsit" in m for m in self._mesaje(raspuns)))
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class ProfilurileFaraCamin(BazaImport):
+    """
+    Un profil fara camin nu apare in nicio lista de camin, deci pana acum nu-l
+    vedea si nu-l putea dezactiva nimeni. Raman din liste vechi sau din teste.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.orfan = self._student("ramasita@gmail.com", camin=None)
+        self.normal = self._student("ana@student.tuiasi.ro", camin=self.t1)
+        self.client.force_login(self.admin_user)
+
+    def _lista(self, camin_selectat):
+        sesiune = self.client.session
+        sesiune["camin_selectat"] = camin_selectat
+        sesiune.save()
+        raspuns = self.client.get(reverse("incarca_studenti"))
+        return raspuns, {s.email for s in raspuns.context["studenti"]}
+
+    def test_nu_apare_in_lista_unui_camin(self):
+        _, emailuri = self._lista(str(self.t1.id))
+
+        self.assertEqual(emailuri, {"ana@student.tuiasi.ro"})
+
+    def test_apare_cand_alegi_fara_camin(self):
+        raspuns, emailuri = self._lista("fara")
+
+        self.assertEqual(emailuri, {"ramasita@gmail.com"})
+        self.assertTrue(raspuns.context["fara_camin"])
+        self.assertContains(raspuns, "Profiluri fără cămin")
+
+    def test_poate_fi_dezactivat_de_acolo(self):
+        self._lista("fara")
+
+        self.client.post(reverse("comuta_activ_student", args=[self.orfan.id]))
+
+        self.orfan.refresh_from_db()
+        self.assertFalse(self.orfan.activ)
+
+    def test_stergerea_in_masa_nu_apare_pe_lista_asta(self):
+        raspuns, _ = self._lista("fara")
+
+        self.assertNotContains(raspuns, "Șterge toți studenții")
+
+    def test_optiunea_apare_in_selectorul_super_adminului(self):
+        raspuns, _ = self._lista("fara")
+
+        self.assertContains(raspuns, "— fără cămin —")
+        self.assertContains(raspuns, "fără cămin")

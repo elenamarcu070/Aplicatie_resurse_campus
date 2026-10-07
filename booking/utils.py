@@ -306,8 +306,12 @@ def get_camin_curent(request):
     admin = AdminCamin.objects.filter(email=user.email).first()
     if admin:
         if admin.is_super_admin:
-            camin_id = request.session.get("camin_selectat")
-            return Camin.objects.filter(id=camin_id).first() if camin_id else None
+            camin_id = str(request.session.get("camin_selectat") or "")
+            # Selectorul poate trimite si „fara" — profilurile fara camin — iar
+            # `filter(id=...)` arunca ValueError pe orice nu e numar.
+            if not camin_id.isdigit():
+                return None
+            return Camin.objects.filter(id=camin_id).first()
         return admin.camin
 
     # Verificăm dacă este student

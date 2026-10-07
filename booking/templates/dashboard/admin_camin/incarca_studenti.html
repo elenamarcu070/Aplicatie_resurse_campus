@@ -4,7 +4,16 @@
 {% block content %}
 <div class="container mt-4 fade-in" style="max-width: 1000px;">
     <div class="p-4 bg-white rounded shadow">
+        {% if fara_camin %}
+        <h3 class="mb-2 fw-bold">Profiluri fără cămin</h3>
+        <p class="text-muted">
+            Conturi rămase din liste vechi sau de la teste. Nu apar în niciun cămin,
+            deci nu le vede nimeni altcineva. Le poți dezactiva de aici — nu se
+            șterge nimic, iar reactivarea e tot de aici.
+        </p>
+        {% else %}
         <h3 class="mb-4 fw-bold">Studenți cazați în {{ camin.nume }}</h3>
+        {% endif %}
 
         <!-- Cereri de cont venite de la studenți -->
         {% if cereri %}
@@ -452,12 +461,14 @@
             <a href="{% url 'adauga_student' %}" class="btn btn-success">
                 <i class="fas fa-user-plus"></i> Adaugă student
             </a>
+            {% if not fara_camin %}
             <form action="{% url 'sterge_toti_studentii' %}" method="post" onsubmit="return confirm('Ești sigur că vrei să ștergi toți studenții din {{ camin.nume }}?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">
                     <i class="fas fa-trash-alt"></i> Șterge toți studenții
                 </button>
             </form>
+            {% endif %}
         </div>
 
         <!-- Tabelul cu studenți -->
@@ -547,7 +558,11 @@
             </table>
         </div>
         {% else %}
+        {% if fara_camin %}
+        <p>Nu există profiluri fără cămin. Toate conturile sunt legate de un cămin.</p>
+        {% else %}
         <p>Nu există studenți înregistrați în căminul {{ camin.nume }}.</p>
+        {% endif %}
         {% endif %}
     </div>
 </div>
